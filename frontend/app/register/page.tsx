@@ -3,13 +3,16 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { register: registerUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   // Step 1 - Create Account
   const [step1Data, setStep1Data] = useState({
@@ -70,14 +73,37 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Registration data:', { step1Data, step2Data, step3Data });
+    // Validate passwords match
+    if (step2Data.password !== step2Data.confirmPassword) {
+      setError('Passwords do not match');
       setIsLoading(false);
-      // Redirect to login or dashboard
-      router.push('/');
-    }, 1500);
+      return;
+    }
+
+    try {
+      await registerUser({
+        email: step2Data.emailAddress,
+        password: step2Data.password,
+        fullName: step2Data.fullName,
+        mobileNumber: step2Data.mobileNumber,
+        address: step2Data.address,
+        emergencyContact: step2Data.emergencyContact,
+        petName: step2Data.petName,
+        species: step2Data.species,
+        breed: step2Data.breed,
+        ageOrDob: step2Data.ageOrDob,
+        gender: step2Data.gender,
+        vaccinationStatus: step2Data.vaccinationStatus,
+        vaccinationReminders: step3Data.vaccinationReminders,
+        appointmentUpdates: step3Data.appointmentUpdates,
+      });
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -102,7 +128,14 @@ export default function RegisterPage() {
 
         {/* Registration Card */}
         <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-12">
-          <form onSubmit={handleSubmit}>
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+          
+          <form onSubmit={handleSubmit} autoComplete="off">
             {/* Step 1: Create your account */}
             {currentStep === 1 && (
               <div className="space-y-6 animate-fade-in">
@@ -131,6 +164,7 @@ export default function RegisterPage() {
                       name="email"
                       type="email"
                       required
+                      autoComplete="off"
                       value={step1Data.email}
                       onChange={handleStep1Change}
                       className="block w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ec6d13] focus:border-transparent transition-all duration-200"
@@ -155,6 +189,7 @@ export default function RegisterPage() {
                       name="password"
                       type={showPassword ? "text" : "password"}
                       required
+                      autoComplete="new-password"
                       value={step1Data.password}
                       onChange={handleStep1Change}
                       className="block w-full pl-12 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ec6d13] focus:border-transparent transition-all duration-200"
@@ -195,6 +230,7 @@ export default function RegisterPage() {
                       name="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
                       required
+                      autoComplete="new-password"
                       value={step1Data.confirmPassword}
                       onChange={handleStep1Change}
                       className="block w-full pl-12 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ec6d13] focus:border-transparent transition-all duration-200"

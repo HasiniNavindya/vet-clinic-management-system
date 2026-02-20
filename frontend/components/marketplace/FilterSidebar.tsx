@@ -8,12 +8,6 @@ interface FilterSidebarProps {
   setActiveCategory?: (category: Category) => void;
   priceRange: { min: number; max: number };
   setPriceRange: (range: { min: number; max: number }) => void;
-  showReadyToShip?: boolean;
-  setShowReadyToShip?: (value: boolean) => void;
-  showPaidSamples?: boolean;
-  setShowPaidSamples?: (value: boolean) => void;
-  minOrder?: number;
-  setMinOrder?: (value: number) => void;
 }
 
 const categories = [
@@ -30,13 +24,7 @@ export default function FilterSidebar({
   activeCategory,
   setActiveCategory,
   priceRange,
-  setPriceRange,
-  showReadyToShip,
-  setShowReadyToShip,
-  showPaidSamples,
-  setShowPaidSamples,
-  minOrder,
-  setMinOrder
+  setPriceRange
 }: FilterSidebarProps) {
   return (
     <div className="w-64 shrink-0">
@@ -45,74 +33,21 @@ export default function FilterSidebar({
         
         {type === 'products' && (
           <>
-            {/* Supplier Types */}
-            <div className="mb-6">
-              <h4 className="text-sm font-bold text-gray-900 mb-3">Supplier Types</h4>
-              <label className="flex items-center gap-2 text-sm text-gray-700 mb-2 cursor-pointer hover:text-[#ec6d13]">
-                <input
-                  type="checkbox"
-                  checked={showReadyToShip}
-                  onChange={(e) => setShowReadyToShip?.(e.target.checked)}
-                  className="w-4 h-4 text-[#ec6d13] border-gray-300 rounded focus:ring-[#ec6d13]"
-                />
-                Ready to ship
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-[#ec6d13]">
-                <input
-                  type="checkbox"
-                  checked={showPaidSamples}
-                  onChange={(e) => setShowPaidSamples?.(e.target.checked)}
-                  className="w-4 h-4 text-[#ec6d13] border-gray-300 rounded focus:ring-[#ec6d13]"
-                />
-                Paid Samples
-              </label>
-            </div>
-
             {/* Product Types */}
             <div className="mb-6 pb-6 border-b border-gray-200">
               <h4 className="text-sm font-bold text-gray-900 mb-3">Product Types</h4>
               {categories.map((category) => (
                 <label key={category.id} className="flex items-center gap-2 text-sm text-gray-700 mb-2 cursor-pointer hover:text-[#ec6d13]">
                   <input
-                    type="checkbox"
+                    type="radio"
+                    name="category"
                     checked={activeCategory === category.id}
                     onChange={() => setActiveCategory?.(category.id as Category)}
-                    className="w-4 h-4 text-[#ec6d13] border-gray-300 rounded focus:ring-[#ec6d13]"
+                    className="w-4 h-4 text-[#ec6d13] border-gray-300 focus:ring-[#ec6d13]"
                   />
                   {category.name}
                 </label>
               ))}
-            </div>
-
-            {/* Condition */}
-            <div className="mb-6 pb-6 border-b border-gray-200">
-              <h4 className="text-sm font-bold text-gray-900 mb-3">Condition</h4>
-              <label className="flex items-center gap-2 text-sm text-gray-700 mb-2 cursor-pointer hover:text-[#ec6d13]">
-                <input type="checkbox" className="w-4 h-4 text-[#ec6d13] border-gray-300 rounded focus:ring-[#ec6d13]" />
-                New
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:text-[#ec6d13]">
-                <input type="checkbox" className="w-4 h-4 text-[#ec6d13] border-gray-300 rounded focus:ring-[#ec6d13]" />
-                Used
-              </label>
-            </div>
-
-            {/* Min Order */}
-            <div className="mb-6 pb-6 border-b border-gray-200">
-              <h4 className="text-sm font-bold text-gray-900 mb-3">Min Order</h4>
-              <input
-                type="range"
-                min="1"
-                max="100"
-                value={minOrder}
-                onChange={(e) => setMinOrder?.(Number(e.target.value))}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#ec6d13]"
-              />
-              <div className="flex justify-between text-xs text-gray-600 mt-2">
-                <span>1</span>
-                <span className="font-semibold text-[#ec6d13]">{minOrder}</span>
-                <span>100</span>
-              </div>
             </div>
           </>
         )}

@@ -19,7 +19,7 @@ export default function Hero() {
             alt="Veterinarian with pet" 
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30"></div>
+          <div className="absolute inset-0 bg-linear-to-r from-black/70 via-black/50 to-black/30"></div>
         </div>
 
         {/* Content */}
@@ -37,21 +37,6 @@ export default function Hero() {
               Professional veterinary care that your furry family members deserve. 
               Trusted by thousands of pet parents.
             </p>
-
-            <div className="flex flex-wrap gap-4 justify-center">
-              <button 
-                onClick={() => setIsLoginModalOpen(true)}
-                className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-2 border-white/30 px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300"
-              >
-                Login
-              </button>
-              <Link 
-                href="/register"
-                className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-2 border-white/30 px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300"
-              >
-                Sign Up
-              </Link>
-            </div>
           </div>
         </div>
       </section>

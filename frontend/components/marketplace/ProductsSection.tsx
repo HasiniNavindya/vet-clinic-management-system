@@ -23,14 +23,11 @@ interface ProductsSectionProps {
   setPriceRange: (range: { min: number; max: number }) => void;
   sortBy: string;
   setSortBy: (value: string) => void;
-  showReadyToShip: boolean;
-  setShowReadyToShip: (value: boolean) => void;
-  showPaidSamples: boolean;
-  setShowPaidSamples: (value: boolean) => void;
-  minOrder: number;
-  setMinOrder: (value: number) => void;
-  clearAllFilters: () => void;
   searchQuery: string;
+  onEdit?: (product: Product) => void;
+  onDelete?: (id: number) => void;
+  onAddToCart?: (item: { id: number; name: string; price: number; image: string; type: 'product' }) => void;
+  refreshKey?: number;
 }
 
 export default function ProductsSection({
@@ -40,14 +37,11 @@ export default function ProductsSection({
   setPriceRange,
   sortBy,
   setSortBy,
-  showReadyToShip,
-  setShowReadyToShip,
-  showPaidSamples,
-  setShowPaidSamples,
-  minOrder,
-  setMinOrder,
-  clearAllFilters,
-  searchQuery
+  searchQuery,
+  onEdit,
+  onDelete,
+  onAddToCart,
+  refreshKey
 }: ProductsSectionProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +62,7 @@ export default function ProductsSection({
         setError(err.message);
         setLoading(false);
       });
-  }, []);
+  }, [refreshKey]);
 
   const filteredProducts = useMemo(() => {
     const matches = products.filter((product) => {
@@ -93,32 +87,22 @@ export default function ProductsSection({
   }, [products, activeCategory, searchQuery, priceRange, sortBy]);
 
   const activeFilters = [
-    showReadyToShip && { key: 'readyToShip', label: 'Ready to ship', action: () => setShowReadyToShip(false) },
-    showPaidSamples && { key: 'paidSamples', label: 'Paid Samples', action: () => setShowPaidSamples(false) },
+    activeCategory !== 'all' && { key: 'category', label: activeCategory, action: () => setActiveCategory('all') },
     priceRange.min > 0 && { key: 'priceMin', label: `Min: $${priceRange.min}`, action: () => setPriceRange({ ...priceRange, min: 0 }) },
     priceRange.max < 1500 && { key: 'priceMax', label: `Max: $${priceRange.max}`, action: () => setPriceRange({ ...priceRange, max: 1500 }) },
-    minOrder > 1 && { key: 'minOrder', label: `Min Order: ${minOrder}`, action: () => setMinOrder(1) },
   ].filter(Boolean) as { key: string; label: string; action: () => void }[];
 
   return (
-    <section className="py-8 bg-gray-50">
-      <div className="max-w-[1400px] mx-auto px-6">
-        <div className="flex gap-6">
-          <FilterSidebar
-            type="products"
-            activeCategory={activeCategory}
-            setActiveCategory={setActiveCategory}
-            priceRange={priceRange}
-            setPriceRange={setPriceRange}
-            showReadyToShip={showReadyToShip}
-            setShowReadyToShip={setShowReadyToShip}
-            showPaidSamples={showPaidSamples}
-            setShowPaidSamples={setShowPaidSamples}
-            minOrder={minOrder}
-            setMinOrder={setMinOrder}
-          />
+    <div className="flex gap-6">
+      <FilterSidebar
+        type="products"
+        activeCategory={activeCategory}
+        setActiveCategory={setActiveCategory}
+        priceRange={priceRange}
+        setPriceRange={setPriceRange}
+      />
 
-          <div className="flex-1">
+      <div className="flex-1">
             <div className="bg-white rounded-lg border border-gray-200 p-4 mb-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-gray-600">
@@ -151,7 +135,13 @@ export default function ProductsSection({
                       </button>
                     </span>
                   ))}
-                  <button onClick={clearAllFilters} className="text-sm text-[#ec6d13] hover:underline font-medium">
+                  <button 
+                    onClick={() => {
+                      setActiveCategory('all');
+                      setPriceRange({ min: 0, max: 1500 });
+                    }} 
+                    className="text-sm text-[#ec6d13] hover:underline font-medium"
+                  >
                     Clear All Filters
                   </button>
                 </div>
@@ -165,7 +155,13 @@ export default function ProductsSection({
               <>
                 <div className="grid grid-cols-4 gap-4">
                   {filteredProducts.map((product) => (
-                    <ProductCard key={product.id} {...product} />
+                    <ProductCard 
+                      key={product.id} 
+                      {...product} 
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onAddToCart={onAddToCart}
+                    />
                   ))}
                 </div>
 
@@ -205,7 +201,5 @@ export default function ProductsSection({
             </div>
           </div>
         </div>
-      </div>
-    </section>
   );
 }

@@ -1,10 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Dashboard() {
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [selectedDate, setSelectedDate] = useState(15);
+
+  // Protect this route
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ec6d13] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render dashboard if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const chartData = [65, 45, 70, 55, 85, 60, 75, 50, 65, 80, 90, 75];
 
@@ -72,7 +100,8 @@ export default function Dashboard() {
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900">Overview</h2>
+              <h2 className="text-3xl font-bold text-gray-900">Welcome, {user?.fullName}!</h2>
+              <p className="text-gray-600 mt-1">Here's your overview</p>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-gray-600">Today <span className="font-semibold">March, 15</span></span>

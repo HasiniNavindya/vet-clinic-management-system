@@ -9,9 +9,13 @@ interface PetCardProps {
   image: string;
   location: string;
   seller: string;
+  contactNumber?: string;
+  onEdit?: (pet: PetCardProps) => void;
+  onDelete?: (id: number) => void;
+  onAddToCart?: (item: { id: number; name: string; price: number; image: string; type: 'pet' }) => void;
 }
 
-export default function PetCard({ name, age, price, image, location }: PetCardProps) {
+export default function PetCard({ id, name, age, price, description, image, location, seller, contactNumber, onEdit, onDelete, onAddToCart }: PetCardProps) {
   return (
     <div className="group bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200">
       <div className="relative">
@@ -23,6 +27,27 @@ export default function PetCard({ name, age, price, image, location }: PetCardPr
         <span className="absolute top-2 left-2 bg-[#ec6d13] text-white px-2.5 py-1 rounded text-sm font-bold">
           ${price}
         </span>
+        {/* Edit and Delete buttons */}
+        <div className="absolute top-2 right-2 flex gap-1">
+          <button
+            onClick={() => onEdit?.({ id, name, age, price, description, image, location, seller, contactNumber })}
+            className="w-8 h-8 bg-blue-500 rounded text-white flex items-center justify-center hover:bg-blue-600 transition-colors shadow-lg"
+            title="Edit"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <button
+            onClick={() => onDelete?.(id)}
+            className="w-8 h-8 bg-red-500 rounded text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+            title="Delete"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
       </div>
       <div className="p-4">
         <h3 className="font-semibold text-gray-900 text-sm mb-2">
@@ -54,9 +79,18 @@ export default function PetCard({ name, age, price, image, location }: PetCardPr
           </div>
           <span className="text-xs text-gray-600 font-medium">4.8</span>
         </div>
-        <button className="w-full py-2 bg-[#ec6d13] text-white text-sm font-semibold rounded hover:bg-[#d65a0a] transition-colors">
-          Contact Seller
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => onAddToCart?.({ id, name, price, image, type: 'pet' })}
+            className="flex-1 py-2 bg-[#ec6d13] text-white text-sm font-semibold rounded hover:bg-[#d65a0a] transition-colors flex items-center justify-center gap-1"
+            title="Add to Cart"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            Add to Cart
+          </button>
+        </div>
       </div>
     </div>
   );

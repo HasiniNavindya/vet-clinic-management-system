@@ -34,7 +34,7 @@ export default function MissionVision() {
   };
 
   return (
-    <section className="py-20 relative overflow-hidden bg-gradient-to-b from-white to-gray-50">
+    <section className="py-20 relative overflow-hidden bg-linear-to-b from-white to-gray-50">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#ec6d13] rounded-full blur-3xl"></div>
@@ -92,7 +92,7 @@ export default function MissionVision() {
               fill
               className="object-cover group-hover:scale-110 transition-transform duration-700"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+            <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent"></div>
             <div className="absolute bottom-8 left-8 right-8">
               <h3 className="text-3xl font-bold text-white mb-2">
                 {content[activeTab].title}
@@ -129,7 +129,7 @@ export default function MissionVision() {
             </div>
 
             {/* Stats Card */}
-            <div className={`${activeTab === 'mission' ? 'bg-gradient-to-r from-[#ec6d13] to-[#ff8c42]' : 'bg-gradient-to-r from-blue-600 to-cyan-600'} rounded-3xl p-6 text-white shadow-xl`}>
+            <div className={`${activeTab === 'mission' ? 'bg-linear-to-r from-[#ec6d13] to-[#ff8c42]' : 'bg-linear-to-r from-blue-600 to-cyan-600'} rounded-3xl p-6 text-white shadow-xl`}>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-sm opacity-90 mb-1">Our Commitment</div>

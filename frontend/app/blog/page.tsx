@@ -128,7 +128,7 @@ export default function BlogPage() {
       <Header />
 
       {/* Hero Section */}
-      <section className="pt-28 pb-8 bg-gradient-to-br from-orange-50 to-white">
+      <section className="pt-28 pb-8 bg-linear-to-br from-orange-50 to-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h1 className="text-5xl font-bold text-gray-900 mb-4">

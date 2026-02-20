@@ -2,9 +2,11 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, logout, isAuthenticated } = useAuth();
 
   return (
     <header className="bg-white fixed w-full top-0 z-50">
@@ -95,7 +97,29 @@ export default function Header() {
             </div>
 
             {/* Get Appointment Button */}
-            <div className="hidden md:block py-3">
+            <div className="hidden md:flex items-center space-x-3 py-3">
+              {isAuthenticated ? (
+                <>
+                  <Link href="/dashboard" className="text-white hover:text-white/80 transition font-semibold text-sm uppercase">
+                    {user?.fullName}
+                  </Link>
+                  <button 
+                    onClick={logout}
+                    className="bg-white text-[#ec6d13] px-6 py-2 font-bold text-sm uppercase hover:bg-gray-100 transition-all"
+                  >
+                    LOGOUT
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    href="/login"
+                    className="bg-white text-[#ec6d13] px-6 py-2 font-bold text-sm uppercase hover:bg-gray-100 transition-all inline-block"
+                  >
+                    LOGIN
+                  </Link>
+                </>
+              )}
               <button className="bg-white text-[#ec6d13] px-6 py-2 font-bold text-sm uppercase hover:bg-gray-100 transition-all">
                 GET APPOINTMENT
               </button>

@@ -13,6 +13,7 @@ interface Pet {
   image: string;
   location: string;
   seller: string;
+  contactNumber?: string;
   createdAt?: string;
 }
 
@@ -22,6 +23,10 @@ interface PetsSectionProps {
   sortBy: string;
   setSortBy: (value: string) => void;
   searchQuery: string;
+  onEdit?: (pet: Pet) => void;
+  onDelete?: (id: number) => void;
+  onAddToCart?: (item: { id: number; name: string; price: number; image: string; type: 'pet' }) => void;
+  refreshKey?: number;
 }
 
 export default function PetsSection({
@@ -29,7 +34,11 @@ export default function PetsSection({
   setPriceRange,
   sortBy,
   setSortBy,
-  searchQuery
+  searchQuery,
+  onEdit,
+  onDelete,
+  onAddToCart,
+  refreshKey
 }: PetsSectionProps) {
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +59,7 @@ export default function PetsSection({
         setError(err.message);
         setLoading(false);
       });
-  }, []);
+  }, [refreshKey]);
 
   const filteredPets = useMemo(() => {
     const matches = pets.filter((pet) => {
@@ -74,16 +83,14 @@ export default function PetsSection({
   }, [pets, priceRange, searchQuery, sortBy]);
 
   return (
-    <section className="py-8 bg-gray-50">
-      <div className="max-w-[1400px] mx-auto px-6">
-        <div className="flex gap-6">
-          <FilterSidebar
-            type="pets"
-            priceRange={priceRange}
-            setPriceRange={setPriceRange}
-          />
+    <div className="flex gap-6">
+      <FilterSidebar
+        type="pets"
+        priceRange={priceRange}
+        setPriceRange={setPriceRange}
+      />
 
-          <div className="flex-1">
+      <div className="flex-1">
             <div className="bg-white rounded-lg border border-gray-200 p-4 mb-5">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600">
@@ -112,7 +119,13 @@ export default function PetsSection({
               <>
                 <div className="grid grid-cols-4 gap-4">
                   {filteredPets.map((pet) => (
-                    <PetCard key={pet.id} {...pet} />
+                    <PetCard 
+                      key={pet.id} 
+                      {...pet} 
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      onAddToCart={onAddToCart}
+                    />
                   ))}
                 </div>
 
@@ -152,7 +165,5 @@ export default function PetsSection({
             </div>
           </div>
         </div>
-      </div>
-    </section>
   );
 }
