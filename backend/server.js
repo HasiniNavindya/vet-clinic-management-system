@@ -21,9 +21,6 @@ app.get("/", (req, res) => {
   res.send("API running...");
 });
 
-// ============================================
-// AUTHENTICATION ENDPOINTS
-// ============================================
 
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
@@ -218,9 +215,6 @@ app.get("/auth/me", authenticateToken, async (req, res) => {
   }
 });
 
-// ============================================
-// EXISTING ENDPOINTS
-// ============================================
 
 // GET users
 app.get("/users", async (req, res) => {
@@ -246,6 +240,70 @@ app.post("/users", async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+
+// GET /api/user/dashboard - Get user dashboard data
+app.get("/api/user/dashboard", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get user info
+    const userResult = await pool.query(
+      "SELECT id, email, full_name, mobile_number, address, role, created_at FROM auth_users WHERE id = $1",
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+
+    // Get user's pets
+    const petsResult = await pool.query(
+      "SELECT * FROM pets_owned WHERE user_id = $1",
+      [userId]
+    );
+
+    // Get user preferences
+    const preferencesResult = await pool.query(
+      "SELECT * FROM user_preferences WHERE user_id = $1",
+      [userId]
+    );
+
+    // Calculate user stats (for now, return mock data - can be enhanced later)
+    const stats = {
+      visits: 0,
+      yearsOfService: 0,
+      favouriteDoctors: 0,
+      vetcoins: 0
+    };
+
+    // Calculate years of service
+    if (user.created_at) {
+      const accountAge = new Date() - new Date(user.created_at);
+      stats.yearsOfService = Math.floor(accountAge / (1000 * 60 * 60 * 24 * 365));
+    }
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        mobileNumber: user.mobile_number,
+        address: user.address,
+        role: user.role,
+        createdAt: user.created_at
+      },
+      pets: petsResult.rows,
+      preferences: preferencesResult.rows[0] || null,
+      stats
+    });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
   }
 });
 
