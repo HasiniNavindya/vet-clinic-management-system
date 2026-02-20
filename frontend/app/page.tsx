@@ -1,3 +1,4 @@
+"use client";
 import Header from '@/components/layout/Header';
 import Hero from '@/components/home/Hero';
 import PetCare from '@/components/home/PetCare';

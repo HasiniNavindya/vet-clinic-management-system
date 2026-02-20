@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useMemo, useState } from 'react';
 import FilterSidebar from './FilterSidebar';
 import ProductCard from './ProductCard';
 
@@ -11,10 +13,10 @@ interface Product {
   price: number;
   image: string;
   category: string;
+  createdAt?: string;
 }
 
 interface ProductsSectionProps {
-  products: Product[];
   activeCategory: Category;
   setActiveCategory: (category: Category) => void;
   priceRange: { min: number; max: number };
@@ -28,10 +30,10 @@ interface ProductsSectionProps {
   minOrder: number;
   setMinOrder: (value: number) => void;
   clearAllFilters: () => void;
+  searchQuery: string;
 }
 
 export default function ProductsSection({
-  products,
   activeCategory,
   setActiveCategory,
   priceRange,
@@ -44,8 +46,52 @@ export default function ProductsSection({
   setShowPaidSamples,
   minOrder,
   setMinOrder,
-  clearAllFilters
+  clearAllFilters,
+  searchQuery
 }: ProductsSectionProps) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
+    fetch(`${apiBase}/products`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
+        return res.json();
+      })
+      .then((data) => {
+        setProducts(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch((err: Error) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    const matches = products.filter((product) => {
+      const matchesCategory = activeCategory === 'all' || product.category === activeCategory;
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesPrice = product.price >= priceRange.min && product.price <= priceRange.max;
+      return matchesCategory && matchesSearch && matchesPrice;
+    });
+
+    if (sortBy === 'priceLow') return [...matches].sort((a, b) => a.price - b.price);
+    if (sortBy === 'priceHigh') return [...matches].sort((a, b) => b.price - a.price);
+    if (sortBy === 'newest') {
+      return [...matches].sort((a, b) => {
+        const aDate = a.createdAt ? new Date(a.createdAt).getTime() : a.id;
+        const bDate = b.createdAt ? new Date(b.createdAt).getTime() : b.id;
+        return bDate - aDate;
+      });
+    }
+    return matches;
+  }, [products, activeCategory, searchQuery, priceRange, sortBy]);
+
   const activeFilters = [
     showReadyToShip && { key: 'readyToShip', label: 'Ready to ship', action: () => setShowReadyToShip(false) },
     showPaidSamples && { key: 'paidSamples', label: 'Paid Samples', action: () => setShowPaidSamples(false) },
@@ -58,7 +104,6 @@ export default function ProductsSection({
     <section className="py-8 bg-gray-50">
       <div className="max-w-[1400px] mx-auto px-6">
         <div className="flex gap-6">
-          {/* Sidebar Filter */}
           <FilterSidebar
             type="products"
             activeCategory={activeCategory}
@@ -73,13 +118,11 @@ export default function ProductsSection({
             setMinOrder={setMinOrder}
           />
 
-          {/* Main Content */}
           <div className="flex-1">
-            {/* Results Header */}
             <div className="bg-white rounded-lg border border-gray-200 p-4 mb-5">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-gray-600">
-                  <span className="font-semibold text-gray-900">{products.length}</span> results found
+                  <span className="font-semibold text-gray-900">{filteredProducts.length}</span> results found
                 </p>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600">Sort by:</span>
@@ -96,7 +139,6 @@ export default function ProductsSection({
                 </div>
               </div>
 
-              {/* Active Filters */}
               {activeFilters.length > 0 && (
                 <div className="flex items-center gap-2 flex-wrap">
                   {activeFilters.map((filter) => (
@@ -116,23 +158,28 @@ export default function ProductsSection({
               )}
             </div>
 
-            {/* Products Grid */}
-            <div className="grid grid-cols-4 gap-4">
-              {products.map((product) => (
-                <ProductCard key={product.id} {...product} />
-              ))}
-            </div>
+            {loading && <div className="text-center py-12 text-gray-500">Loading products...</div>}
+            {error && <div className="text-center py-12 text-red-500">{error}</div>}
 
-            {products.length === 0 && (
-              <div className="text-center py-20 bg-white rounded-lg border border-gray-200">
-                <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-gray-500">No products found matching your filters.</p>
-              </div>
+            {!loading && !error && (
+              <>
+                <div className="grid grid-cols-4 gap-4">
+                  {filteredProducts.map((product) => (
+                    <ProductCard key={product.id} {...product} />
+                  ))}
+                </div>
+
+                {filteredProducts.length === 0 && (
+                  <div className="text-center py-20 bg-white rounded-lg border border-gray-200">
+                    <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-gray-500">No products found matching your filters.</p>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* Pagination */}
             <div className="flex justify-center items-center gap-2 mt-12">
               <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
                 &lt;
