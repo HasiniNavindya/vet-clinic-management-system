@@ -12,6 +12,7 @@ import EditProductModal from '@/components/marketplace/EditProductModal';
 import EditPetModal from '@/components/marketplace/EditPetModal';
 import Cart from '@/components/marketplace/Cart';
 import CheckoutModal from '@/components/marketplace/CheckoutModal';
+import { useAuth } from '@/context/AuthContext';
 
 type Tab = 'products' | 'pets';
 type Category = 'all' | 'food' | 'toys' | 'grooming' | 'health' | 'accessories';
@@ -47,6 +48,10 @@ interface Pet {
 }
 
 export default function MarketplacePage() {
+  const { user } = useAuth();
+  // Allow admin access when not logged in (temporary) OR when logged in as admin
+  // Restrict edit/delete for regular logged-in users
+  const isAdmin = !user || user?.role === 'admin';
   const [activeTab, setActiveTab] = useState<Tab>('products');
   const [activeCategory, setActiveCategory] = useState<Category>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -172,24 +177,34 @@ export default function MarketplacePage() {
         setSearchQuery={setSearchQuery}
       />
 
-      {/* Add buttons */}
+      {/* Add buttons - Only visible for admins */}
+      {isAdmin && (
+        <div className="py-4">
+          <div className="max-w-[1600px] mx-auto px-6">
+            <div className="flex justify-between items-center">
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setShowAddProductModal(true)}
+                  className="px-6 py-2 bg-[#ec6d13] text-white rounded-lg font-semibold hover:bg-[#d55a0a] transition-colors"
+                >
+                  + Add Product
+                </button>
+                <button 
+                  onClick={() => setShowAddPetModal(true)}
+                  className="px-6 py-2 bg-[#ec6d13] text-white rounded-lg font-semibold hover:bg-[#d55a0a] transition-colors"
+                >
+                  + Add Pet
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cart button - Always visible */}
       <div className="py-4">
         <div className="max-w-[1600px] mx-auto px-6">
-          <div className="flex justify-between items-center">
-            <div className="flex gap-4">
-              <button 
-                onClick={() => setShowAddProductModal(true)}
-                className="px-6 py-2 bg-[#ec6d13] text-white rounded-lg font-semibold hover:bg-[#d55a0a] transition-colors"
-              >
-                + Add Product
-              </button>
-              <button 
-                onClick={() => setShowAddPetModal(true)}
-                className="px-6 py-2 bg-[#ec6d13] text-white rounded-lg font-semibold hover:bg-[#d55a0a] transition-colors"
-              >
-                + Add Pet
-              </button>
-            </div>
+          <div className="flex justify-end">
             <button 
               onClick={() => setShowCart(true)}
               className="relative px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors flex items-center gap-2"
@@ -219,10 +234,11 @@ export default function MarketplacePage() {
                 sortBy={sortBy}
                 setSortBy={setSortBy}
                 searchQuery={searchQuery}
-                onEdit={handleEditProduct}
-                onDelete={handleDeleteProduct}
+                onEdit={isAdmin ? handleEditProduct : undefined}
+                onDelete={isAdmin ? handleDeleteProduct : undefined}
                 onAddToCart={handleAddToCart}
                 refreshKey={refreshKey}
+                isAdmin={isAdmin}
               />
             )}
 
@@ -233,10 +249,11 @@ export default function MarketplacePage() {
                 sortBy={sortBy}
                 setSortBy={setSortBy}
                 searchQuery={searchQuery}
-                onEdit={handleEditPet}
-                onDelete={handleDeletePet}
+                onEdit={isAdmin ? handleEditPet : undefined}
+                onDelete={isAdmin ? handleDeletePet : undefined}
                 onAddToCart={handleAddToCart}
                 refreshKey={refreshKey}
+                isAdmin={isAdmin}
               />
             )}
         </div>

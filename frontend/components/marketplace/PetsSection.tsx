@@ -27,6 +27,7 @@ interface PetsSectionProps {
   onDelete?: (id: number) => void;
   onAddToCart?: (item: { id: number; name: string; price: number; image: string; type: 'pet' }) => void;
   refreshKey?: number;
+  isAdmin?: boolean;
 }
 
 export default function PetsSection({
@@ -38,7 +39,8 @@ export default function PetsSection({
   onEdit,
   onDelete,
   onAddToCart,
-  refreshKey
+  refreshKey,
+  isAdmin = false
 }: PetsSectionProps) {
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,6 +127,7 @@ export default function PetsSection({
                       onEdit={onEdit}
                       onDelete={onDelete}
                       onAddToCart={onAddToCart}
+                      isAdmin={isAdmin}
                     />
                   ))}
                 </div>

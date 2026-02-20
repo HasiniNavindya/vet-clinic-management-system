@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import WhyChooseUs from '@/components/home/WhyChooseUs';
@@ -198,25 +199,6 @@ export default function ServicesPage() {
       {/* Services We Offer Section */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Section Header */}
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold text-gray-900 mb-6">
-              SERVICES WE OFFER
-            </h2>
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <div className="h-0.5 w-24 bg-[#ec6d13]"></div>
-              <div className="w-10 h-10 rounded-full border-2 border-[#ec6d13] flex items-center justify-center">
-                <svg className="w-6 h-6 text-[#ec6d13]" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="h-0.5 w-24 bg-[#ec6d13]"></div>
-            </div>
-            <p className="text-gray-600 max-w-4xl mx-auto text-lg">
-              Comprehensive veterinary care services designed to keep your beloved pets healthy, happy, and thriving at every stage of their life.
-            </p>
-          </div>
-
           {/* Services Layout */}
           <div className="grid lg:grid-cols-3 gap-12 items-center">
             {/* Left Column Services */}
@@ -417,9 +399,9 @@ export default function ServicesPage() {
             Our team is here to provide the best care for your beloved pets
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white text-[#ec6d13] px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl">
+            <Link href="/login" className="bg-white text-[#ec6d13] px-8 py-4 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl">
               Schedule Appointment
-            </button>
+            </Link>
             <button className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-gray-900 transition-all duration-300">
               Contact Us
             </button>

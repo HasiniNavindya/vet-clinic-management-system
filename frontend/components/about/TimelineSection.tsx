@@ -9,35 +9,29 @@ const timelineData = [
 
 export default function TimelineSection() {
   return (
-    <section className="relative py-20 overflow-hidden">
-      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?w=1200&q=80')" }}></div>
-      <div className="absolute inset-0 bg-linear-to-b from-black/40 via-black/50 to-black/40"></div>
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-white mb-4">
+    <section className="py-16 bg-gray-50">
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">
             Our Journey Through the Years
           </h2>
-          <p className="text-white/90 text-lg">
+          <p className="text-gray-600">
             Milestones that shaped who we are today
           </p>
         </div>
 
         <div className="relative">
-          <div className="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-white/40"></div>
+          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-300"></div>
           
-          <div className="space-y-12">
+          <div className="space-y-8">
             {timelineData.map((item, index) => (
-              <div key={index} className={`flex items-center ${index % 2 === 0 ? 'flex-row' : 'flex-row-reverse'}`}>
-                <div className="w-1/2"></div>
-                <div className="absolute left-1/2 transform -translate-x-1/2 bg-[#ec6d13] text-white w-16 h-16 rounded-full flex items-center justify-center font-bold text-lg shadow-lg z-10">
+              <div key={index} className="relative pl-20">
+                <div className="absolute left-0 bg-[#ec6d13] text-white w-16 h-16 rounded-full flex items-center justify-center font-bold text-sm shadow">
                   {item.year}
                 </div>
-                <div className={`w-1/2 ${index % 2 === 0 ? 'pl-12' : 'pr-12'}`}>
-                  <div className="bg-white/95 backdrop-blur-md p-8 rounded-2xl shadow-2xl hover:shadow-[0_20px_50px_rgba(236,109,19,0.3)] transition-all duration-300 hover:-translate-y-1 border border-white/20">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">{item.event}</h3>
-                    <p className="text-gray-700">{item.description}</p>
-                  </div>
+                <div className="bg-white border border-gray-200 p-6 rounded-lg">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{item.event}</h3>
+                  <p className="text-gray-600 text-sm">{item.description}</p>
                 </div>
               </div>
             ))}

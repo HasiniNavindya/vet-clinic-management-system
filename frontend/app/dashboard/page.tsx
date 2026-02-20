@@ -4,11 +4,43 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import Header from '@/components/layout/Header';
+
+interface Pet {
+  id: number;
+  pet_name: string;
+  species: string;
+  breed: string;
+  age_or_dob: string;
+  gender: string;
+  vaccination_status: string;
+}
+
+interface DashboardData {
+  user: {
+    id: number;
+    email: string;
+    fullName: string;
+    mobileNumber?: string;
+    address?: string;
+    role: string;
+    createdAt: string;
+  };
+  pets: Pet[];
+  stats: {
+    visits: number;
+    yearsOfService: number;
+    favouriteDoctors: number;
+    vetcoins: number;
+  };
+}
 
 export default function Dashboard() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, token, logout } = useAuth();
   const [selectedDate, setSelectedDate] = useState(15);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
 
   // Protect this route
   useEffect(() => {
@@ -17,8 +49,39 @@ export default function Dashboard() {
     }
   }, [isAuthenticated, isLoading, router]);
 
+  // Fetch dashboard data
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!token || !isAuthenticated) return;
+
+      try {
+        const response = await fetch('http://localhost:5000/api/user/dashboard', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setDashboardData(data);
+        } else {
+          console.error('Failed to fetch dashboard data');
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setDataLoading(false);
+      }
+    };
+
+    if (isAuthenticated && token) {
+      fetchDashboardData();
+    }
+  }, [isAuthenticated, token]);
+
   // Show loading state while checking authentication
-  if (isLoading) {
+  if (isLoading || dataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -38,10 +101,11 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex">
+      <Header />
+      <div className="flex pt-28">
         {/* Sidebar */}
-        <aside className="w-64 bg-white min-h-screen p-6 border-r border-gray-200">
-          <div className="mb-8">
+        <aside className="w-64 bg-white h-[calc(100vh-112px)] p-6 border-r border-gray-200 flex flex-col fixed left-0 top-28 overflow-y-auto">
+          <div className="mb-6">
             <div className="flex items-center gap-2">
               <div className="w-10 h-10 bg-[#ec6d13] rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-xl">🐾</span>
@@ -53,7 +117,21 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <nav className="space-y-2">
+          {/* User Profile Section */}
+          <div className="mb-6 pb-6 border-b border-gray-200">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-[#ec6d13] flex items-center justify-center text-white font-bold text-2xl mb-3">
+                {user?.fullName?.charAt(0).toUpperCase()}
+              </div>
+              <h3 className="font-bold text-gray-900 text-sm">{user?.fullName}</h3>
+              <p className="text-xs text-gray-500 mt-1">{user?.email}</p>
+              <Link href="/dashboard/settings" className="mt-3 text-xs text-[#ec6d13] hover:text-[#d65e0f] font-semibold">
+                Edit Profile →
+              </Link>
+            </div>
+          </div>
+
+          <nav className="space-y-2 shrink-0">
             <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 bg-[#ec6d13] text-white rounded-lg font-semibold">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -87,16 +165,28 @@ export default function Dashboard() {
             </Link>
           </nav>
 
-          <div className="mt-auto pt-8">
-            <div className="bg-orange-50 rounded-lg p-4">
+          <div className="mt-auto pt-6">
+            <div className="bg-orange-50 rounded-lg p-4 mb-4">
               <p className="text-sm font-semibold text-gray-900 mb-1">Need Help?</p>
               <p className="text-xs text-gray-600">Open our help center</p>
             </div>
+            <button
+              onClick={() => {
+                logout();
+                window.location.href = '/';
+              }}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#ec6d13] text-white rounded-lg font-semibold hover:bg-[#d65e0f] transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Logout
+            </button>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-8 ml-64">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
@@ -123,7 +213,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-1">56</h3>
+              <h3 className="text-3xl font-bold text-gray-900 mb-1">{dashboardData?.stats.visits || 0}</h3>
               <p className="text-sm text-gray-500">Visits</p>
             </div>
 
@@ -135,7 +225,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-1">6</h3>
+              <h3 className="text-3xl font-bold text-gray-900 mb-1">{dashboardData?.stats.yearsOfService || 0}</h3>
               <p className="text-sm text-gray-500">Years of service</p>
             </div>
 
@@ -147,7 +237,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-1">14</h3>
+              <h3 className="text-3xl font-bold text-gray-900 mb-1">{dashboardData?.stats.favouriteDoctors || 0}</h3>
               <p className="text-sm text-gray-500">Favourite doctors</p>
             </div>
 
@@ -159,26 +249,31 @@ export default function Dashboard() {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-1">145</h3>
+              <h3 className="text-3xl font-bold text-gray-900 mb-1">{dashboardData?.stats.vetcoins || 0}</h3>
               <p className="text-sm text-gray-500">Vetcoins</p>
             </div>
           </div>
 
-          {/* Chart */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-6">Statistics of your pet health</h3>
-            <div className="h-64 flex items-end justify-between gap-4">
-              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'].map((month, i) => (
-                <div key={month} className="flex-1 flex flex-col items-center">
-                  <div 
-                    className="w-full bg-linear-to-t from-[#ec6d13]/30 to-[#ec6d13]/10 rounded-t-lg transition-all hover:from-[#ec6d13]/40 hover:to-[#ec6d13]/20"
-                    style={{ height: `${chartData[i]}%` }}
-                  ></div>
-                  <span className="text-xs text-gray-500 mt-2">{month}</span>
-                </div>
-              ))}
+          {/* Chart - Only show if user has pets */}
+          {dashboardData?.pets && dashboardData.pets.length > 0 && (
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-6">Statistics of your pet health</h3>
+              <div className="h-64 flex items-end justify-between gap-4">
+                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'].map((month, i) => {
+                  const chartData = [65, 45, 70, 55, 85, 60, 75, 50, 65, 80, 90, 75];
+                  return (
+                    <div key={month} className="flex-1 flex flex-col items-center">
+                      <div 
+                        className="w-full bg-linear-to-t from-[#ec6d13]/30 to-[#ec6d13]/10 rounded-t-lg transition-all hover:from-[#ec6d13]/40 hover:to-[#ec6d13]/20"
+                        style={{ height: `${chartData[i]}%` }}
+                      ></div>
+                      <span className="text-xs text-gray-500 mt-2">{month}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Appointments */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
@@ -231,29 +326,52 @@ export default function Dashboard() {
         {/* Right Sidebar */}
         <aside className="w-80 bg-white min-h-screen p-6 border-l border-gray-200">
           {/* Pet Profile */}
-          <div className="bg-gray-50 rounded-2xl p-6 mb-6">
-            <img src="https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80" alt="Pet" className="w-20 h-20 rounded-full object-cover mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-1">Dobby</h3>
-            <p className="text-sm text-gray-500 mb-4">Nu254TER</p>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-gray-500 mb-1">Type:</p>
-                <p className="font-semibold text-gray-900">dog</p>
-              </div>
-              <div>
-                <p className="text-gray-500 mb-1">Sex:</p>
-                <p className="font-semibold text-gray-900">male</p>
-              </div>
-              <div>
-                <p className="text-gray-500 mb-1">Age:</p>
-                <p className="font-semibold text-gray-900">8 y.o.</p>
-              </div>
-              <div>
-                <p className="text-gray-500 mb-1">Breed:</p>
-                <p className="font-semibold text-gray-900">Labrador</p>
+          {dashboardData?.pets && dashboardData.pets.length > 0 ? (
+            <div className="bg-gray-50 rounded-2xl p-6 mb-6">
+              <img src="https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80" alt="Pet" className="w-20 h-20 rounded-full object-cover mb-4" />
+              <h3 className="text-xl font-bold text-gray-900 mb-1">{dashboardData.pets[0].pet_name}</h3>
+              <p className="text-sm text-gray-500 mb-4">Pet ID: {dashboardData.pets[0].id}</p>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                {dashboardData.pets[0].species && (
+                  <div>
+                    <p className="text-gray-500 mb-1">Type:</p>
+                    <p className="font-semibold text-gray-900">{dashboardData.pets[0].species}</p>
+                  </div>
+                )}
+                {dashboardData.pets[0].gender && (
+                  <div>
+                    <p className="text-gray-500 mb-1">Sex:</p>
+                    <p className="font-semibold text-gray-900">{dashboardData.pets[0].gender}</p>
+                  </div>
+                )}
+                {dashboardData.pets[0].age_or_dob && (
+                  <div>
+                    <p className="text-gray-500 mb-1">Age:</p>
+                    <p className="font-semibold text-gray-900">{dashboardData.pets[0].age_or_dob}</p>
+                  </div>
+                )}
+                {dashboardData.pets[0].breed && (
+                  <div>
+                    <p className="text-gray-500 mb-1">Breed:</p>
+                    <p className="font-semibold text-gray-900">{dashboardData.pets[0].breed}</p>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-gray-50 rounded-2xl p-6 mb-6 text-center">
+              <div className="w-20 h-20 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
+                <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">No Pet Added</h3>
+              <p className="text-sm text-gray-500 mb-4">Add your pet information to get personalized care</p>
+              <Link href="/register" className="inline-block bg-[#ec6d13] hover:bg-[#d65e0f] text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                Add Pet
+              </Link>
+            </div>
+          )}
 
           {/* Calendar */}
           <div className="mb-6">
@@ -297,9 +415,9 @@ export default function Dashboard() {
           </div>
 
           {/* Book Appointment Button */}
-          <button className="w-full bg-[#ec6d13] hover:bg-[#d65e0f] text-white py-4 rounded-xl font-semibold transition-all duration-300">
+          <Link href="/login" className="block w-full bg-[#ec6d13] hover:bg-[#d65e0f] text-white py-4 rounded-xl font-semibold transition-all duration-300 text-center">
             Book appointment
-          </button>
+          </Link>
         </aside>
       </div>
     </div>

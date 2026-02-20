@@ -28,6 +28,7 @@ interface ProductsSectionProps {
   onDelete?: (id: number) => void;
   onAddToCart?: (item: { id: number; name: string; price: number; image: string; type: 'product' }) => void;
   refreshKey?: number;
+  isAdmin?: boolean;
 }
 
 export default function ProductsSection({
@@ -41,7 +42,8 @@ export default function ProductsSection({
   onEdit,
   onDelete,
   onAddToCart,
-  refreshKey
+  refreshKey,
+  isAdmin = false
 }: ProductsSectionProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,6 +163,7 @@ export default function ProductsSection({
                       onEdit={onEdit}
                       onDelete={onDelete}
                       onAddToCart={onAddToCart}
+                      isAdmin={isAdmin}
                     />
                   ))}
                 </div>
