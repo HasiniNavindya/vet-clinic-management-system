@@ -175,16 +175,6 @@ export default function Blog() {
             ))}
           </div>
         </div>
-
-        {/* View All Blogs Button */}
-        <div className="text-center mt-12">
-          <Link 
-            href="/blog" 
-            className="inline-block bg-[#ec6d13] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#d55e0f] transition-all duration-300 shadow-lg hover:shadow-xl"
-          >
-            View All Blog Posts
-          </Link>
-        </div>
       </div>
     </section>
   );

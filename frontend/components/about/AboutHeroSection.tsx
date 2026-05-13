@@ -33,7 +33,7 @@ export default function AboutHeroSection() {
           <div className="relative h-[450px]">
             <div className="h-full rounded-xl overflow-hidden">
               <img
-                src="https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=800&q=80"
+                src="https://images.unsplash.com/photo-1628009368231-7bb7cfcb0def?w=800&q=80"
                 alt="Veterinary care"
                 className="w-full h-full object-cover"
               />

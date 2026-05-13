@@ -3,9 +3,8 @@ import Footer from '@/components/layout/Footer';
 import AboutHeroSection from '@/components/about/AboutHeroSection';
 import OurStorySection from '@/components/about/OurStorySection';
 import MissionVisionValues from '@/components/about/MissionVisionValues';
-import TimelineSection from '@/components/about/TimelineSection';
 import Team from '@/components/team/Team';
-import AboutCTA from '@/components/about/AboutCTA';
+import BookAppointmentCTA from '@/components/about/BookAppointmentCTA';
 
 export default function AboutPage() {
   return (
@@ -14,9 +13,8 @@ export default function AboutPage() {
       <AboutHeroSection />
       <OurStorySection />
       <MissionVisionValues />
-      <TimelineSection />
       <Team />
-      <AboutCTA />
+      <BookAppointmentCTA />
       <Footer />
     </div>
   );

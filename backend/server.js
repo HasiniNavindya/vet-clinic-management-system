@@ -263,7 +263,7 @@ app.get("/api/user/dashboard", authenticateToken, async (req, res) => {
 
     // Get user's pets
     const petsResult = await pool.query(
-      "SELECT * FROM pets_owned WHERE user_id = $1",
+      "SELECT * FROM pets_owned WHERE user_id = $1 ORDER BY created_at DESC",
       [userId]
     );
 
@@ -273,12 +273,31 @@ app.get("/api/user/dashboard", authenticateToken, async (req, res) => {
       [userId]
     );
 
-    // Calculate user stats (for now, return mock data - can be enhanced later)
+    // Get appointments count
+    const appointmentsCountResult = await pool.query(
+      "SELECT COUNT(*) FROM appointments WHERE user_id = $1",
+      [userId]
+    );
+
+    // Get upcoming appointments
+    const upcomingAppointments = await pool.query(
+      `SELECT a.*, d.name as doctor_name, d.specialization, d.image_url as doctor_image,
+              p.pet_name, a.doctor_notes
+       FROM appointments a
+       LEFT JOIN doctors d ON a.doctor_id = d.id
+       LEFT JOIN pets_owned p ON a.pet_id = p.id
+       WHERE a.user_id = $1 AND a.appointment_date >= CURRENT_DATE
+       ORDER BY a.appointment_date ASC, a.appointment_time ASC
+       LIMIT 5`,
+      [userId]
+    );
+
+    // Calculate user stats
     const stats = {
-      visits: 0,
+      visits: parseInt(appointmentsCountResult.rows[0].count) || 0,
       yearsOfService: 0,
       favouriteDoctors: 0,
-      vetcoins: 0
+      vetcoins: parseInt(appointmentsCountResult.rows[0].count) * 10 || 0
     };
 
     // Calculate years of service
@@ -299,11 +318,167 @@ app.get("/api/user/dashboard", authenticateToken, async (req, res) => {
       },
       pets: petsResult.rows,
       preferences: preferencesResult.rows[0] || null,
-      stats
+      stats,
+      upcomingAppointments: upcomingAppointments.rows
     });
   } catch (error) {
     console.error('Dashboard error:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard data' });
+  }
+});
+
+// GET /api/doctors - Get all doctors
+app.get("/api/doctors", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM doctors ORDER BY name"
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching doctors:', error);
+    res.status(500).json({ error: 'Failed to fetch doctors' });
+  }
+});
+
+// GET /api/appointments - Get user's appointments
+app.get("/api/appointments", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await pool.query(
+      `SELECT a.*, d.name as doctor_name, d.specialization, d.image_url as doctor_image, 
+              p.pet_name, a.doctor_notes
+       FROM appointments a
+       LEFT JOIN doctors d ON a.doctor_id = d.id
+       LEFT JOIN pets_owned p ON a.pet_id = p.id
+       WHERE a.user_id = $1
+       ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching appointments:', error);
+    res.status(500).json({ error: 'Failed to fetch appointments' });
+  }
+});
+
+// POST /api/appointments - Book new appointment
+app.post("/api/appointments", authenticateToken, async (req, res) => {
+  const { doctor_id, pet_id, appointment_date, appointment_time, notes } = req.body;
+  const userId = req.user.id;
+
+  try {
+    // Validate required fields
+    if (!doctor_id || !appointment_date || !appointment_time) {
+      return res.status(400).json({ error: 'Doctor, date, and time are required' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO appointments (user_id, doctor_id, pet_id, appointment_date, appointment_time, notes)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [userId, doctor_id, pet_id || null, appointment_date, appointment_time, notes || null]
+    );
+
+    // Get the full appointment details with doctor info
+    const appointment = await pool.query(
+      `SELECT a.*, d.name as doctor_name, d.specialization, d.image_url as doctor_image,
+              p.pet_name
+       FROM appointments a
+       LEFT JOIN doctors d ON a.doctor_id = d.id
+       LEFT JOIN pets_owned p ON a.pet_id = p.id
+       WHERE a.id = $1`,
+      [result.rows[0].id]
+    );
+
+    res.status(201).json(appointment.rows[0]);
+  } catch (error) {
+    console.error('Error creating appointment:', error);
+    res.status(500).json({ error: 'Failed to create appointment' });
+  }
+});
+
+// GET /api/pets - Get user's pets
+app.get("/api/pets", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await pool.query(
+      "SELECT * FROM pets_owned WHERE user_id = $1 ORDER BY created_at DESC",
+      [userId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching pets:', error);
+    res.status(500).json({ error: 'Failed to fetch pets' });
+  }
+});
+
+// POST /api/pets - Add new pet for user
+app.post("/api/pets", authenticateToken, async (req, res) => {
+  const { pet_name, species, breed, age_or_dob, gender, vaccination_status } = req.body;
+  const userId = req.user.id;
+
+  try {
+    if (!pet_name) {
+      return res.status(400).json({ error: 'Pet name is required' });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO pets_owned (user_id, pet_name, species, breed, age_or_dob, gender, vaccination_status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [userId, pet_name, species || null, breed || null, age_or_dob || null, gender || null, vaccination_status || null]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error adding pet:', error);
+    res.status(500).json({ error: 'Failed to add pet' });
+  }
+});
+
+// DELETE /api/appointments/:id - Cancel appointment
+app.delete("/api/appointments/:id", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const result = await pool.query(
+      "DELETE FROM appointments WHERE id = $1 AND user_id = $2 RETURNING *",
+      [id, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    res.json({ message: 'Appointment cancelled successfully' });
+  } catch (error) {
+    console.error('Error cancelling appointment:', error);
+    res.status(500).json({ error: 'Failed to cancel appointment' });
+  }
+});
+
+// PUT /api/appointments/:id/status - Update appointment status (for doctor actions)
+app.put("/api/appointments/:id/status", authenticateToken, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    if (!['confirmed', 'rejected', 'rescheduled', 'scheduled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const result = await pool.query(
+      "UPDATE appointments SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *",
+      [status, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating appointment status:', error);
+    res.status(500).json({ error: 'Failed to update appointment status' });
   }
 });
 

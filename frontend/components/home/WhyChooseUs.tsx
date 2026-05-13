@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function WhyChooseUs() {
   const services = [
@@ -9,21 +10,24 @@ export default function WhyChooseUs() {
       title: 'CARE ADVICE',
       description: 'Meow for food, then when human fills food dish, take a few bites of food and continue meow for food.',
       image: '/images/service2.jpg',
-      buttonColor: 'text-gray-700'
+      buttonColor: 'text-gray-700',
+      slug: 'care-advice'
     },
     {
       id: 2,
       title: 'VETERINARY HELP',
       description: 'Meow for food, then when human fills food dish, take a few bites of food and continue meow for food.',
       image: '/images/service3.jpg',
-      buttonColor: 'text-[#ec6d13]'
+      buttonColor: 'text-[#ec6d13]',
+      slug: 'veterinary-help'
     },
     {
       id: 3,
       title: 'EMERGENCY SERVICE',
       description: 'Meow for food, then when human fills food dish, take a few bites of food and continue meow for food.',
       image: '/images/service1.avif',
-      buttonColor: 'text-gray-700'
+      buttonColor: 'text-gray-700',
+      slug: 'emergency-service'
     }
   ];
 
@@ -80,14 +84,15 @@ export default function WhyChooseUs() {
                   {service.description}
                 </p>
                 
-                <button 
+                <Link 
+                  href={`/services/${service.slug}`}
                   className={`${service.buttonColor} font-semibold text-sm flex items-center gap-2 hover:gap-4 transition-all duration-300 group/btn`}
                 >
                   READ MORE
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
-                </button>
+                </Link>
               </div>
             </div>
           ))}
