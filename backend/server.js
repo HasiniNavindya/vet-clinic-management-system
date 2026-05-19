@@ -3,11 +3,16 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const pool = require("./db");
+const {
+  normalizeRole,
+  getRoleConfig,
+  getPublicRoles,
+  getDashboardPath,
+  canSelfRegister,
+} = require("./config/roles");
+const { JWT_SECRET, authenticateToken, requireRole } = require("./middleware/auth");
 
 const app = express();
-
-// JWT Secret Key (in production, use environment variable)
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
 
 // CORS middleware - only once!
 app.use(cors({
@@ -22,23 +27,10 @@ app.get("/", (req, res) => {
 });
 
 
-// Middleware to verify JWT token
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
-    }
-    req.user = user;
-    next();
-  });
-};
+// GET /auth/roles - Public role definitions for login/register UI
+app.get("/auth/roles", (req, res) => {
+  res.json({ roles: getPublicRoles() });
+});
 
 // POST /auth/register - Register new user
 app.post("/auth/register", async (req, res) => {
@@ -57,12 +49,46 @@ app.post("/auth/register", async (req, res) => {
     vaccinationStatus,
     vaccinationReminders,
     appointmentUpdates
+  , role
   } = req.body;
 
   try {
     // Validate required fields
     if (!email || !password || !fullName) {
       return res.status(400).json({ error: 'Email, password, and full name are required' });
+    }
+
+    const requestedRole = normalizeRole(role) || 'user';
+    let finalRole = requestedRole;
+
+    const adminCount = await pool.query(
+      "SELECT COUNT(*)::int AS count FROM auth_users WHERE LOWER(role) = 'admin'"
+    );
+    const hasAdmin = (adminCount.rows[0]?.count || 0) > 0;
+    const isBootstrapAdmin = requestedRole === 'admin' && !hasAdmin;
+
+    if (!canSelfRegister(requestedRole) && !isBootstrapAdmin) {
+      try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        if (!token) {
+          return res.status(403).json({ error: 'Admin authorization required for this role' });
+        }
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const adminRole = normalizeRole(decoded.role);
+        if (adminRole !== 'admin') {
+          return res.status(403).json({ error: 'Only admins can create this account type' });
+        }
+        finalRole = requestedRole;
+      } catch (err) {
+        console.error('Role assignment verification error:', err.message || err);
+        return res.status(403).json({ error: 'Invalid admin token' });
+      }
+    }
+
+    const roleConfig = getRoleConfig(finalRole);
+    if (!roleConfig) {
+      return res.status(400).json({ error: 'Invalid role' });
     }
 
     // Check if user already exists
@@ -79,17 +105,17 @@ app.post("/auth/register", async (req, res) => {
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
-    // Insert user
+    // Insert user (include role)
     const userResult = await pool.query(
-      `INSERT INTO auth_users (email, password_hash, full_name, mobile_number, address) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, email, full_name, mobile_number, address, role, created_at`,
-      [email, passwordHash, fullName, mobileNumber || null, address || null]
+      `INSERT INTO auth_users (email, password_hash, full_name, mobile_number, address, role) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, full_name, mobile_number, address, role, created_at`,
+      [email, passwordHash, fullName, mobileNumber || null, address || null, finalRole]
     );
 
     const user = userResult.rows[0];
 
-    // Insert pet information if provided
-    if (petName) {
+    // Insert pet information only for roles that require it
+    if (petName && roleConfig.requiresPetInfo) {
       await pool.query(
         `INSERT INTO pets_owned (user_id, pet_name, species, breed, age_or_dob, gender, vaccination_status)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
@@ -106,10 +132,12 @@ app.post("/auth/register", async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: finalRole },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
+
+    const roleLabel = getRoleConfig(finalRole)?.label || finalRole;
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -120,7 +148,9 @@ app.post("/auth/register", async (req, res) => {
         fullName: user.full_name,
         mobileNumber: user.mobile_number,
         address: user.address,
-        role: user.role
+        role: finalRole,
+        roleLabel,
+        dashboardPath: getDashboardPath(finalRole),
       }
     });
 
@@ -132,7 +162,7 @@ app.post("/auth/register", async (req, res) => {
 
 // POST /auth/login - Login user
 app.post("/auth/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
 
   try {
     // Validate required fields
@@ -159,9 +189,22 @@ app.post("/auth/login", async (req, res) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
+    const dbRole = normalizeRole(user.role) || 'user';
+    const selectedRole = role ? normalizeRole(role) : null;
+
+    if (selectedRole && selectedRole !== dbRole) {
+      const expectedLabel = getRoleConfig(dbRole)?.label || dbRole;
+      return res.status(403).json({
+        error: `This account is registered as ${expectedLabel}. Please log in with the correct role.`,
+      });
+    }
+
+    const canonicalRole = dbRole;
+    const roleLabel = getRoleConfig(canonicalRole)?.label || canonicalRole;
+
     // Generate JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: canonicalRole },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -175,7 +218,9 @@ app.post("/auth/login", async (req, res) => {
         fullName: user.full_name,
         mobileNumber: user.mobile_number,
         address: user.address,
-        role: user.role
+        role: canonicalRole,
+        roleLabel,
+        dashboardPath: getDashboardPath(canonicalRole),
       }
     });
 
@@ -199,13 +244,16 @@ app.get("/auth/me", authenticateToken, async (req, res) => {
 
     const user = userResult.rows[0];
 
+    const canonicalRole = normalizeRole(user.role) || user.role;
     res.json({
       id: user.id,
       email: user.email,
       fullName: user.full_name,
       mobileNumber: user.mobile_number,
       address: user.address,
-      role: user.role,
+      role: canonicalRole,
+      roleLabel: getRoleConfig(canonicalRole)?.label || canonicalRole,
+      dashboardPath: getDashboardPath(canonicalRole),
       createdAt: user.created_at
     });
 
@@ -487,7 +535,7 @@ app.listen(5000, () => {
 });
 
 // PUT - update product
-app.put("/products/:id", async (req, res) => {
+app.put("/products/:id", authenticateToken, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
   const { name, description, price, image, category } = req.body;
 
@@ -507,7 +555,7 @@ app.put("/products/:id", async (req, res) => {
 });
 
 // DELETE product
-app.delete("/products/:id", async (req, res) => {
+app.delete("/products/:id", authenticateToken, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -523,7 +571,7 @@ app.delete("/products/:id", async (req, res) => {
 });
 
 // PUT - update pet
-app.put("/pets/:id", async (req, res) => {
+app.put("/pets/:id", authenticateToken, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
   const { name, age, price, description, image, location, seller, contactNumber } = req.body;
 
@@ -543,7 +591,7 @@ app.put("/pets/:id", async (req, res) => {
 });
 
 // DELETE pet
-app.delete("/pets/:id", async (req, res) => {
+app.delete("/pets/:id", authenticateToken, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -559,7 +607,7 @@ app.delete("/pets/:id", async (req, res) => {
 });
 
 // POST - add new pet (updated to include contactNumber)
-app.post("/pets", async (req, res) => {
+app.post("/pets", authenticateToken, requireRole('admin'), async (req, res) => {
   const { name, age, price, description, image, location, seller, contactNumber } = req.body;
 
   try {
@@ -575,7 +623,7 @@ app.post("/pets", async (req, res) => {
 });
 
 // POST - add new product
-app.post("/products", async (req, res) => {
+app.post("/products", authenticateToken, requireRole('admin'), async (req, res) => {
   const { name, description, price, image, category } = req.body;
 
   try {

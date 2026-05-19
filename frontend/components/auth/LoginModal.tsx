@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useRoles } from '@/hooks/useRoles';
+import RoleSelect from '@/components/auth/RoleSelect';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -13,9 +15,11 @@ interface LoginModalProps {
 export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const router = useRouter();
   const { login } = useAuth();
+  const { roles, loading: rolesLoading } = useRoles();
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    role: 'user',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,11 +48,12 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     setError('');
     
     try {
-      await login(formData.email, formData.password);
+      const redirectPath = await login(formData.email, formData.password, formData.role);
       onClose();
-      router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+      router.push(redirectPath);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
+      setError(message);
       setIsLoading(false);
     }
   };
@@ -56,7 +61,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -183,6 +188,15 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               </Link>
             </div>
 
+            {!rolesLoading && (
+              <RoleSelect
+                roles={roles}
+                value={formData.role}
+                onChange={(roleId) => setFormData((prev) => ({ ...prev, role: roleId }))}
+                label="Account type"
+              />
+            )}
+
             {/* Login Button */}
             <button
               type="submit"
@@ -207,8 +221,8 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <div className="mt-6 text-center">
             <p className="text-gray-600 text-sm">
               Don't have an account?{' '}
-              <Link 
-                href="/register" 
+              <Link
+                href={`/register?role=${formData.role}`}
                 className="text-[#ec6d13] hover:text-[#d65e0f] font-semibold transition-colors duration-200"
                 onClick={onClose}
               >

@@ -119,7 +119,7 @@ export default function Header() {
               ) : (
                 <>
                   <Link 
-                    href="/login"
+                    href="/auth"
                     className="bg-white text-[#ec6d13] px-4 py-1.5 font-bold text-xs uppercase hover:bg-gray-100 transition-all inline-block"
                   >
                     LOGIN
@@ -133,8 +133,9 @@ export default function Header() {
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden text-white py-2"
+              className="md:hidden text-white py-2 ml-auto"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isMenuOpen ? (
@@ -188,7 +189,7 @@ export default function Header() {
                 </>
               ) : (
                 <Link 
-                  href="/login"
+                  href="/auth"
                   className="block w-full bg-white text-[#ec6d13] px-4 py-2 font-bold text-sm uppercase mt-3 text-center hover:bg-gray-100 transition-all"
                 >
                   LOGIN

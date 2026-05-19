@@ -1,30 +1,36 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { API_BASE_URL } from '@/lib/api';
+import { getDashboardPath, normalizeRoleId, type PublicRole } from '@/lib/roles';
 
-interface User {
+export interface User {
   id: number;
   email: string;
   fullName: string;
   mobileNumber?: string;
   address?: string;
   role: string;
+  roleLabel?: string;
+  dashboardPath?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (userData: RegisterData) => Promise<void>;
+  login: (email: string, password: string, role: string) => Promise<string>;
+  register: (userData: RegisterData) => Promise<string>;
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
+  hasRole: (...roles: string[]) => boolean;
 }
 
-interface RegisterData {
+export interface RegisterData {
   email: string;
   password: string;
   fullName: string;
+  role: string;
   mobileNumber?: string;
   address?: string;
   emergencyContact?: string;
@@ -40,12 +46,16 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function resolveRedirectPath(user: User, roles?: PublicRole[]): string {
+  if (user.dashboardPath) return user.dashboardPath;
+  return getDashboardPath(roles || [], user.role);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load user from localStorage on mount
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
@@ -54,75 +64,86 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
     }
-    
+
     setIsLoading(false);
   }, []);
 
-  // Login function
-  const login = async (email: string, password: string) => {
-    try {
-      const response = await fetch('http://localhost:5000/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
-      }
-
-      // Store token and user data
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      
-      setToken(data.token);
-      setUser(data.user);
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
+  const persistSession = (sessionToken: string, sessionUser: User) => {
+    localStorage.setItem('token', sessionToken);
+    localStorage.setItem('user', JSON.stringify(sessionUser));
+    setToken(sessionToken);
+    setUser(sessionUser);
   };
 
-  // Register function
-  const register = async (userData: RegisterData) => {
-    try {
-      const response = await fetch('http://localhost:5000/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
-      }
-
-      // Store token and user data
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      
-      setToken(data.token);
-      setUser(data.user);
-    } catch (error) {
-      console.error('Registration error:', error);
-      throw error;
+  const login = useCallback(async (email: string, password: string, role: string) => {
+    const canonicalRole = normalizeRoleId(role);
+    if (!canonicalRole) {
+      throw new Error('Please select a valid role');
     }
-  };
 
-  // Logout function
-  const logout = () => {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, role: canonicalRole }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Login failed');
+    }
+
+    const sessionUser: User = {
+      ...data.user,
+      role: data.user.role || canonicalRole,
+    };
+
+    persistSession(data.token, sessionUser);
+    return resolveRedirectPath(sessionUser);
+  }, []);
+
+  const register = useCallback(async (userData: RegisterData) => {
+    const canonicalRole = normalizeRoleId(userData.role);
+    if (!canonicalRole) {
+      throw new Error('Please select a valid role');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...userData, role: canonicalRole }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Registration failed');
+    }
+
+    const sessionUser: User = {
+      ...data.user,
+      role: data.user.role || canonicalRole,
+    };
+
+    persistSession(data.token, sessionUser);
+    return resolveRedirectPath(sessionUser);
+  }, []);
+
+  const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);
-  };
+  }, []);
+
+  const hasRole = useCallback(
+    (...roles: string[]) => {
+      const userRole = normalizeRoleId(user?.role);
+      if (!userRole) return false;
+      return roles.map((r) => normalizeRoleId(r)).filter(Boolean).includes(userRole);
+    },
+    [user]
+  );
 
   const value = {
     user,
@@ -132,6 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     isLoading,
     isAuthenticated: !!user && !!token,
+    hasRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

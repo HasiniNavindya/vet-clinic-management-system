@@ -88,7 +88,7 @@ export default function Blog() {
           {featuredBlog && (
             <div className="group">
               <div className="relative overflow-hidden rounded-lg shadow-lg mb-6">
-                <div className="relative h-96">
+                <div className="relative h-56 sm:h-72 md:h-96">
                   <Image
                     src={featuredBlog.image}
                     alt={featuredBlog.title}
@@ -138,7 +138,7 @@ export default function Blog() {
           {/* Side Blogs */}
           <div className="space-y-6">
             {sideBlogs.map((blog) => (
-              <Link key={blog.id} href="/blog" className="flex gap-6 group">
+              <Link key={blog.id} href="/blog" className="flex flex-col sm:flex-row gap-4 sm:gap-6 group">
                 {/* Date Badge */}
                 <div className="shrink-0 bg-[#ec6d13] text-white text-center p-3 rounded h-fit">
                   <div className="text-xl font-bold">{blog.date.day}</div>

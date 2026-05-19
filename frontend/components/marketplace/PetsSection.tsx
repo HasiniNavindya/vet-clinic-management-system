@@ -1,50 +1,33 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import FilterSidebar from './FilterSidebar';
 import PetCard from './PetCard';
-
-interface Pet {
-  id: number;
-  name: string;
-  age: string;
-  price: number;
-  description: string;
-  image: string;
-  location: string;
-  seller: string;
-  contactNumber?: string;
-  createdAt?: string;
-}
+import PetDetailModal, { type MarketplacePet } from './PetDetailModal';
 
 interface PetsSectionProps {
-  priceRange: { min: number; max: number };
-  setPriceRange: (range: { min: number; max: number }) => void;
   sortBy: string;
   setSortBy: (value: string) => void;
   searchQuery: string;
-  onEdit?: (pet: Pet) => void;
+  onEdit?: (pet: MarketplacePet) => void;
   onDelete?: (id: number) => void;
-  onAddToCart?: (item: { id: number; name: string; price: number; image: string; type: 'pet' }) => void;
   refreshKey?: number;
   isAdmin?: boolean;
 }
 
 export default function PetsSection({
-  priceRange,
-  setPriceRange,
   sortBy,
   setSortBy,
   searchQuery,
   onEdit,
   onDelete,
-  onAddToCart,
   refreshKey,
-  isAdmin = false
+  isAdmin = false,
 }: PetsSectionProps) {
-  const [pets, setPets] = useState<Pet[]>([]);
+  const [pets, setPets] = useState<MarketplacePet[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPet, setSelectedPet] = useState<MarketplacePet | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   useEffect(() => {
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
@@ -65,11 +48,13 @@ export default function PetsSection({
 
   const filteredPets = useMemo(() => {
     const matches = pets.filter((pet) => {
-      const matchesSearch =
-        pet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        pet.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesPrice = pet.price >= priceRange.min && pet.price <= priceRange.max;
-      return matchesSearch && matchesPrice;
+      const q = searchQuery.toLowerCase();
+      return (
+        pet.name.toLowerCase().includes(q) ||
+        pet.description.toLowerCase().includes(q) ||
+        pet.location.toLowerCase().includes(q) ||
+        pet.seller.toLowerCase().includes(q)
+      );
     });
 
     if (sortBy === 'priceLow') return [...matches].sort((a, b) => a.price - b.price);
@@ -82,91 +67,74 @@ export default function PetsSection({
       });
     }
     return matches;
-  }, [pets, priceRange, searchQuery, sortBy]);
+  }, [pets, searchQuery, sortBy]);
 
   return (
-    <div className="flex gap-6">
-      <FilterSidebar
-        type="pets"
-        priceRange={priceRange}
-        setPriceRange={setPriceRange}
-      />
-
-      <div className="flex-1">
-            <div className="bg-white rounded-lg border border-gray-200 p-4 mb-5">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">
-                  <span className="font-semibold text-gray-900">{filteredPets.length}</span> results found
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Sort by:</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="px-3 py-1.5 border border-gray-300 rounded text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#ec6d13]"
-                  >
-                    <option value="featured">Best Match</option>
-                    <option value="priceLow">Price: Low to High</option>
-                    <option value="priceHigh">Price: High to Low</option>
-                    <option value="newest">Newest</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {loading && <div className="text-center py-12 text-gray-500">Loading pets...</div>}
-            {error && <div className="text-center py-12 text-red-500">{error}</div>}
-
-            {!loading && !error && (
-              <>
-                <div className="grid grid-cols-4 gap-4">
-                  {filteredPets.map((pet) => (
-                    <PetCard 
-                      key={pet.id} 
-                      {...pet} 
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                      onAddToCart={onAddToCart}
-                      isAdmin={isAdmin}
-                    />
-                  ))}
-                </div>
-
-                {filteredPets.length === 0 && (
-                  <div className="text-center py-20 bg-white rounded-lg border border-gray-200">
-                    <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p className="text-gray-500">No pets found matching your filters.</p>
-                  </div>
-                )}
-              </>
-            )}
-
-            <div className="flex justify-center items-center gap-2 mt-12">
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                &lt;
-              </button>
-              <button className="px-4 py-2 rounded-lg bg-[#ec6d13] text-white font-semibold">
-                1
-              </button>
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                2
-              </button>
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                3
-              </button>
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                4
-              </button>
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                5
-              </button>
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                &gt;
-              </button>
-            </div>
+    <div className="w-full">
+      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-5">
+        <p className="text-sm text-gray-600 mb-3 pb-3 border-b border-gray-100">
+          Pet owners can list pets here for buyers to discover. Open <strong>View Details</strong> to see the full description and contact the owner directly.
+        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-sm text-gray-600">
+            <span className="font-semibold text-gray-900">{filteredPets.length}</span> listings found
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 shrink-0">Sort by:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full sm:w-auto px-3 py-1.5 border border-gray-300 rounded text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#ec6d13]"
+            >
+              <option value="featured">Best Match</option>
+              <option value="priceLow">Price: Low to High</option>
+              <option value="priceHigh">Price: High to Low</option>
+              <option value="newest">Newest</option>
+            </select>
           </div>
         </div>
+      </div>
+
+      {loading && <div className="text-center py-12 text-gray-500">Loading pets...</div>}
+      {error && <div className="text-center py-12 text-red-500">{error}</div>}
+
+      {!loading && !error && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredPets.map((pet) => (
+              <PetCard
+                key={pet.id}
+                {...pet}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onViewDetails={(p) => {
+                  setSelectedPet(p);
+                  setDetailOpen(true);
+                }}
+                isAdmin={isAdmin}
+              />
+            ))}
+          </div>
+
+          {filteredPets.length === 0 && (
+            <div className="text-center py-20 bg-white rounded-lg border border-gray-200">
+              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-gray-500">No pets found matching your search.</p>
+            </div>
+          )}
+        </>
+      )}
+
+      <PetDetailModal
+        isOpen={detailOpen}
+        pet={selectedPet}
+        onClose={() => {
+          setDetailOpen(false);
+          setSelectedPet(null);
+        }}
+      />
+    </div>
   );
 }

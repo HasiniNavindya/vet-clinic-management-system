@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { API_BASE_URL, authHeaders } from '@/lib/api';
 
 type Category = 'food' | 'toys' | 'grooming' | 'health' | 'accessories';
 
@@ -11,6 +13,7 @@ interface AddProductModalProps {
 }
 
 export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProductModalProps) {
+  const { token } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -35,12 +38,9 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
     setError(null);
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
-      const response = await fetch(`${apiBase}/products`, {
+      const response = await fetch(`${API_BASE_URL}/products`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: authHeaders(token),
         body: JSON.stringify({
           name: formData.name,
           description: formData.description,

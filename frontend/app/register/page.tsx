@@ -1,13 +1,21 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useRoles } from '@/hooks/useRoles';
+import StaffRegisterForm, { type StaffRegisterFormData } from '@/components/auth/StaffRegisterForm';
+import { getRoleFromList, normalizeRoleId } from '@/lib/roles';
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { register: registerUser } = useAuth();
+  const { roles, loading: rolesLoading } = useRoles();
+
+  const roleId = normalizeRoleId(searchParams.get('role')) || 'user';
+  const roleConfig = getRoleFromList(roles, roleId);
   const [currentStep, setCurrentStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -83,10 +91,11 @@ export default function RegisterPage() {
     }
 
     try {
-      await registerUser({
+      const redirectPath = await registerUser({
         email: step2Data.emailAddress,
         password: step2Data.password,
         fullName: step2Data.fullName,
+        role: roleId,
         mobileNumber: step2Data.mobileNumber,
         address: step2Data.address,
         emergencyContact: step2Data.emergencyContact,
@@ -99,12 +108,73 @@ export default function RegisterPage() {
         vaccinationReminders: step3Data.vaccinationReminders,
         appointmentUpdates: step3Data.appointmentUpdates,
       });
-      router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+      router.push(redirectPath);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      setError(message);
       setIsLoading(false);
     }
   };
+
+  const handleStaffRegister = async (data: StaffRegisterFormData) => {
+    if (data.password !== data.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+    try {
+      const redirectPath = await registerUser({
+        email: data.email,
+        password: data.password,
+        fullName: data.fullName,
+        role: roleId,
+        mobileNumber: data.mobileNumber,
+        address: data.address,
+        vaccinationReminders: true,
+        appointmentUpdates: true,
+      });
+      router.push(redirectPath);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      setError(message);
+      setIsLoading(false);
+    }
+  };
+
+  if (rolesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-gray-50 via-white to-orange-50">
+        <div className="animate-spin h-10 w-10 border-4 border-[#ec6d13] border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!roleConfig) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-4">
+        <p className="text-gray-700 mb-4">Invalid account type.</p>
+        <Link href="/auth" className="text-[#ec6d13] font-semibold">
+          Choose a role
+        </Link>
+      </div>
+    );
+  }
+
+  if (!roleConfig.requiresPetInfo) {
+    return (
+      <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-orange-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-xl p-8 sm:p-12">
+          <StaffRegisterForm
+            role={roleConfig}
+            onSubmit={handleStaffRegister}
+            isLoading={isLoading}
+            error={error}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-orange-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -661,5 +731,19 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-gray-50 via-white to-orange-50">
+          <div className="animate-spin h-10 w-10 border-4 border-[#ec6d13] border-t-transparent rounded-full" />
+        </div>
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
   );
 }
