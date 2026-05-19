@@ -9,7 +9,7 @@ const ROLES = {
     aliases: ['pet owner', 'petowner', 'owner', 'user'],
     selfRegisterable: true,
     requiresPetInfo: true,
-    dashboardPath: '/dashboard',
+    dashboardPath: '/dashboard/pet-owner',
   },
   admin: {
     id: 'admin',

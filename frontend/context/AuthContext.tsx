@@ -10,6 +10,7 @@ export interface User {
   fullName: string;
   mobileNumber?: string;
   address?: string;
+  emergencyContact?: string;
   role: string;
   roleLabel?: string;
   dashboardPath?: string;

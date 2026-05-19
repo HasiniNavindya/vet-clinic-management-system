@@ -65,8 +65,13 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login');
+      return;
     }
-  }, [isAuthenticated, isLoading, router]);
+
+    if (isAuthenticated && user?.role === 'user') {
+      router.replace('/dashboard/pet-owner');
+    }
+  }, [isAuthenticated, isLoading, router, user]);
 
   // Fetch dashboard data
   const fetchDashboardData = async () => {
