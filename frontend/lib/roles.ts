@@ -15,7 +15,7 @@ export const FALLBACK_ROLES: PublicRole[] = [
     label: 'Pet Owner',
     selfRegisterable: true,
     requiresPetInfo: true,
-    dashboardPath: '/dashboard',
+    dashboardPath: '/dashboard/pet-owner',
   },
   {
     id: 'admin',

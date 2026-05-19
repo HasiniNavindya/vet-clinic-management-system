@@ -3,6 +3,8 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const pool = require("./db");
+const fs = require('fs');
+const path = require('path');
 const {
   normalizeRole,
   getRoleConfig,
@@ -20,7 +22,15 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
+// Increase JSON body limit to allow image uploads as base64
+app.use(express.json({ limit: '10mb' }));
+
+// Ensure uploads folder exists and serve it statically
+const uploadsDir = path.join(__dirname, 'uploads');
+const petsUploadsDir = path.join(uploadsDir, 'pets');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+if (!fs.existsSync(petsUploadsDir)) fs.mkdirSync(petsUploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir));
 
 app.get("/", (req, res) => {
   res.send("API running...");
@@ -107,9 +117,9 @@ app.post("/auth/register", async (req, res) => {
 
     // Insert user (include role)
     const userResult = await pool.query(
-      `INSERT INTO auth_users (email, password_hash, full_name, mobile_number, address, role) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, email, full_name, mobile_number, address, role, created_at`,
-      [email, passwordHash, fullName, mobileNumber || null, address || null, finalRole]
+      `INSERT INTO auth_users (email, password_hash, full_name, mobile_number, address, emergency_contact, role) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, email, full_name, mobile_number, address, emergency_contact, role, created_at`,
+      [email, passwordHash, fullName, mobileNumber || null, address || null, emergencyContact || null, finalRole]
     );
 
     const user = userResult.rows[0];
@@ -148,6 +158,7 @@ app.post("/auth/register", async (req, res) => {
         fullName: user.full_name,
         mobileNumber: user.mobile_number,
         address: user.address,
+        emergencyContact: user.emergency_contact,
         role: finalRole,
         roleLabel,
         dashboardPath: getDashboardPath(finalRole),
@@ -172,7 +183,7 @@ app.post("/auth/login", async (req, res) => {
 
     // Find user by email
     const userResult = await pool.query(
-      "SELECT id, email, password_hash, full_name, mobile_number, address, role FROM auth_users WHERE email = $1",
+      "SELECT id, email, password_hash, full_name, mobile_number, address, emergency_contact, role FROM auth_users WHERE email = $1",
       [email]
     );
 
@@ -218,6 +229,7 @@ app.post("/auth/login", async (req, res) => {
         fullName: user.full_name,
         mobileNumber: user.mobile_number,
         address: user.address,
+        emergencyContact: user.emergency_contact,
         role: canonicalRole,
         roleLabel,
         dashboardPath: getDashboardPath(canonicalRole),
@@ -234,7 +246,7 @@ app.post("/auth/login", async (req, res) => {
 app.get("/auth/me", authenticateToken, async (req, res) => {
   try {
     const userResult = await pool.query(
-      "SELECT id, email, full_name, mobile_number, address, role, created_at FROM auth_users WHERE id = $1",
+      "SELECT id, email, full_name, mobile_number, address, emergency_contact, role, created_at FROM auth_users WHERE id = $1",
       [req.user.id]
     );
 
@@ -251,6 +263,7 @@ app.get("/auth/me", authenticateToken, async (req, res) => {
       fullName: user.full_name,
       mobileNumber: user.mobile_number,
       address: user.address,
+      emergencyContact: user.emergency_contact,
       role: canonicalRole,
       roleLabel: getRoleConfig(canonicalRole)?.label || canonicalRole,
       dashboardPath: getDashboardPath(canonicalRole),
@@ -260,6 +273,132 @@ app.get("/auth/me", authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Get user error:', err.message);
     res.status(500).json({ error: 'Failed to fetch user data' });
+  }
+});
+
+// PUT /auth/me - Update current Pet Owner profile
+app.put("/auth/me", authenticateToken, requireRole('user'), async (req, res) => {
+  const {
+    fullName,
+    mobileNumber,
+    address,
+    emergencyContact,
+    currentPassword,
+    newPassword,
+    vaccinationReminders,
+    appointmentUpdates,
+  } = req.body;
+
+  try {
+    const userResult = await pool.query(
+      "SELECT id, password_hash, role FROM auth_users WHERE id = $1",
+      [req.user.id]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required to change password' });
+      }
+
+      const passwordMatch = await bcrypt.compare(currentPassword, userResult.rows[0].password_hash);
+      if (!passwordMatch) {
+        return res.status(400).json({ error: 'Current password is incorrect' });
+      }
+    }
+
+    const updates = [];
+    const values = [];
+    let parameterIndex = 1;
+
+    if (fullName !== undefined) {
+      updates.push(`full_name = $${parameterIndex++}`);
+      values.push(fullName);
+    }
+
+    if (mobileNumber !== undefined) {
+      updates.push(`mobile_number = $${parameterIndex++}`);
+      values.push(mobileNumber || null);
+    }
+
+    if (address !== undefined) {
+      updates.push(`address = $${parameterIndex++}`);
+      values.push(address || null);
+    }
+
+    if (emergencyContact !== undefined) {
+      updates.push(`emergency_contact = $${parameterIndex++}`);
+      values.push(emergencyContact || null);
+    }
+
+    if (newPassword) {
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      updates.push(`password_hash = $${parameterIndex++}`);
+      values.push(hashedPassword);
+    }
+
+    if (updates.length === 0 && vaccinationReminders === undefined && appointmentUpdates === undefined) {
+      return res.status(400).json({ error: 'No profile changes provided' });
+    }
+
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(req.user.id);
+
+    await pool.query(
+      `UPDATE auth_users SET ${updates.join(', ')} WHERE id = $${parameterIndex}`,
+      values
+    );
+
+    if (vaccinationReminders !== undefined || appointmentUpdates !== undefined) {
+      await pool.query(
+        `INSERT INTO user_preferences (user_id, vaccination_reminders, appointment_updates)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (user_id) DO UPDATE SET
+           vaccination_reminders = COALESCE(EXCLUDED.vaccination_reminders, user_preferences.vaccination_reminders),
+           appointment_updates = COALESCE(EXCLUDED.appointment_updates, user_preferences.appointment_updates)`,
+        [
+          req.user.id,
+          vaccinationReminders !== undefined ? vaccinationReminders : null,
+          appointmentUpdates !== undefined ? appointmentUpdates : null,
+        ]
+      );
+    }
+
+    const updatedUser = await pool.query(
+      "SELECT id, email, full_name, mobile_number, address, emergency_contact, role, created_at FROM auth_users WHERE id = $1",
+      [req.user.id]
+    );
+
+    const updatedPreferences = await pool.query(
+      "SELECT vaccination_reminders, appointment_updates FROM user_preferences WHERE user_id = $1",
+      [req.user.id]
+    );
+
+    const user = updatedUser.rows[0];
+    const canonicalRole = normalizeRole(user.role) || user.role;
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        mobileNumber: user.mobile_number,
+        address: user.address,
+        emergencyContact: user.emergency_contact,
+        role: canonicalRole,
+        roleLabel: getRoleConfig(canonicalRole)?.label || canonicalRole,
+        dashboardPath: getDashboardPath(canonicalRole),
+        createdAt: user.created_at,
+      },
+      preferences: updatedPreferences.rows[0] || null,
+    });
+  } catch (err) {
+    console.error('Profile update error:', err.message);
+    res.status(500).json({ error: 'Failed to update profile' });
   }
 });
 
@@ -293,13 +432,13 @@ app.post("/users", async (req, res) => {
 
 
 // GET /api/user/dashboard - Get user dashboard data
-app.get("/api/user/dashboard", authenticateToken, async (req, res) => {
+app.get("/api/user/dashboard", authenticateToken, requireRole('user'), async (req, res) => {
   try {
     const userId = req.user.id;
 
     // Get user info
     const userResult = await pool.query(
-      "SELECT id, email, full_name, mobile_number, address, role, created_at FROM auth_users WHERE id = $1",
+      "SELECT id, email, full_name, mobile_number, address, emergency_contact, role, created_at FROM auth_users WHERE id = $1",
       [userId]
     );
 
@@ -361,6 +500,7 @@ app.get("/api/user/dashboard", authenticateToken, async (req, res) => {
         fullName: user.full_name,
         mobileNumber: user.mobile_number,
         address: user.address,
+        emergencyContact: user.emergency_contact,
         role: user.role,
         createdAt: user.created_at
       },
@@ -445,7 +585,7 @@ app.post("/api/appointments", authenticateToken, async (req, res) => {
 });
 
 // GET /api/pets - Get user's pets
-app.get("/api/pets", authenticateToken, async (req, res) => {
+app.get("/api/pets", authenticateToken, requireRole('user'), async (req, res) => {
   try {
     const userId = req.user.id;
     const result = await pool.query(
@@ -460,7 +600,77 @@ app.get("/api/pets", authenticateToken, async (req, res) => {
 });
 
 // POST /api/pets - Add new pet for user
-app.post("/api/pets", authenticateToken, async (req, res) => {
+app.get("/api/pets/:id", authenticateToken, requireRole('user'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      "SELECT * FROM pets_owned WHERE id = $1 AND user_id = $2",
+      [id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Pet not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching pet:', error);
+    res.status(500).json({ error: 'Failed to fetch pet' });
+  }
+});
+
+// PUT /api/pets/:id - Update pet for current user
+app.put("/api/pets/:id", authenticateToken, requireRole('user'), async (req, res) => {
+  const { id } = req.params;
+  const { pet_name, species, breed, age_or_dob, gender, vaccination_status } = req.body;
+
+  try {
+    if (!pet_name) {
+      return res.status(400).json({ error: 'Pet name is required' });
+    }
+
+    const result = await pool.query(
+      `UPDATE pets_owned
+       SET pet_name = $1, species = $2, breed = $3, age_or_dob = $4, gender = $5, vaccination_status = $6
+       WHERE id = $7 AND user_id = $8
+       RETURNING *`,
+      [pet_name, species || null, breed || null, age_or_dob || null, gender || null, vaccination_status || null, id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Pet not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating pet:', error);
+    res.status(500).json({ error: 'Failed to update pet' });
+  }
+});
+
+// DELETE /api/pets/:id - Remove pet owned by current user
+app.delete("/api/pets/:id", authenticateToken, requireRole('user'), async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      "DELETE FROM pets_owned WHERE id = $1 AND user_id = $2 RETURNING *",
+      [id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Pet not found' });
+    }
+
+    res.json({ message: 'Pet deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting pet:', error);
+    res.status(500).json({ error: 'Failed to delete pet' });
+  }
+});
+
+// POST /api/pets - Add new pet for user
+app.post("/api/pets", authenticateToken, requireRole('user'), async (req, res) => {
   const { pet_name, species, breed, age_or_dob, gender, vaccination_status } = req.body;
   const userId = req.user.id;
 
@@ -479,6 +689,50 @@ app.post("/api/pets", authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error adding pet:', error);
     res.status(500).json({ error: 'Failed to add pet' });
+  }
+});
+
+// POST /api/pets/:id/image - Upload pet image (expects base64 payload)
+app.post('/api/pets/:id/image', authenticateToken, requireRole('user'), async (req, res) => {
+  const { id } = req.params;
+  const { imageBase64, filename } = req.body || {};
+
+  if (!imageBase64 || !filename) {
+    return res.status(400).json({ error: 'Missing imageBase64 or filename' });
+  }
+
+  try {
+    const petResult = await pool.query(
+      'SELECT id, user_id FROM pets_owned WHERE id = $1',
+      [id]
+    );
+
+    if (petResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Pet not found' });
+    }
+
+    if (petResult.rows[0].user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized to update this pet' });
+    }
+
+    const buffer = Buffer.from(imageBase64, 'base64');
+    const safeName = filename.replace(/[^a-z0-9.\-_]/gi, '_');
+    const outName = `${Date.now()}-${safeName}`;
+    const destPath = path.join(petsUploadsDir, outName);
+
+    fs.writeFileSync(destPath, buffer);
+
+    const publicUrl = `/uploads/pets/${outName}`;
+
+    await pool.query(
+      'UPDATE pets_owned SET image_url = $1 WHERE id = $2',
+      [publicUrl, id]
+    );
+
+    res.json({ message: 'Image uploaded', imageUrl: publicUrl });
+  } catch (error) {
+    console.error('Pet image upload error:', error);
+    res.status(500).json({ error: 'Failed to upload image' });
   }
 });
 
@@ -661,5 +915,39 @@ app.get("/pets", async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/pets/:id/image - upload pet image (base64)
+app.post('/api/pets/:id/image', authenticateToken, requireRole('user'), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { imageBase64, filename } = req.body;
+
+    if (!imageBase64) return res.status(400).json({ error: 'No image data provided' });
+
+    // determine extension
+    const ext = filename && path.extname(filename) ? path.extname(filename) : '.jpg';
+    const fileName = `pet_${id}_${Date.now()}${ext}`;
+    const filePath = path.join(__dirname, 'uploads', 'pets', fileName);
+
+    // save file
+    const buffer = Buffer.from(imageBase64, 'base64');
+    fs.writeFileSync(filePath, buffer);
+
+    const publicPath = `/uploads/pets/${fileName}`;
+
+    const result = await pool.query(
+      'UPDATE pets_owned SET image_url = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
+      [publicPath, id, userId]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Pet not found or not owned by user' });
+
+    res.json({ message: 'Image uploaded', pet: result.rows[0] });
+  } catch (err) {
+    console.error('Error uploading pet image:', err);
+    res.status(500).json({ error: 'Failed to upload image' });
   }
 });

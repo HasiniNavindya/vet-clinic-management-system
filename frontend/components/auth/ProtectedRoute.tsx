@@ -29,7 +29,7 @@ export default function ProtectedRoute({
     }
 
     if (allowedRoles.length > 0 && !userHasRole(user?.role, allowedRoles)) {
-      router.replace('/dashboard');
+      router.replace(user?.dashboardPath || '/dashboard');
     }
   }, [isAuthenticated, isLoading, user, allowedRoles, loginPath, router]);
 

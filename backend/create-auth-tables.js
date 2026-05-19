@@ -11,6 +11,7 @@ async function createAuthTables() {
         full_name VARCHAR(255) NOT NULL,
         mobile_number VARCHAR(20),
         address TEXT,
+        emergency_contact TEXT,
         role VARCHAR(50) DEFAULT 'user',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
+import { API_BASE_URL, authHeaders } from '@/lib/api';
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, token } = useAuth();
   const [selectedTab, setSelectedTab] = useState('profile');
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -18,6 +19,7 @@ export default function SettingsPage() {
     email: '',
     mobileNumber: '',
     address: '',
+    emergencyContact: '',
   });
 
   const [preferences, setPreferences] = useState({
@@ -43,17 +45,38 @@ export default function SettingsPage() {
         email: user.email || '',
         mobileNumber: user.mobileNumber || '',
         address: user.address || '',
+        emergencyContact: user.emergencyContact || '',
       });
     }
   }, [isAuthenticated, isLoading, router, user]);
 
   const handleProfileUpdate = async () => {
     setIsSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSuccessMessage('Profile updated successfully!');
-    setIsSaving(false);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'PUT',
+        headers: authHeaders(token),
+        body: JSON.stringify({
+          fullName: profileData.fullName,
+          mobileNumber: profileData.mobileNumber,
+          address: profileData.address,
+          emergencyContact: profileData.emergencyContact,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update profile');
+      }
+
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setSuccessMessage('Profile updated successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePasswordChange = async () => {
@@ -62,12 +85,29 @@ export default function SettingsPage() {
       return;
     }
     setIsSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSuccessMessage('Password changed successfully!');
-    setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    setIsSaving(false);
-    setTimeout(() => setSuccessMessage(''), 3000);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'PUT',
+        headers: authHeaders(token),
+        body: JSON.stringify({
+          currentPassword: security.currentPassword,
+          newPassword: security.newPassword,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update password');
+      }
+
+      setSuccessMessage('Password changed successfully!');
+      setSecurity({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to update password');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {
@@ -91,7 +131,7 @@ export default function SettingsPage() {
             <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
             <p className="text-gray-600 mt-1">Manage your account and preferences</p>
           </div>
-          <Link href="/dashboard" className="flex items-center gap-2 text-[#ec6d13] hover:text-[#d65e0f] font-semibold">
+          <Link href="/dashboard/pet-owner" className="flex items-center gap-2 text-[#ec6d13] hover:text-[#d65e0f] font-semibold">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
@@ -211,6 +251,17 @@ export default function SettingsPage() {
                       />
                     </div>
 
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Emergency Contact</label>
+                      <input
+                        type="text"
+                        value={profileData.emergencyContact}
+                        onChange={(e) => setProfileData({...profileData, emergencyContact: e.target.value})}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ec6d13] focus:border-transparent"
+                        placeholder="Enter emergency contact"
+                      />
+                    </div>
+
                     <button
                       onClick={handleProfileUpdate}
                       disabled={isSaving}
@@ -240,7 +291,7 @@ export default function SettingsPage() {
                           onChange={(e) => setPreferences({...preferences, vaccinationReminders: e.target.checked})}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#ec6d13]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ec6d13]"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#ec6d13]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ec6d13]"></div>
                       </label>
                     </div>
 
@@ -256,7 +307,7 @@ export default function SettingsPage() {
                           onChange={(e) => setPreferences({...preferences, appointmentUpdates: e.target.checked})}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#ec6d13]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ec6d13]"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#ec6d13]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ec6d13]"></div>
                       </label>
                     </div>
 
@@ -272,7 +323,7 @@ export default function SettingsPage() {
                           onChange={(e) => setPreferences({...preferences, emailNotifications: e.target.checked})}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#ec6d13]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ec6d13]"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#ec6d13]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ec6d13]"></div>
                       </label>
                     </div>
 
@@ -288,7 +339,7 @@ export default function SettingsPage() {
                           onChange={(e) => setPreferences({...preferences, smsNotifications: e.target.checked})}
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#ec6d13]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ec6d13]"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#ec6d13]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ec6d13]"></div>
                       </label>
                     </div>
 
