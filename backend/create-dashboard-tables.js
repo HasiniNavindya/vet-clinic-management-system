@@ -27,7 +27,7 @@ async function createDashboardTables() {
         doctor_id INTEGER REFERENCES doctors(id) ON DELETE CASCADE,
         appointment_date DATE NOT NULL,
         appointment_time TIME NOT NULL,
-        status VARCHAR(50) DEFAULT 'scheduled',
+        status VARCHAR(50) DEFAULT 'pending',
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

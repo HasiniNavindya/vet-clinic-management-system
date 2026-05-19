@@ -4,19 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import BookAppointmentModal from '@/components/dashboard/BookAppointmentModal';
-
-interface Appointment {
-  id: number;
-  appointment_date: string;
-  appointment_time: string;
-  status: string;
-  notes: string;
-  doctor_notes: string;
-  doctor_name: string;
-  specialization: string;
-  doctor_image: string;
-  pet_name: string;
-}
+import AppointmentStatusBadge from '@/components/appointments/AppointmentStatusBadge';
+import { API_BASE_URL, authHeaders } from '@/lib/api';
+import { Appointment, AppointmentStatus } from '@/lib/appointments';
 
 interface Pet {
   id: number;
@@ -52,10 +42,8 @@ export default function CalendarPage() {
 
   const fetchAppointments = async (token: string) => {
     try {
-      const response = await fetch('http://localhost:5000/api/appointments', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await fetch(`${API_BASE_URL}/api/appointments`, {
+        headers: authHeaders(token),
       });
 
       if (response.ok) {
@@ -71,10 +59,8 @@ export default function CalendarPage() {
 
   const fetchPets = async (token: string) => {
     try {
-      const response = await fetch('http://localhost:5000/api/pets', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await fetch(`${API_BASE_URL}/api/pets`, {
+        headers: authHeaders(token),
       });
 
       if (response.ok) {
@@ -115,7 +101,7 @@ export default function CalendarPage() {
 
   const getAppointmentsForDate = (date: Date) => {
     return appointments.filter(apt => {
-      const aptDate = new Date(apt.appointment_date);
+      const aptDate = new Date(apt.appointmentDate);
       return aptDate.getDate() === date.getDate() &&
              aptDate.getMonth() === date.getMonth() &&
              aptDate.getFullYear() === date.getFullYear();
@@ -132,8 +118,8 @@ export default function CalendarPage() {
   };
 
   const upcomingAppointments = appointments
-    .filter(apt => new Date(apt.appointment_date) >= new Date())
-    .sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime())
+    .filter(apt => new Date(apt.appointmentDate) >= new Date())
+    .sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime())
     .slice(0, 5);
 
   const isToday = (date: Date) => {
@@ -153,6 +139,9 @@ export default function CalendarPage() {
             <h1 className="text-3xl font-bold text-gray-900">Calendar & Appointments</h1>
             <p className="text-gray-600 mt-1">Manage your pet's appointments</p>
           </div>
+          <Link href="/dashboard/appointments/manage" className="flex items-center gap-2 text-[#ec6d13] hover:text-[#d65e0f] font-semibold mr-4">
+            Manage queue
+          </Link>
           <Link href="/dashboard" className="flex items-center gap-2 text-[#ec6d13] hover:text-[#d65e0f] font-semibold">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -272,7 +261,7 @@ export default function CalendarPage() {
               ) : (
                 <div className="space-y-3">
                   {upcomingAppointments.map((apt, index) => {
-                    const aptDate = new Date(apt.appointment_date);
+                    const aptDate = new Date(apt.appointmentDate);
                     return (
                       <button
                         key={apt.id}
@@ -290,21 +279,16 @@ export default function CalendarPage() {
                           }`}>
                             {monthNames[aptDate.getMonth()]} {aptDate.getDate()}, {aptDate.getFullYear()}
                           </span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold capitalize ${
-                            apt.status === 'confirmed'
-                              ? index === 0 ? 'bg-white/20 text-white' : 'bg-green-100 text-green-700'
-                              : apt.status === 'completed'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            {apt.status}
-                          </span>
+                          <AppointmentStatusBadge
+                            status={apt.status as AppointmentStatus}
+                            className={index === 0 ? '!bg-white/20 !text-white' : ''}
+                          />
                         </div>
                         <div className="flex items-center gap-3 mb-2">
-                          {apt.doctor_image && (
+                          {apt.doctorImage && (
                             <img 
-                              src={apt.doctor_image} 
-                              alt={apt.doctor_name}
+                              src={apt.doctorImage} 
+                              alt={apt.doctorName}
                               className={`w-10 h-10 rounded-full object-cover ${
                                 index === 0 ? 'ring-2 ring-white/50' : 'ring-2 ring-gray-200'
                               }`}
@@ -314,7 +298,7 @@ export default function CalendarPage() {
                             <p className={`font-bold ${
                               index === 0 ? 'text-white' : 'text-gray-900'
                             }`}>
-                              {apt.doctor_name}
+                              {apt.doctorName}
                             </p>
                             <p className={`text-sm ${
                               index === 0 ? 'text-white/90' : 'text-gray-600'
@@ -330,14 +314,14 @@ export default function CalendarPage() {
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            {apt.appointment_time}
+                            {apt.appointmentTime}
                           </span>
-                          {apt.pet_name && (
+                          {apt.petName && (
                             <span className="flex items-center gap-1">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                               </svg>
-                              {apt.pet_name}
+                              {apt.petName}
                             </span>
                           )}
                         </div>
@@ -368,7 +352,7 @@ export default function CalendarPage() {
                 <div>
                   <h2 className="text-2xl font-bold mb-1">Appointment Details</h2>
                   <p className="text-white/90">
-                    {new Date(selectedAppointment.appointment_date).toLocaleDateString('en-US', { 
+                    {new Date(selectedAppointment.appointmentDate).toLocaleDateString('en-US', { 
                       weekday: 'long', 
                       year: 'numeric', 
                       month: 'long', 
@@ -391,30 +375,22 @@ export default function CalendarPage() {
             <div className="p-6 space-y-6">
               {/* Doctor Info */}
               <div className="flex items-start gap-4 pb-6 border-b border-gray-100">
-                {selectedAppointment.doctor_image && (
+                {selectedAppointment.doctorImage && (
                   <img 
-                    src={selectedAppointment.doctor_image} 
-                    alt={selectedAppointment.doctor_name}
+                    src={selectedAppointment.doctorImage} 
+                    alt={selectedAppointment.doctorName}
                     className="w-20 h-20 rounded-xl object-cover ring-4 ring-orange-100"
                   />
                 )}
                 <div className="flex-1">
                   <h3 className="text-xl font-bold text-gray-900 mb-1">
-                    {selectedAppointment.doctor_name}
+                    {selectedAppointment.doctorName}
                   </h3>
                   <p className="text-[#ec6d13] font-semibold mb-2">
                     {selectedAppointment.specialization}
                   </p>
                   <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold capitalize ${
-                      selectedAppointment.status === 'confirmed'
-                        ? 'bg-green-100 text-green-700'
-                        : selectedAppointment.status === 'completed'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {selectedAppointment.status}
-                    </span>
+                    <AppointmentStatusBadge status={selectedAppointment.status as AppointmentStatus} />
                   </div>
                 </div>
               </div>
@@ -428,10 +404,10 @@ export default function CalendarPage() {
                     </svg>
                     <span className="text-sm font-medium">Time</span>
                   </div>
-                  <p className="text-lg font-bold text-gray-900">{selectedAppointment.appointment_time}</p>
+                  <p className="text-lg font-bold text-gray-900">{selectedAppointment.appointmentTime}</p>
                 </div>
 
-                {selectedAppointment.pet_name && (
+                {selectedAppointment.petName && (
                   <div className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-center gap-2 text-gray-600 mb-1">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -439,7 +415,7 @@ export default function CalendarPage() {
                       </svg>
                       <span className="text-sm font-medium">Pet</span>
                     </div>
-                    <p className="text-lg font-bold text-gray-900">{selectedAppointment.pet_name}</p>
+                    <p className="text-lg font-bold text-gray-900">{selectedAppointment.petName}</p>
                   </div>
                 )}
               </div>
@@ -460,7 +436,7 @@ export default function CalendarPage() {
               )}
 
               {/* Doctor's Notes */}
-              {selectedAppointment.doctor_notes && (
+              {selectedAppointment.doctorNotes && (
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-5 border-2 border-[#ec6d13]/20">
                   <div className="flex items-start gap-3">
                     <div className="bg-[#ec6d13] text-white rounded-lg p-2">
@@ -470,13 +446,13 @@ export default function CalendarPage() {
                     </div>
                     <div className="flex-1">
                       <h4 className="font-bold text-gray-900 mb-2 text-lg">Doctor's Notes</h4>
-                      <p className="text-gray-800 leading-relaxed font-medium">{selectedAppointment.doctor_notes}</p>
+                      <p className="text-gray-800 leading-relaxed font-medium">{selectedAppointment.doctorNotes}</p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {!selectedAppointment.doctor_notes && (
+              {!selectedAppointment.doctorNotes && (
                 <div className="bg-gray-50 rounded-xl p-4 text-center text-gray-500">
                   <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
