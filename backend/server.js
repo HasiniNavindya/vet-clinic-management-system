@@ -3,6 +3,8 @@ const cors = require("cors");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const pool = require("./db");
+const fs = require('fs');
+const path = require('path');
 const {
   normalizeRole,
   getRoleConfig,
@@ -20,7 +22,15 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(express.json());
+// Increase JSON body limit to allow image uploads as base64
+app.use(express.json({ limit: '10mb' }));
+
+// Ensure uploads folder exists and serve it statically
+const uploadsDir = path.join(__dirname, 'uploads');
+const petsUploadsDir = path.join(uploadsDir, 'pets');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+if (!fs.existsSync(petsUploadsDir)) fs.mkdirSync(petsUploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir));
 
 app.get("/", (req, res) => {
   res.send("API running...");
@@ -682,6 +692,50 @@ app.post("/api/pets", authenticateToken, requireRole('user'), async (req, res) =
   }
 });
 
+// POST /api/pets/:id/image - Upload pet image (expects base64 payload)
+app.post('/api/pets/:id/image', authenticateToken, requireRole('user'), async (req, res) => {
+  const { id } = req.params;
+  const { imageBase64, filename } = req.body || {};
+
+  if (!imageBase64 || !filename) {
+    return res.status(400).json({ error: 'Missing imageBase64 or filename' });
+  }
+
+  try {
+    const petResult = await pool.query(
+      'SELECT id, user_id FROM pets_owned WHERE id = $1',
+      [id]
+    );
+
+    if (petResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Pet not found' });
+    }
+
+    if (petResult.rows[0].user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized to update this pet' });
+    }
+
+    const buffer = Buffer.from(imageBase64, 'base64');
+    const safeName = filename.replace(/[^a-z0-9.\-_]/gi, '_');
+    const outName = `${Date.now()}-${safeName}`;
+    const destPath = path.join(petsUploadsDir, outName);
+
+    fs.writeFileSync(destPath, buffer);
+
+    const publicUrl = `/uploads/pets/${outName}`;
+
+    await pool.query(
+      'UPDATE pets_owned SET image_url = $1 WHERE id = $2',
+      [publicUrl, id]
+    );
+
+    res.json({ message: 'Image uploaded', imageUrl: publicUrl });
+  } catch (error) {
+    console.error('Pet image upload error:', error);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
 // DELETE /api/appointments/:id - Cancel appointment
 app.delete("/api/appointments/:id", authenticateToken, async (req, res) => {
   const { id } = req.params;
@@ -861,5 +915,39 @@ app.get("/pets", async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/pets/:id/image - upload pet image (base64)
+app.post('/api/pets/:id/image', authenticateToken, requireRole('user'), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { imageBase64, filename } = req.body;
+
+    if (!imageBase64) return res.status(400).json({ error: 'No image data provided' });
+
+    // determine extension
+    const ext = filename && path.extname(filename) ? path.extname(filename) : '.jpg';
+    const fileName = `pet_${id}_${Date.now()}${ext}`;
+    const filePath = path.join(__dirname, 'uploads', 'pets', fileName);
+
+    // save file
+    const buffer = Buffer.from(imageBase64, 'base64');
+    fs.writeFileSync(filePath, buffer);
+
+    const publicPath = `/uploads/pets/${fileName}`;
+
+    const result = await pool.query(
+      'UPDATE pets_owned SET image_url = $1 WHERE id = $2 AND user_id = $3 RETURNING *',
+      [publicPath, id, userId]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Pet not found or not owned by user' });
+
+    res.json({ message: 'Image uploaded', pet: result.rows[0] });
+  } catch (err) {
+    console.error('Error uploading pet image:', err);
+    res.status(500).json({ error: 'Failed to upload image' });
   }
 });

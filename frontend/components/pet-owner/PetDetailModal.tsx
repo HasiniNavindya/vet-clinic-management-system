@@ -10,6 +10,7 @@ export interface OwnerPet {
   age_or_dob: string;
   gender: string;
   vaccination_status: string;
+  image_url?: string;
   created_at?: string;
 }
 

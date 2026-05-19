@@ -24,6 +24,7 @@ export default function EditPetModal({ isOpen, pet, onClose, onSuccess }: EditPe
     gender: '',
     vaccination_status: '',
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (pet) {
@@ -55,6 +56,15 @@ export default function EditPetModal({ isOpen, pet, onClose, onSuccess }: EditPe
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Failed to update pet');
+      }
+
+      // upload image if provided
+      if (imageFile) {
+        try {
+          await uploadPetImage(token || '', pet.id, imageFile);
+        } catch (err) {
+          console.warn('Image upload failed', err);
+        }
       }
 
       onSuccess();
@@ -116,6 +126,10 @@ export default function EditPetModal({ isOpen, pet, onClose, onSuccess }: EditPe
               <label className="block text-sm font-semibold text-gray-700 mb-2">Vaccination Status</label>
               <input value={formData.vaccination_status} onChange={(e) => setFormData({ ...formData, vaccination_status: e.target.value })} className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-[#ec6d13]" />
             </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Pet Photo</label>
+              <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)} />
+            </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-gray-300 px-4 py-3 font-semibold text-gray-700 hover:bg-gray-50">Cancel</button>
               <button type="submit" disabled={isSaving} className="flex-1 rounded-lg bg-[#ec6d13] px-4 py-3 font-semibold text-white hover:bg-[#d65e0f] disabled:opacity-50">{isSaving ? 'Saving...' : 'Save Changes'}</button>
@@ -125,4 +139,30 @@ export default function EditPetModal({ isOpen, pet, onClose, onSuccess }: EditPe
       </div>
     </div>
   );
+}
+
+async function uploadPetImage(token: string, petId: number, file: File) {
+  const reader = await new Promise<ArrayBuffer | null>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as ArrayBuffer);
+    r.onerror = () => reject(new Error('Failed reading file'));
+    r.readAsArrayBuffer(file);
+  });
+
+  if (!reader) return;
+  const uint8 = new Uint8Array(reader);
+  let binary = '';
+  for (let i = 0; i < uint8.byteLength; i++) {
+    binary += String.fromCharCode(uint8[i]);
+  }
+  const base64 = btoa(binary);
+
+  await fetch(`${API_BASE_URL}/api/pets/${petId}/image`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ imageBase64: base64, filename: file.name }),
+  });
 }

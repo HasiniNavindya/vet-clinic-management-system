@@ -18,6 +18,7 @@ export default function AddPetModal({ isOpen, onClose, onSuccess, token }: AddPe
     gender: '',
     vaccination_status: ''
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -37,6 +38,15 @@ export default function AddPetModal({ isOpen, onClose, onSuccess, token }: AddPe
       });
 
       if (response.ok) {
+        const newPet = await response.json();
+        // if image selected, upload it
+        if (imageFile) {
+          try {
+            await uploadPetImage(token, newPet.id, imageFile);
+          } catch (err) {
+            console.warn('Image upload failed', err);
+          }
+        }
         onSuccess();
         onClose();
         setFormData({
@@ -47,6 +57,7 @@ export default function AddPetModal({ isOpen, onClose, onSuccess, token }: AddPe
           gender: '',
           vaccination_status: ''
         });
+        setImageFile(null);
       } else {
         const data = await response.json();
         setError(data.error || 'Failed to add pet');
@@ -161,6 +172,11 @@ export default function AddPetModal({ isOpen, onClose, onSuccess, token }: AddPe
             </select>
           </div>
 
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Pet Photo</label>
+            <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)} />
+          </div>
+
           <div className="flex gap-3 pt-4">
             <button
               type="button"
@@ -182,3 +198,29 @@ export default function AddPetModal({ isOpen, onClose, onSuccess, token }: AddPe
     </div>
   );
 }
+
+  async function uploadPetImage(token: string, petId: number, file: File) {
+    const reader = await new Promise<ArrayBuffer | null>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as ArrayBuffer);
+      r.onerror = () => reject(new Error('Failed reading file'));
+      r.readAsArrayBuffer(file);
+    });
+
+    if (!reader) return;
+    const uint8 = new Uint8Array(reader);
+    let binary = '';
+    for (let i = 0; i < uint8.byteLength; i++) {
+      binary += String.fromCharCode(uint8[i]);
+    }
+    const base64 = btoa(binary);
+
+    await fetch(`http://localhost:5000/api/pets/${petId}/image`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ imageBase64: base64, filename: file.name }),
+    });
+  }
