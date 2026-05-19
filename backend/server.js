@@ -14,6 +14,9 @@ const {
 } = require("./config/roles");
 const { JWT_SECRET, authenticateToken, requireRole } = require("./middleware/auth");
 const appointmentsRouter = require("./routes/appointments");
+const medicalRecordsRouter = require("./routes/medicalRecords");
+const vaccinationsRouter = require("./routes/vaccinations");
+const prescriptionsRouter = require("./routes/prescriptions");
 const { getAvailableSlots } = require("./services/appointmentService");
 
 const app = express();
@@ -552,6 +555,21 @@ app.get("/api/doctors/:id/availability", authenticateToken, async (req, res) => 
 });
 
 app.use("/api/appointments", appointmentsRouter);
+app.use("/api/medical-records", medicalRecordsRouter);
+app.use("/api/vaccinations", vaccinationsRouter);
+app.use("/api/prescriptions", prescriptionsRouter);
+
+// GET /api/clinic/pets - Staff list all registered pets (for health record entry)
+app.get("/api/clinic/pets", authenticateToken, requireRole('admin', 'doctor', 'staff'), async (req, res) => {
+  try {
+    const { listPetsForUser } = require('./services/petAccess');
+    const pets = await listPetsForUser(req.user.id, req.user.role);
+    res.json(pets);
+  } catch (error) {
+    console.error('Clinic pets error:', error);
+    res.status(500).json({ error: 'Failed to fetch pets' });
+  }
+});
 
 // GET /api/pets - Get user's pets
 app.get("/api/pets", authenticateToken, requireRole('user'), async (req, res) => {

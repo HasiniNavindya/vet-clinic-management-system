@@ -55,7 +55,7 @@ export default function MyAppointmentsPage() {
           href="/dashboard/pet-owner/appointments/book"
           className="inline-flex items-center justify-center rounded-lg bg-[#ec6d13] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#d65e0f]"
         >
-          Book appointment
+          New Appointment
         </Link>
       </div>
 
@@ -95,7 +95,7 @@ export default function MyAppointmentsPage() {
         <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center">
           <p className="text-gray-600">No appointments found.</p>
           <Link href="/dashboard/pet-owner/appointments/book" className="mt-4 inline-block text-[#ec6d13] font-semibold">
-            Book your first appointment →
+            New appointment →
           </Link>
         </div>
       ) : (
