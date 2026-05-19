@@ -13,6 +13,8 @@ const {
   canSelfRegister,
 } = require("./config/roles");
 const { JWT_SECRET, authenticateToken, requireRole } = require("./middleware/auth");
+const appointmentsRouter = require("./routes/appointments");
+const { getAvailableSlots } = require("./services/appointmentService");
 
 const app = express();
 
@@ -473,7 +475,9 @@ app.get("/api/user/dashboard", authenticateToken, requireRole('user'), async (re
        FROM appointments a
        LEFT JOIN doctors d ON a.doctor_id = d.id
        LEFT JOIN pets_owned p ON a.pet_id = p.id
-       WHERE a.user_id = $1 AND a.appointment_date >= CURRENT_DATE
+       WHERE a.user_id = $1
+         AND a.appointment_date >= CURRENT_DATE
+         AND a.status IN ('pending', 'approved')
        ORDER BY a.appointment_date ASC, a.appointment_time ASC
        LIMIT 5`,
       [userId]
@@ -528,61 +532,26 @@ app.get("/api/doctors", async (req, res) => {
   }
 });
 
-// GET /api/appointments - Get user's appointments
-app.get("/api/appointments", authenticateToken, async (req, res) => {
+// GET /api/doctors/:id/availability?date=YYYY-MM-DD
+app.get("/api/doctors/:id/availability", authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const result = await pool.query(
-      `SELECT a.*, d.name as doctor_name, d.specialization, d.image_url as doctor_image, 
-              p.pet_name, a.doctor_notes
-       FROM appointments a
-       LEFT JOIN doctors d ON a.doctor_id = d.id
-       LEFT JOIN pets_owned p ON a.pet_id = p.id
-       WHERE a.user_id = $1
-       ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
-      [userId]
-    );
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching appointments:', error);
-    res.status(500).json({ error: 'Failed to fetch appointments' });
-  }
-});
-
-// POST /api/appointments - Book new appointment
-app.post("/api/appointments", authenticateToken, async (req, res) => {
-  const { doctor_id, pet_id, appointment_date, appointment_time, notes } = req.body;
-  const userId = req.user.id;
-
-  try {
-    // Validate required fields
-    if (!doctor_id || !appointment_date || !appointment_time) {
-      return res.status(400).json({ error: 'Doctor, date, and time are required' });
+    const { id } = req.params;
+    const { date } = req.query;
+    if (!date) {
+      return res.status(400).json({ error: 'Query parameter date is required (YYYY-MM-DD)' });
     }
-
-    const result = await pool.query(
-      `INSERT INTO appointments (user_id, doctor_id, pet_id, appointment_date, appointment_time, notes)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [userId, doctor_id, pet_id || null, appointment_date, appointment_time, notes || null]
-    );
-
-    // Get the full appointment details with doctor info
-    const appointment = await pool.query(
-      `SELECT a.*, d.name as doctor_name, d.specialization, d.image_url as doctor_image,
-              p.pet_name
-       FROM appointments a
-       LEFT JOIN doctors d ON a.doctor_id = d.id
-       LEFT JOIN pets_owned p ON a.pet_id = p.id
-       WHERE a.id = $1`,
-      [result.rows[0].id]
-    );
-
-    res.status(201).json(appointment.rows[0]);
+    const { available, error } = await getAvailableSlots(Number(id), date);
+    if (error) {
+      return res.status(400).json({ error });
+    }
+    res.json({ date, doctorId: Number(id), slots: available });
   } catch (error) {
-    console.error('Error creating appointment:', error);
-    res.status(500).json({ error: 'Failed to create appointment' });
+    console.error('Availability error:', error);
+    res.status(500).json({ error: 'Failed to load availability' });
   }
 });
+
+app.use("/api/appointments", appointmentsRouter);
 
 // GET /api/pets - Get user's pets
 app.get("/api/pets", authenticateToken, requireRole('user'), async (req, res) => {
@@ -734,58 +703,6 @@ app.post('/api/pets/:id/image', authenticateToken, requireRole('user'), async (r
     console.error('Pet image upload error:', error);
     res.status(500).json({ error: 'Failed to upload image' });
   }
-});
-
-// DELETE /api/appointments/:id - Cancel appointment
-app.delete("/api/appointments/:id", authenticateToken, async (req, res) => {
-  const { id } = req.params;
-  const userId = req.user.id;
-
-  try {
-    const result = await pool.query(
-      "DELETE FROM appointments WHERE id = $1 AND user_id = $2 RETURNING *",
-      [id, userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Appointment not found' });
-    }
-
-    res.json({ message: 'Appointment cancelled successfully' });
-  } catch (error) {
-    console.error('Error cancelling appointment:', error);
-    res.status(500).json({ error: 'Failed to cancel appointment' });
-  }
-});
-
-// PUT /api/appointments/:id/status - Update appointment status (for doctor actions)
-app.put("/api/appointments/:id/status", authenticateToken, async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-
-  try {
-    if (!['confirmed', 'rejected', 'rescheduled', 'scheduled'].includes(status)) {
-      return res.status(400).json({ error: 'Invalid status' });
-    }
-
-    const result = await pool.query(
-      "UPDATE appointments SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *",
-      [status, id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Appointment not found' });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error updating appointment status:', error);
-    res.status(500).json({ error: 'Failed to update appointment status' });
-  }
-});
-
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
 });
 
 // PUT - update product
@@ -950,4 +867,8 @@ app.post('/api/pets/:id/image', authenticateToken, requireRole('user'), async (r
     console.error('Error uploading pet image:', err);
     res.status(500).json({ error: 'Failed to upload image' });
   }
+});
+
+app.listen(5000, () => {
+  console.log("Server running on port 5000");
 });
