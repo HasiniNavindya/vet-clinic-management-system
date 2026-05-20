@@ -127,6 +127,20 @@ async function processAndGetReminders(userId) {
          VALUES ($1, $2, $3, 'in_app', $4)`,
         [row.id, userId, reminderType, message]
       );
+      try {
+        const { notifyVaccinationAlert } = require('./notificationService');
+        const due =
+          typeof row.due_date === 'string' ? row.due_date.slice(0, 10) : row.due_date;
+        await notifyVaccinationAlert(userId, {
+          petName: row.pet_name,
+          vaccineName: row.vaccine_name,
+          dueDate: due,
+          status,
+          message,
+        });
+      } catch (notifyErr) {
+        console.error('Vaccination notification error:', notifyErr.message);
+      }
     }
 
     reminders.push({

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import NotificationDropdown from '@/components/notifications/NotificationDropdown';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -100,6 +101,7 @@ export default function Header() {
             <div className="hidden md:flex items-center space-x-2 py-2">
               {isAuthenticated ? (
                 <>
+                  <NotificationDropdown />
                   <Link href="/dashboard" className="flex items-center gap-2 text-white hover:text-white/80 transition">
                     <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#ec6d13] font-bold text-sm">
                       {user?.fullName?.charAt(0).toUpperCase()}

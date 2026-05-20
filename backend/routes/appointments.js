@@ -238,6 +238,12 @@ router.patch('/:id/status', authenticateToken, requireRole('admin', 'doctor', 's
     );
 
     const updated = await fetchAppointmentById(req.params.id);
+    try {
+      const { notifyAppointmentStatusChange } = require('../services/notificationService');
+      await notifyAppointmentStatusChange(updated.userId, updated, nextStatus);
+    } catch (notifyErr) {
+      console.error('Appointment status notification error:', notifyErr.message);
+    }
     res.json(updated);
   } catch (err) {
     console.error('Status update error:', err);
