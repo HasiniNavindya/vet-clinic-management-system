@@ -25,20 +25,10 @@ export default function PetOwnerSidebar({ welcomeName, email, avatarUrl }: Props
     pathname.startsWith('/dashboard/pet-owner/medical-records') ||
     pathname.startsWith('/dashboard/pet-owner/vaccinations') ||
     pathname.startsWith('/dashboard/pet-owner/prescriptions');
-  const isPayments = pathname.startsWith('/dashboard/pet-owner/payments');
-  const isNotifications = pathname.startsWith('/dashboard/pet-owner/notifications');
   const isSettings = pathname === '/dashboard/settings';
 
   return (
     <aside className="fixed left-0 top-28 z-20 flex h-[calc(100vh-112px)] w-64 flex-col overflow-y-auto border-r border-gray-200 bg-white p-6">
-      <div className="mb-6 flex items-center gap-2">
-        <BrandLogo />
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">CARLISLE</h1>
-          <p className="text-xs text-gray-500">Pet Care</p>
-        </div>
-      </div>
-
       <div className="mb-6 border-b border-gray-200 pb-6">
         <div className="flex flex-col items-center text-center">
           {avatarUrl ? (
@@ -75,16 +65,6 @@ export default function PetOwnerSidebar({ welcomeName, email, avatarUrl }: Props
           Pet Health
         </Link>
 
-        <Link href="/dashboard/pet-owner/payments" className={navClass(isPayments)}>
-          <PaymentsIcon />
-          Payments
-        </Link>
-
-        <Link href="/dashboard/pet-owner/notifications" className={navClass(isNotifications)}>
-          <BellIcon />
-          Notifications
-        </Link>
-
         <Link href="/dashboard/settings" className={navClass(isSettings)}>
           <SettingsIcon />
           Settings
@@ -95,14 +75,6 @@ export default function PetOwnerSidebar({ welcomeName, email, avatarUrl }: Props
         <HelpBox />
       </div>
     </aside>
-  );
-}
-
-function BrandLogo() {
-  return (
-    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#ec6d13]">
-      <span className="text-xl font-bold text-white">PO</span>
-    </div>
   );
 }
 
@@ -143,22 +115,6 @@ function HealthIcon() {
   return (
     <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-    </svg>
-  );
-}
-
-function PaymentsIcon() {
-  return (
-    <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-    </svg>
-  );
-}
-
-function BellIcon() {
-  return (
-    <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
     </svg>
   );
 }

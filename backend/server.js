@@ -562,6 +562,21 @@ app.get("/api/doctors", async (req, res) => {
   }
 });
 
+// GET /api/doctors/:id - Single doctor profile
+app.get("/api/doctors/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query("SELECT * FROM doctors WHERE id = $1", [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Doctor not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching doctor:', error);
+    res.status(500).json({ error: 'Failed to fetch doctor' });
+  }
+});
+
 // GET /api/doctors/:id/availability?date=YYYY-MM-DD
 app.get("/api/doctors/:id/availability", authenticateToken, async (req, res) => {
   try {
