@@ -175,7 +175,23 @@ async function fulfillAppointmentBooking(transaction) {
     paid_at: new Date(),
   });
 
-  return fetchAppointmentById(appointmentId);
+  const appointment = await fetchAppointmentById(appointmentId);
+  try {
+    const {
+      notifyPaymentConfirmation,
+      notifyAppointmentBooked,
+    } = require('./notificationService');
+    const txn = await getTransactionById(transaction.id);
+    await notifyPaymentConfirmation(Number(userId), {
+      ...txn,
+      referenceType: 'appointment',
+      referenceId: appointmentId,
+    });
+    await notifyAppointmentBooked(Number(userId), appointment);
+  } catch (notifyErr) {
+    console.error('Payment notification error:', notifyErr.message);
+  }
+  return appointment;
 }
 
 async function createAppointmentCheckout(userId, userEmail, booking) {
@@ -363,6 +379,17 @@ async function fulfillShopOrder(transaction) {
     status: PAYMENT_STATUSES.SUCCEEDED,
     paid_at: new Date(),
   });
+  try {
+    const { notifyPaymentConfirmation } = require('./notificationService');
+    const txn = await getTransactionById(transaction.id);
+    await notifyPaymentConfirmation(txn.userId, {
+      ...txn,
+      referenceType: 'shop_order',
+      referenceId: orderId,
+    });
+  } catch (notifyErr) {
+    console.error('Shop payment notification error:', notifyErr.message);
+  }
   return { orderId };
 }
 

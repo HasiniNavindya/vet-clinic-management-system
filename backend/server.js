@@ -19,6 +19,7 @@ const medicalRecordsRouter = require("./routes/medicalRecords");
 const vaccinationsRouter = require("./routes/vaccinations");
 const prescriptionsRouter = require("./routes/prescriptions");
 const paymentsRouter = require("./routes/payments");
+const notificationsRouter = require("./routes/notifications");
 const { getAvailableSlots } = require("./services/appointmentService");
 const { handleStripeCheckoutCompleted } = require("./services/paymentService");
 const { constructWebhookEvent } = require("./services/stripeService");
@@ -585,6 +586,7 @@ app.use("/api/medical-records", medicalRecordsRouter);
 app.use("/api/vaccinations", vaccinationsRouter);
 app.use("/api/prescriptions", prescriptionsRouter);
 app.use("/api/payments", paymentsRouter);
+app.use("/api/notifications", notificationsRouter);
 
 // GET /api/clinic/pets - Staff list all registered pets (for health record entry)
 app.get("/api/clinic/pets", authenticateToken, requireRole('admin', 'doctor', 'staff'), async (req, res) => {
