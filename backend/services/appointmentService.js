@@ -57,6 +57,13 @@ function mapAppointmentRow(row) {
     ownerPhone: row.owner_phone,
     paymentStatus: row.payment_status || 'unpaid',
     bookingFeeCents: row.booking_fee_cents,
+    staffResponseReason: row.staff_response_reason,
+    proposedAppointmentDate: row.proposed_appointment_date,
+    proposedAppointmentTime:
+      row.proposed_appointment_time != null
+        ? String(row.proposed_appointment_time).slice(0, 5)
+        : null,
+    staffRespondedAt: row.staff_responded_at,
   };
 }
 
@@ -82,14 +89,22 @@ async function isDoctorAvailableOnDate(doctorId, dateStr) {
   return { ok: true };
 }
 
+const ACTIVE_STATUSES_SQL = `('pending', 'awaiting_payment', 'approved', 'completed', 'reschedule_offered')`;
+
 async function isSlotTaken(doctorId, dateStr, timeStr, excludeAppointmentId = null) {
   const params = [doctorId, dateStr, timeStr];
   let sql = `
     SELECT id FROM appointments
     WHERE doctor_id = $1
-      AND appointment_date = $2
-      AND appointment_time = $3
-      AND status IN ('pending', 'approved', 'completed')
+      AND status IN ${ACTIVE_STATUSES_SQL}
+      AND (
+        (appointment_date = $2 AND appointment_time = $3)
+        OR (
+          status = 'reschedule_offered'
+          AND proposed_appointment_date = $2
+          AND proposed_appointment_time = $3
+        )
+      )
   `;
   if (excludeAppointmentId) {
     sql += ' AND id <> $4';
@@ -119,18 +134,28 @@ async function getAvailableSlots(doctorId, dateStr) {
   }
 
   const booked = await pool.query(
-    `SELECT appointment_time FROM appointments
-     WHERE doctor_id = $1 AND appointment_date = $2
-       AND status IN ('pending', 'approved', 'completed')`,
+    `SELECT appointment_time, status, proposed_appointment_time
+     FROM appointments
+     WHERE doctor_id = $1
+       AND status IN ${ACTIVE_STATUSES_SQL}
+       AND (
+         appointment_date = $2
+         OR (status = 'reschedule_offered' AND proposed_appointment_date = $2)
+       )`,
     [doctorId, dateStr]
   );
-  const taken = new Set(
-    booked.rows.map((r) =>
-      typeof r.appointment_time === 'string'
-        ? r.appointment_time.slice(0, 5)
-        : String(r.appointment_time)
-    )
-  );
+  const taken = new Set();
+  booked.rows.forEach((r) => {
+    if (r.status === 'reschedule_offered' && r.proposed_appointment_time) {
+      taken.add(String(r.proposed_appointment_time).slice(0, 5));
+    } else if (r.appointment_time) {
+      taken.add(
+        typeof r.appointment_time === 'string'
+          ? r.appointment_time.slice(0, 5)
+          : String(r.appointment_time)
+      );
+    }
+  });
 
   const available = buildTimeSlots().filter((slot) => !taken.has(slot));
   return { available, error: null };
@@ -184,6 +209,85 @@ async function validateBookingInput({
   return { ok: true, timeNorm };
 }
 
+async function createAppointmentRequest({
+  userId,
+  doctorId,
+  petId,
+  appointmentDate,
+  appointmentTime,
+  notes,
+}) {
+  const validation = await validateBookingInput({
+    doctorId,
+    petId,
+    userId,
+    appointmentDate,
+    appointmentTime,
+  });
+  if (!validation.ok) return { ok: false, error: validation.error };
+
+  const insert = await pool.query(
+    `INSERT INTO appointments (
+       user_id, doctor_id, pet_id, appointment_date, appointment_time,
+       status, notes, confirmation_message, payment_status
+     ) VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, 'unpaid')
+     RETURNING id`,
+    [
+      userId,
+      doctorId,
+      petId || null,
+      appointmentDate,
+      validation.timeNorm,
+      notes || null,
+      'Your appointment request was sent. The clinic will review and respond shortly.',
+    ]
+  );
+
+  const appointment = await fetchAppointmentById(insert.rows[0].id);
+  return { ok: true, appointment };
+}
+
+async function getDoctorMonthAvailability(doctorId, yearMonth) {
+  const [year, month] = yearMonth.split('-').map(Number);
+  if (!year || !month) {
+    return { ok: false, error: 'Invalid month format. Use YYYY-MM' };
+  }
+
+  const dayCheck = await pool.query('SELECT available_days FROM doctors WHERE id = $1', [doctorId]);
+  if (dayCheck.rows.length === 0) return { ok: false, error: 'Doctor not found' };
+  const availableDays = dayCheck.rows[0].available_days || [];
+
+  const lastDay = new Date(year, month, 0).getDate();
+  const today = new Date().toISOString().slice(0, 10);
+  const dates = {};
+
+  for (let day = 1; day <= lastDay; day++) {
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (dateStr < today) {
+      dates[dateStr] = { availableCount: 0, hasSlots: false };
+      continue;
+    }
+    if (availableDays.length > 0) {
+      const dayName = dayNameFromDate(dateStr);
+      if (!availableDays.includes(dayName)) {
+        dates[dateStr] = { availableCount: 0, hasSlots: false };
+        continue;
+      }
+    }
+    const { available, error } = await getAvailableSlots(doctorId, dateStr);
+    if (error) {
+      dates[dateStr] = { availableCount: 0, hasSlots: false, error };
+    } else {
+      dates[dateStr] = {
+        availableCount: available.length,
+        hasSlots: available.length > 0,
+      };
+    }
+  }
+
+  return { ok: true, yearMonth, dates };
+}
+
 module.exports = {
   mapAppointmentRow,
   fetchAppointmentById,
@@ -194,5 +298,7 @@ module.exports = {
   normalizeStatus,
   DEFAULT_STATUS,
   isActiveForScheduling,
+  createAppointmentRequest,
+  getDoctorMonthAvailability,
   APPOINTMENT_SELECT,
 };

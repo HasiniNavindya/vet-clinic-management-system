@@ -7,13 +7,14 @@ const {
   canOwnerCancel,
   canOwnerReschedule,
   canStaffSetStatus,
-  DEFAULT_STATUS,
+  canOwnerPay,
+  canStaffReview,
 } = require('../config/appointments');
 const {
   mapAppointmentRow,
   fetchAppointmentById,
   validateBookingInput,
-  isSlotTaken,
+  createAppointmentRequest,
   APPOINTMENT_SELECT,
 } = require('../services/appointmentService');
 
@@ -69,42 +70,43 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, requireRole('user'), async (req, res) => {
-  const { payment_transaction_id: paymentTransactionId } = req.body;
-  const userId = req.user.id;
+/** Submit appointment request (no payment until staff approves) */
+router.post('/request', authenticateToken, requireRole('user'), async (req, res) => {
+  const { doctor_id, pet_id, appointment_date, appointment_time, notes } = req.body;
 
   try {
-    if (!paymentTransactionId) {
-      return res.status(402).json({
-        error: 'Online payment is required to book an appointment. Complete checkout first.',
-        code: 'PAYMENT_REQUIRED',
-      });
-    }
-
-    const txnRes = await pool.query(
-      `SELECT * FROM payment_transactions
-       WHERE id = $1 AND user_id = $2 AND type = 'appointment_booking' AND status = 'succeeded'`,
-      [paymentTransactionId, userId]
-    );
-    if (txnRes.rows.length === 0) {
-      return res.status(402).json({
-        error: 'Valid paid transaction required before booking.',
-        code: 'PAYMENT_REQUIRED',
-      });
-    }
-
-    if (txnRes.rows[0].reference_id) {
-      const existing = await fetchAppointmentById(txnRes.rows[0].reference_id);
-      if (existing) return res.status(201).json(existing);
-    }
-
-    return res.status(400).json({
-      error: 'Payment received but appointment not created yet. Contact support or retry checkout.',
+    const result = await createAppointmentRequest({
+      userId: req.user.id,
+      doctorId: Number(doctor_id),
+      petId: pet_id ? Number(pet_id) : null,
+      appointmentDate: appointment_date,
+      appointmentTime: appointment_time,
+      notes,
     });
+
+    if (!result.ok) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    try {
+      const { notifyAppointmentBooked } = require('../services/notificationService');
+      await notifyAppointmentBooked(req.user.id, result.appointment);
+    } catch (notifyErr) {
+      console.error('Request notification error:', notifyErr.message);
+    }
+
+    res.status(201).json(result.appointment);
   } catch (err) {
-    console.error('Book appointment error:', err);
-    res.status(500).json({ error: 'Failed to book appointment' });
+    console.error('Appointment request error:', err);
+    res.status(500).json({ error: 'Failed to submit appointment request' });
   }
+});
+
+router.post('/', authenticateToken, requireRole('user'), async (req, res) => {
+  return res.status(400).json({
+    error: 'Use POST /api/appointments/request to submit a booking request. Payment is required after clinic approval.',
+    code: 'USE_REQUEST_ENDPOINT',
+  });
 });
 
 router.patch('/:id/reschedule', authenticateToken, requireRole('user'), async (req, res) => {
@@ -140,6 +142,8 @@ router.patch('/:id/reschedule', authenticateToken, requireRole('user'), async (r
            appointment_time = $2,
            notes = COALESCE($3, notes),
            status = 'pending',
+           proposed_appointment_date = NULL,
+           proposed_appointment_time = NULL,
            confirmation_message = $4,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $5`,
@@ -147,7 +151,7 @@ router.patch('/:id/reschedule', authenticateToken, requireRole('user'), async (r
         appointment_date,
         validation.timeNorm,
         notes,
-        'Appointment rescheduled. Awaiting clinic approval for the new date and time.',
+        'Your reschedule request was sent. The clinic will review the new date and time.',
         req.params.id,
       ]
     );
@@ -157,6 +161,54 @@ router.patch('/:id/reschedule', authenticateToken, requireRole('user'), async (r
   } catch (err) {
     console.error('Reschedule error:', err);
     res.status(500).json({ error: 'Failed to reschedule appointment' });
+  }
+});
+
+router.post('/:id/accept-reschedule', authenticateToken, requireRole('user'), async (req, res) => {
+  try {
+    const existing = await fetchAppointmentById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Appointment not found' });
+    if (existing.userId !== req.user.id) return res.status(403).json({ error: 'Not authorized' });
+    if (existing.status !== 'reschedule_offered') {
+      return res.status(400).json({ error: 'No reschedule offer to accept' });
+    }
+    if (!existing.proposedAppointmentDate || !existing.proposedAppointmentTime) {
+      return res.status(400).json({ error: 'Proposed date and time missing' });
+    }
+
+    const validation = await validateBookingInput({
+      doctorId: existing.doctorId,
+      petId: existing.petId,
+      userId: req.user.id,
+      appointmentDate: existing.proposedAppointmentDate,
+      appointmentTime: existing.proposedAppointmentTime,
+      excludeAppointmentId: existing.id,
+    });
+    if (!validation.ok) return res.status(400).json({ error: validation.error });
+
+    await pool.query(
+      `UPDATE appointments
+       SET appointment_date = $1,
+           appointment_time = $2,
+           proposed_appointment_date = NULL,
+           proposed_appointment_time = NULL,
+           status = 'pending',
+           confirmation_message = $3,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4`,
+      [
+        existing.proposedAppointmentDate,
+        validation.timeNorm,
+        'You accepted the new appointment time. The clinic will confirm your booking.',
+        req.params.id,
+      ]
+    );
+
+    const updated = await fetchAppointmentById(req.params.id);
+    res.json(updated);
+  } catch (err) {
+    console.error('Accept reschedule error:', err);
+    res.status(500).json({ error: 'Failed to accept reschedule' });
   }
 });
 
@@ -183,11 +235,7 @@ router.post('/:id/cancel', authenticateToken, requireRole('user'), async (req, r
            confirmation_message = $2,
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $3`,
-      [
-        reason || null,
-        'Your appointment has been cancelled.',
-        req.params.id,
-      ]
+      [reason || null, 'Your appointment has been cancelled.', req.params.id]
     );
 
     const updated = await fetchAppointmentById(req.params.id);
@@ -195,6 +243,132 @@ router.post('/:id/cancel', authenticateToken, requireRole('user'), async (req, r
   } catch (err) {
     console.error('Cancel error:', err);
     res.status(500).json({ error: 'Failed to cancel appointment' });
+  }
+});
+
+/** Staff: approve (→ awaiting payment), reject, or reschedule with reason */
+router.patch('/:id/respond', authenticateToken, requireRole('admin', 'doctor', 'staff'), async (req, res) => {
+  const { action, reason, appointment_date, appointment_time, doctor_notes, confirmation_message } =
+    req.body;
+
+  try {
+    const existing = await fetchAppointmentById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Appointment not found' });
+
+    const act = String(action || '').toLowerCase();
+
+    if (act === 'approve') {
+      if (!canStaffReview(existing.status)) {
+        return res.status(400).json({ error: 'Only pending requests can be approved' });
+      }
+
+      await pool.query(
+        `UPDATE appointments
+         SET status = 'awaiting_payment',
+             staff_response_reason = $1,
+             doctor_notes = COALESCE($2, doctor_notes),
+             confirmation_message = $3,
+             staff_responded_at = CURRENT_TIMESTAMP,
+             proposed_appointment_date = NULL,
+             proposed_appointment_time = NULL,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $4`,
+        [
+          reason || null,
+          doctor_notes || null,
+          confirmation_message ||
+            'Your appointment was approved. Please complete online payment to confirm your booking.',
+          req.params.id,
+        ]
+      );
+    } else if (act === 'reject') {
+      if (!reason || !String(reason).trim()) {
+        return res.status(400).json({ error: 'A reason is required when declining a request' });
+      }
+      if (!canStaffReview(existing.status)) {
+        return res.status(400).json({ error: 'Only pending requests can be declined' });
+      }
+
+      await pool.query(
+        `UPDATE appointments
+         SET status = 'rejected',
+             staff_response_reason = $1,
+             doctor_notes = COALESCE($2, doctor_notes),
+             confirmation_message = $3,
+             cancelled_at = CURRENT_TIMESTAMP,
+             staff_responded_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $4`,
+        [
+          reason,
+          doctor_notes || null,
+          confirmation_message ||
+            'Your appointment request was declined. Please choose another time or contact the clinic.',
+          req.params.id,
+        ]
+      );
+    } else if (act === 'reschedule') {
+      if (!reason || !String(reason).trim()) {
+        return res.status(400).json({ error: 'A reason is required when offering a reschedule' });
+      }
+      if (!appointment_date || !appointment_time) {
+        return res.status(400).json({
+          error: 'Proposed appointment_date and appointment_time are required',
+        });
+      }
+
+      const validation = await validateBookingInput({
+        doctorId: existing.doctorId,
+        petId: existing.petId,
+        userId: existing.userId,
+        appointmentDate: appointment_date,
+        appointmentTime: appointment_time,
+        excludeAppointmentId: existing.id,
+      });
+      if (!validation.ok) return res.status(400).json({ error: validation.error });
+
+      await pool.query(
+        `UPDATE appointments
+         SET status = 'reschedule_offered',
+             proposed_appointment_date = $1,
+             proposed_appointment_time = $2,
+             staff_response_reason = $3,
+             doctor_notes = COALESCE($4, doctor_notes),
+             confirmation_message = $5,
+             staff_responded_at = CURRENT_TIMESTAMP,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $6`,
+        [
+          appointment_date,
+          validation.timeNorm,
+          reason,
+          doctor_notes || null,
+          confirmation_message ||
+            `The clinic proposed a new time: ${appointment_date} at ${validation.timeNorm}. Please review and accept the new slot.`,
+          req.params.id,
+        ]
+      );
+    } else {
+      return res.status(400).json({ error: 'action must be approve, reject, or reschedule' });
+    }
+
+    const updated = await fetchAppointmentById(req.params.id);
+    try {
+      const { notifyAppointmentStatusChange } = require('../services/notificationService');
+      const notifyStatus =
+        act === 'approve'
+          ? 'awaiting_payment'
+          : act === 'reject'
+            ? 'rejected'
+            : 'reschedule_offered';
+      await notifyAppointmentStatusChange(updated.userId, updated, notifyStatus);
+    } catch (notifyErr) {
+      console.error('Respond notification error:', notifyErr.message);
+    }
+    res.json(updated);
+  } catch (err) {
+    console.error('Staff respond error:', err);
+    res.status(500).json({ error: 'Failed to update appointment' });
   }
 });
 
@@ -215,13 +389,15 @@ router.patch('/:id/status', authenticateToken, requireRole('admin', 'doctor', 's
     let message = confirmation_message;
     if (!message) {
       if (nextStatus === 'approved') {
-        message = 'Your appointment has been approved. Please arrive 10 minutes early.';
+        message = 'Your appointment is confirmed.';
       } else if (nextStatus === 'rejected') {
-        message = 'Your appointment request was not accepted. Please book another slot or contact the clinic.';
+        message = 'Your appointment request was not accepted.';
       } else if (nextStatus === 'completed') {
         message = 'Thank you for visiting Carlisle Pet Care.';
       } else if (nextStatus === 'cancelled') {
         message = 'This appointment was cancelled by the clinic.';
+      } else if (nextStatus === 'awaiting_payment') {
+        message = 'Please complete online payment to confirm your booking.';
       }
     }
 

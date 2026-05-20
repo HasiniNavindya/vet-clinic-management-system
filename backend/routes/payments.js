@@ -4,6 +4,7 @@ const {
   listTransactions,
   getTransactionById,
   createAppointmentCheckout,
+  createAppointmentPaymentCheckout,
   createShopCheckout,
   completeTransactionById,
   confirmPaymentFromSession,
@@ -52,7 +53,14 @@ router.get('/transactions/:id', authenticateToken, async (req, res) => {
 
 router.post('/appointment/checkout', authenticateToken, requireRole('user'), async (req, res) => {
   try {
-    const result = await createAppointmentCheckout(req.user.id, req.user.email, req.body);
+    const { appointment_id } = req.body;
+    const result = appointment_id
+      ? await createAppointmentPaymentCheckout(
+          req.user.id,
+          req.user.email,
+          Number(appointment_id)
+        )
+      : await createAppointmentCheckout(req.user.id, req.user.email, req.body);
     if (!result.ok) return res.status(400).json({ error: result.error });
     res.json(result);
   } catch (err) {
