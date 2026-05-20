@@ -51,12 +51,20 @@ export default function MyAppointmentsPage() {
           <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">My Appointments</h1>
           <p className="mt-1 text-gray-600">View status, reschedule, or cancel</p>
         </div>
-        <Link
-          href="/dashboard/pet-owner/appointments/book"
-          className="inline-flex items-center justify-center rounded-lg bg-[#ec6d13] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#d65e0f]"
-        >
-          New Appointment
-        </Link>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Link
+            href="/dashboard/pet-owner/doctors"
+            className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Browse veterinarians
+          </Link>
+          <Link
+            href="/dashboard/pet-owner/appointments/book"
+            className="inline-flex items-center justify-center rounded-lg bg-[#ec6d13] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#d65e0f]"
+          >
+            New Appointment
+          </Link>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">

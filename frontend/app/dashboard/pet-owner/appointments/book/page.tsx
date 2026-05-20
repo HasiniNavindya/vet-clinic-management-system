@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import PetOwnerShell from '@/components/pet-owner/PetOwnerShell';
 import { API_BASE_URL, authHeaders } from '@/lib/api';
@@ -15,8 +15,9 @@ import { createAppointmentCheckout, fetchPaymentConfig, formatMoney } from '@/li
 
 type Pet = { id: number; pet_name: string; species?: string };
 
-export default function BookAppointmentPage() {
-  const router = useRouter();
+function BookAppointmentContent() {
+  const searchParams = useSearchParams();
+  const doctorFromUrl = searchParams.get('doctor');
   const { token } = useAuth();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [pets, setPets] = useState<Pet[]>([]);
@@ -37,6 +38,17 @@ export default function BookAppointmentPage() {
     fetchDoctors().then((res) => {
       if (res.ok) setDoctors(res.data);
     });
+  }, []);
+
+  useEffect(() => {
+    if (!doctorFromUrl || doctors.length === 0) return;
+    const match = doctors.some((d) => String(d.id) === doctorFromUrl);
+    if (match) {
+      setForm((f) => ({ ...f, doctor_id: doctorFromUrl, appointment_time: '' }));
+    }
+  }, [doctorFromUrl, doctors]);
+
+  useEffect(() => {
     if (token) {
       fetchPaymentConfig(token).then((res) => {
         if (res.ok) {
@@ -100,6 +112,18 @@ export default function BookAppointmentPage() {
         <Link href="/dashboard/pet-owner/appointments" className="text-sm font-medium text-[#ec6d13] hover:text-[#d65e0f]">
           ← My appointments
         </Link>
+        {doctorFromUrl && form.doctor_id ? (
+          <p className="mt-2 text-sm text-gray-600">
+            Booking with{' '}
+            <span className="font-semibold text-gray-900">
+              {doctors.find((d) => String(d.id) === form.doctor_id)?.name || 'selected veterinarian'}
+            </span>
+            .{' '}
+            <Link href="/dashboard/pet-owner/doctors" className="text-[#ec6d13] hover:underline">
+              Change doctor
+            </Link>
+          </p>
+        ) : null}
         <h1 className="mt-2 text-2xl font-bold text-gray-900 md:text-3xl">Book Appointment</h1>
         <p className="mt-1 text-gray-600">Choose veterinarian, date, and time</p>
         {bookingFeeLabel ? (
@@ -203,5 +227,21 @@ export default function BookAppointmentPage() {
         </button>
       </form>
     </PetOwnerShell>
+  );
+}
+
+export default function BookAppointmentPage() {
+  return (
+    <Suspense
+      fallback={
+        <PetOwnerShell>
+          <div className="flex justify-center py-16">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />
+          </div>
+        </PetOwnerShell>
+      }
+    >
+      <BookAppointmentContent />
+    </Suspense>
   );
 }
