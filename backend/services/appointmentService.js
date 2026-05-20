@@ -55,6 +55,8 @@ function mapAppointmentRow(row) {
     ownerName: row.owner_name,
     ownerEmail: row.owner_email,
     ownerPhone: row.owner_phone,
+    paymentStatus: row.payment_status || 'unpaid',
+    bookingFeeCents: row.booking_fee_cents,
   };
 }
 

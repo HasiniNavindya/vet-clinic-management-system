@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { createShopCheckout } from '@/lib/payments';
 
 interface CartItem {
   id: number;
@@ -16,28 +19,59 @@ interface CheckoutModalProps {
   onClose: () => void;
   items: CartItem[];
   total: number;
+  onOrderPlaced?: () => void;
 }
 
-export default function CheckoutModal({ isOpen, onClose, items, total }: CheckoutModalProps) {
+export default function CheckoutModal({
+  isOpen,
+  onClose,
+  items,
+  total,
+  onOrderPlaced,
+}: CheckoutModalProps) {
+  const router = useRouter();
+  const { token, user } = useAuth();
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
+    fullName: user?.fullName || '',
+    email: user?.email || '',
     phone: '',
     address: '',
     city: '',
     zipCode: '',
-    paymentMethod: 'card',
   });
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Here you would typically send the order to your backend
-    console.log('Order submitted:', { formData, items, total });
-    alert('Order placed successfully! Thank you for your purchase.');
-    onClose();
+    setError('');
+
+    if (!token) {
+      router.push('/login?redirect=/marketplace');
+      return;
+    }
+
+    setSubmitting(true);
+    const res = await createShopCheckout(token, {
+      items,
+      shipping: formData,
+    });
+    setSubmitting(false);
+
+    if (!res.ok) {
+      setError((res.data as { error?: string }).error || 'Checkout failed');
+      return;
+    }
+
+    if (res.data.url) {
+      onOrderPlaced?.();
+      window.location.href = res.data.url;
+    }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -51,10 +85,9 @@ export default function CheckoutModal({ isOpen, onClose, items, total }: Checkou
       <div className="fixed inset-0 z-40" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto pointer-events-auto shadow-2xl">
-          {/* Header */}
           <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
             <h2 className="text-2xl font-bold text-gray-900">Checkout</h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-700">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -62,8 +95,10 @@ export default function CheckoutModal({ isOpen, onClose, items, total }: Checkou
           </div>
 
           <form onSubmit={handleSubmit} className="p-6">
+            <p className="mb-4 text-sm text-gray-600">
+              Pay securely online with Stripe. You must be logged in as a pet owner.
+            </p>
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Left Column - Order Summary */}
               <div>
                 <h3 className="text-lg font-semibold mb-4 text-gray-900">Order Summary</h3>
                 <div className="space-y-3 mb-4">
@@ -88,7 +123,6 @@ export default function CheckoutModal({ isOpen, onClose, items, total }: Checkou
                 </div>
               </div>
 
-              {/* Right Column - Customer Information */}
               <div>
                 <h3 className="text-lg font-semibold mb-4 text-gray-900">Customer Information</h3>
                 <div className="space-y-4">
@@ -106,7 +140,6 @@ export default function CheckoutModal({ isOpen, onClose, items, total }: Checkou
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ec6d13]"
                     />
                   </div>
-
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                       Email *
@@ -121,7 +154,6 @@ export default function CheckoutModal({ isOpen, onClose, items, total }: Checkou
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ec6d13]"
                     />
                   </div>
-
                   <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
                       Phone Number *
@@ -136,7 +168,6 @@ export default function CheckoutModal({ isOpen, onClose, items, total }: Checkou
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ec6d13]"
                     />
                   </div>
-
                   <div>
                     <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
                       Delivery Address *
@@ -151,7 +182,6 @@ export default function CheckoutModal({ isOpen, onClose, items, total }: Checkou
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ec6d13]"
                     />
                   </div>
-
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
@@ -167,7 +197,6 @@ export default function CheckoutModal({ isOpen, onClose, items, total }: Checkou
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ec6d13]"
                       />
                     </div>
-
                     <div>
                       <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
                         ZIP Code *
@@ -183,29 +212,12 @@ export default function CheckoutModal({ isOpen, onClose, items, total }: Checkou
                       />
                     </div>
                   </div>
-
-                  <div>
-                    <label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700 mb-1">
-                      Payment Method *
-                    </label>
-                    <select
-                      id="paymentMethod"
-                      name="paymentMethod"
-                      required
-                      value={formData.paymentMethod}
-                      onChange={handleChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ec6d13]"
-                    >
-                      <option value="card">Credit/Debit Card</option>
-                      <option value="cash">Cash on Delivery</option>
-                      <option value="bank">Bank Transfer</option>
-                    </select>
-                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Submit Button */}
+            {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
+
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
@@ -216,9 +228,10 @@ export default function CheckoutModal({ isOpen, onClose, items, total }: Checkou
               </button>
               <button
                 type="submit"
-                className="flex-1 px-6 py-3 bg-[#ec6d13] text-white rounded-lg font-semibold hover:bg-[#d55a0a] transition-colors"
+                disabled={submitting}
+                className="flex-1 px-6 py-3 bg-[#ec6d13] text-white rounded-lg font-semibold hover:bg-[#d55a0a] transition-colors disabled:opacity-50"
               >
-                Place Order
+                {submitting ? 'Redirecting…' : 'Pay with Stripe'}
               </button>
             </div>
           </form>

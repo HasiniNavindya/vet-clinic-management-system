@@ -320,6 +320,7 @@ export default function MarketplacePage() {
         onClose={() => setShowCheckout(false)}
         items={cartItems}
         total={cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)}
+        onOrderPlaced={() => setCartItems([])}
       />
     </div>
   );

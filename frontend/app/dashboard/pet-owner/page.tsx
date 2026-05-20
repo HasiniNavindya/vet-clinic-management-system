@@ -9,7 +9,7 @@ import Header from '@/components/layout/Header';
 import AddPetModal from '@/components/dashboard/AddPetModal';
 import PetDetailModal, { type OwnerPet } from '@/components/pet-owner/PetDetailModal';
 import EditPetModal from '@/components/pet-owner/EditPetModal';
-import { API_BASE_URL, authHeaders } from '@/lib/api';
+import { API_BASE_URL, authHeaders, isAuthFailure } from '@/lib/api';
 
 type DashboardData = {
   user: {
@@ -53,7 +53,7 @@ function getImageUrl(imagePath?: string | null): string | null {
 
 function PetOwnerDashboardPage() {
   const router = useRouter();
-  const { token, user, isAuthenticated, isLoading } = useAuth();
+  const { token, user, isAuthenticated, isLoading, logout } = useAuth();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [isAddPetOpen, setIsAddPetOpen] = useState(false);
@@ -80,11 +80,21 @@ function PetOwnerDashboardPage() {
 
       const data = await response.json();
       if (!response.ok) {
+        if (isAuthFailure(response.status)) {
+          logout();
+          router.push('/login');
+          return;
+        }
         throw new Error(data.error || 'Failed to load dashboard');
       }
 
       setDashboardData(data);
     } catch (error) {
+      if (error instanceof Error && error.message.includes('token')) {
+        logout();
+        router.push('/login');
+        return;
+      }
       console.error(error);
     } finally {
       setDataLoading(false);

@@ -58,15 +58,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    const restoreSession = async () => {
+      const storedToken = localStorage.getItem('token');
+      if (!storedToken) {
+        setIsLoading(false);
+        return;
+      }
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
+      try {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${storedToken}` },
+        });
 
-    setIsLoading(false);
+        if (!response.ok) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
+        const data = await response.json();
+        const sessionUser: User = {
+          id: data.id,
+          email: data.email,
+          fullName: data.fullName,
+          mobileNumber: data.mobileNumber,
+          address: data.address,
+          emergencyContact: data.emergencyContact,
+          role: data.role,
+          roleLabel: data.roleLabel,
+          dashboardPath: data.dashboardPath,
+        };
+        localStorage.setItem('user', JSON.stringify(sessionUser));
+        setToken(storedToken);
+        setUser(sessionUser);
+      } catch {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    restoreSession();
   }, []);
 
   const persistSession = (sessionToken: string, sessionUser: User) => {

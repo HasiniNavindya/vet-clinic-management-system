@@ -25,6 +25,7 @@ export default function PetOwnerSidebar({ welcomeName, email, avatarUrl }: Props
     pathname.startsWith('/dashboard/pet-owner/medical-records') ||
     pathname.startsWith('/dashboard/pet-owner/vaccinations') ||
     pathname.startsWith('/dashboard/pet-owner/prescriptions');
+  const isPayments = pathname.startsWith('/dashboard/pet-owner/payments');
   const isSettings = pathname === '/dashboard/settings';
 
   return (
@@ -71,6 +72,11 @@ export default function PetOwnerSidebar({ welcomeName, email, avatarUrl }: Props
         <Link href="/dashboard/pet-owner/health" className={navClass(isHealth)}>
           <HealthIcon />
           Pet Health
+        </Link>
+
+        <Link href="/dashboard/pet-owner/payments" className={navClass(isPayments)}>
+          <PaymentsIcon />
+          Payments
         </Link>
 
         <Link href="/dashboard/settings" className={navClass(isSettings)}>
@@ -131,6 +137,14 @@ function HealthIcon() {
   return (
     <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+    </svg>
+  );
+}
+
+function PaymentsIcon() {
+  return (
+    <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
     </svg>
   );
 }

@@ -12,6 +12,10 @@ export function authHeaders(token: string | null, extra: Record<string, string> 
   return headers;
 }
 
+export function isAuthFailure(status: number) {
+  return status === 401 || status === 403;
+}
+
 export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {}

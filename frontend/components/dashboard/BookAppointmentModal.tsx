@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { bookAppointment, Doctor, fetchDoctorAvailability, fetchDoctors } from '@/lib/appointments';
+import { Doctor, fetchDoctorAvailability, fetchDoctors } from '@/lib/appointments';
+import { createAppointmentCheckout } from '@/lib/payments';
 
 interface Pet {
   id: number;
@@ -65,7 +66,7 @@ export default function BookAppointmentModal({
     setIsSubmitting(true);
     setError('');
 
-    const res = await bookAppointment(token, {
+    const res = await createAppointmentCheckout(token, {
       doctor_id: Number(formData.doctor_id),
       pet_id: formData.pet_id ? Number(formData.pet_id) : undefined,
       appointment_date: formData.appointment_date,
@@ -75,19 +76,13 @@ export default function BookAppointmentModal({
 
     setIsSubmitting(false);
     if (!res.ok) {
-      setError((res.data as { error?: string }).error || 'Failed to book appointment');
+      setError((res.data as { error?: string }).error || 'Failed to start checkout');
       return;
     }
 
-    onSuccess();
-    onClose();
-    setFormData({
-      doctor_id: '',
-      pet_id: '',
-      appointment_date: '',
-      appointment_time: '',
-      notes: '',
-    });
+    if (res.data.url) {
+      window.location.href = res.data.url;
+    }
   };
 
   if (!isOpen) return null;

@@ -145,6 +145,9 @@ export default function CalendarPage() {
           <Link href="/dashboard/health/manage" className="mr-4 flex items-center gap-2 font-semibold text-[#ec6d13] hover:text-[#d65e0f]">
             Health records
           </Link>
+          <Link href="/dashboard/payments/manage" className="mr-4 flex items-center gap-2 font-semibold text-[#ec6d13] hover:text-[#d65e0f]">
+            Record payment
+          </Link>
           <Link href="/dashboard" className="flex items-center gap-2 text-[#ec6d13] hover:text-[#d65e0f] font-semibold">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

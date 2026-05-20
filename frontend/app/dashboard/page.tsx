@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { API_BASE_URL, isAuthFailure } from '@/lib/api';
 import Header from '@/components/layout/Header';
 import AddPetModal from '@/components/dashboard/AddPetModal';
 import BookAppointmentModal from '@/components/dashboard/BookAppointmentModal';
@@ -79,9 +80,9 @@ export default function Dashboard() {
 
     try {
       setDataLoading(true);
-      const response = await fetch('http://localhost:5000/api/user/dashboard', {
+      const response = await fetch(`${API_BASE_URL}/api/user/dashboard`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -89,6 +90,9 @@ export default function Dashboard() {
       if (response.ok) {
         const data = await response.json();
         setDashboardData(data);
+      } else if (isAuthFailure(response.status)) {
+        logout();
+        router.push('/login');
       } else {
         console.error('Failed to fetch dashboard data');
       }
@@ -100,10 +104,10 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (isAuthenticated && token) {
+    if (isAuthenticated && token && user?.role && user.role !== 'user') {
       fetchDashboardData();
     }
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, user?.role]);
 
   const handlePetAdded = () => {
     fetchDashboardData();
