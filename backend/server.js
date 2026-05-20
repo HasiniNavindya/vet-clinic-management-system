@@ -12,7 +12,11 @@ const {
   getPublicRoles,
   getDashboardPath,
   canSelfRegister,
+  requiresDoctorApplication,
 } = require("./config/roles");
+const { canLogin, loginBlockMessage } = require("./config/accountStatus");
+const { getDoctorProfileByUserId } = require("./services/doctorApplicationService");
+const doctorApplicationsRouter = require("./routes/doctorApplications");
 const { JWT_SECRET, authenticateToken, requireRole } = require("./middleware/auth");
 const appointmentsRouter = require("./routes/appointments");
 const medicalRecordsRouter = require("./routes/medicalRecords");
@@ -60,8 +64,10 @@ app.use(express.json({ limit: '10mb' }));
 // Ensure uploads folder exists and serve it statically
 const uploadsDir = path.join(__dirname, 'uploads');
 const petsUploadsDir = path.join(uploadsDir, 'pets');
+const doctorLicensesDir = path.join(uploadsDir, 'doctor-licenses');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(petsUploadsDir)) fs.mkdirSync(petsUploadsDir, { recursive: true });
+if (!fs.existsSync(doctorLicensesDir)) fs.mkdirSync(doctorLicensesDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
 app.get("/", (req, res) => {
@@ -73,6 +79,14 @@ app.get("/", (req, res) => {
 app.get("/auth/roles", (req, res) => {
   res.json({ roles: getPublicRoles() });
 });
+
+// Public veterinarian application (same handlers as /api/doctor-applications — avoids 404 if router order/version differs)
+app.get("/auth/doctor-application-meta", (req, res) => {
+  res.json(doctorApplicationsRouter.getDoctorApplicationMetaData());
+});
+app.post("/auth/register-doctor", doctorApplicationsRouter.handleDoctorRegister);
+
+app.use("/api/doctor-applications", doctorApplicationsRouter);
 
 // POST /auth/register - Register new user
 app.post("/auth/register", async (req, res) => {
@@ -131,6 +145,13 @@ app.post("/auth/register", async (req, res) => {
     const roleConfig = getRoleConfig(finalRole);
     if (!roleConfig) {
       return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    if (requiresDoctorApplication(finalRole)) {
+      return res.status(400).json({
+        error: 'Veterinarians must apply via the doctor registration form',
+        applyUrl: '/register?role=doctor',
+      });
     }
 
     // Check if user already exists
@@ -215,7 +236,8 @@ app.post("/auth/login", async (req, res) => {
 
     // Find user by email
     const userResult = await pool.query(
-      "SELECT id, email, password_hash, full_name, mobile_number, address, emergency_contact, role FROM auth_users WHERE email = $1",
+      `SELECT id, email, password_hash, full_name, mobile_number, address, emergency_contact, role, account_status
+       FROM auth_users WHERE email = $1`,
       [email]
     );
 
@@ -243,7 +265,26 @@ app.post("/auth/login", async (req, res) => {
     }
 
     const canonicalRole = dbRole;
+    const accountStatus = user.account_status || 'active';
+
+    if (!canLogin(accountStatus)) {
+      const appRes = await pool.query(
+        'SELECT rejection_reason FROM doctor_applications WHERE user_id = $1',
+        [user.id]
+      );
+      return res.status(403).json({
+        error: loginBlockMessage(accountStatus, appRes.rows[0]?.rejection_reason),
+        accountStatus,
+        pendingApproval: accountStatus === 'pending',
+      });
+    }
+
     const roleLabel = getRoleConfig(canonicalRole)?.label || canonicalRole;
+    let doctorProfileId = null;
+    if (canonicalRole === 'doctor') {
+      const profile = await getDoctorProfileByUserId(user.id);
+      doctorProfileId = profile?.id || null;
+    }
 
     // Generate JWT token
     const token = jwt.sign(
@@ -265,6 +306,8 @@ app.post("/auth/login", async (req, res) => {
         role: canonicalRole,
         roleLabel,
         dashboardPath: getDashboardPath(canonicalRole),
+        accountStatus,
+        doctorProfileId,
       }
     });
 
@@ -278,7 +321,8 @@ app.post("/auth/login", async (req, res) => {
 app.get("/auth/me", authenticateToken, async (req, res) => {
   try {
     const userResult = await pool.query(
-      "SELECT id, email, full_name, mobile_number, address, emergency_contact, role, created_at FROM auth_users WHERE id = $1",
+      `SELECT id, email, full_name, mobile_number, address, emergency_contact, role, account_status, created_at
+       FROM auth_users WHERE id = $1`,
       [req.user.id]
     );
 
@@ -289,6 +333,11 @@ app.get("/auth/me", authenticateToken, async (req, res) => {
     const user = userResult.rows[0];
 
     const canonicalRole = normalizeRole(user.role) || user.role;
+    let doctorProfileId = null;
+    if (canonicalRole === 'doctor') {
+      const profile = await getDoctorProfileByUserId(user.id);
+      doctorProfileId = profile?.id || null;
+    }
     res.json({
       id: user.id,
       email: user.email,
@@ -299,6 +348,8 @@ app.get("/auth/me", authenticateToken, async (req, res) => {
       role: canonicalRole,
       roleLabel: getRoleConfig(canonicalRole)?.label || canonicalRole,
       dashboardPath: getDashboardPath(canonicalRole),
+      accountStatus: user.account_status || 'active',
+      doctorProfileId,
       createdAt: user.created_at
     });
 
@@ -308,8 +359,8 @@ app.get("/auth/me", authenticateToken, async (req, res) => {
   }
 });
 
-// PUT /auth/me - Update current Pet Owner profile
-app.put("/auth/me", authenticateToken, requireRole('user'), async (req, res) => {
+// PUT /auth/me - Update profile (pet owner, doctor, staff, admin)
+app.put("/auth/me", authenticateToken, requireRole('user', 'doctor', 'staff', 'admin'), async (req, res) => {
   const {
     fullName,
     mobileNumber,
@@ -553,7 +604,10 @@ app.get("/api/user/dashboard", authenticateToken, requireRole('user'), async (re
 app.get("/api/doctors", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT * FROM doctors ORDER BY name"
+      `SELECT d.* FROM doctors d
+       LEFT JOIN auth_users u ON d.user_id = u.id
+       WHERE d.user_id IS NULL OR u.account_status = 'active'
+       ORDER BY d.name`
     );
     res.json(result.rows);
   } catch (error) {

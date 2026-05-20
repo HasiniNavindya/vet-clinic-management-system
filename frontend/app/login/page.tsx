@@ -59,9 +59,11 @@ function LoginForm() {
         <div className="text-center mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">Welcome Back!</h1>
           <p className="text-gray-600">
-            {selectedRole
-              ? `Sign in to your ${selectedRole.label} account`
-              : 'Login to your account'}
+            {selectedRole?.requiresDoctorApplication
+              ? 'Sign in after your application has been approved by an administrator.'
+              : selectedRole
+                ? `Sign in to your ${selectedRole.label} account`
+                : 'Login to your account'}
           </p>
         </div>
 
