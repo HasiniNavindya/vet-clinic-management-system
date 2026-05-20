@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
+const pool = require('../db');
 const { normalizeRole } = require('../config/roles');
+const { ACCOUNT_STATUS } = require('../config/accountStatus');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
@@ -11,12 +13,30 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
     const canonicalRole = normalizeRole(decoded.role) || decoded.role;
     req.user = { ...decoded, role: canonicalRole };
+
+    try {
+      const r = await pool.query('SELECT account_status FROM auth_users WHERE id = $1', [decoded.id]);
+      if (r.rows.length === 0) {
+        return res.status(403).json({ error: 'Invalid or expired token' });
+      }
+      const accountStatus = r.rows[0].account_status || ACCOUNT_STATUS.ACTIVE;
+      if (accountStatus === ACCOUNT_STATUS.SUSPENDED) {
+        return res.status(403).json({
+          error: 'Your account has been suspended.',
+          accountStatus: ACCOUNT_STATUS.SUSPENDED,
+        });
+      }
+    } catch (dbErr) {
+      console.error('authenticateToken DB error:', dbErr.message);
+      return res.status(500).json({ error: 'Authentication check failed' });
+    }
+
     next();
   });
 }

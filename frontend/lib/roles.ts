@@ -23,7 +23,7 @@ export const FALLBACK_ROLES: PublicRole[] = [
     label: 'Admin',
     selfRegisterable: true,
     requiresPetInfo: false,
-    dashboardPath: '/dashboard',
+    dashboardPath: '/dashboard/admin',
   },
   {
     id: 'doctor',
@@ -63,7 +63,14 @@ export function getRoleFromList(roles: PublicRole[], roleId?: string | null): Pu
 }
 
 export function getDashboardPath(roles: PublicRole[], roleId?: string | null): string {
-  return getRoleFromList(roles, roleId)?.dashboardPath || '/dashboard';
+  const normalized = normalizeRoleId(roleId);
+  if (!normalized) return '/dashboard';
+  const list = roles.length > 0 ? roles : FALLBACK_ROLES;
+  return (
+    getRoleFromList(list, normalized)?.dashboardPath ??
+    getRoleFromList(FALLBACK_ROLES, normalized)?.dashboardPath ??
+    '/dashboard'
+  );
 }
 
 export function getRoleLabel(roles: PublicRole[], roleId?: string | null): string {
