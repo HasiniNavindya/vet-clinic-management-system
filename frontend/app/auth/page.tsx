@@ -31,7 +31,9 @@ export default function AuthPortalPage() {
                 <p className="text-sm text-gray-600 mb-6 flex-1">
                   {role.requiresPetInfo
                     ? 'For pet parents booking care and managing pets.'
-                    : `Clinic ${role.label.toLowerCase()} account.`}
+                    : role.requiresDoctorApplication
+                      ? 'Apply with license and qualifications; admin approval required before login.'
+                      : `Clinic ${role.label.toLowerCase()} account.`}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Link

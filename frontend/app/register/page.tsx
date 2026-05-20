@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useRoles } from '@/hooks/useRoles';
 import StaffRegisterForm, { type StaffRegisterFormData } from '@/components/auth/StaffRegisterForm';
+import DoctorRegisterForm from '@/components/auth/DoctorRegisterForm';
+import { submitDoctorApplication, type DoctorRegisterPayload } from '@/lib/doctorApplications';
 import { getRoleFromList, normalizeRoleId } from '@/lib/roles';
 
 function RegisterPageContent() {
@@ -116,6 +118,19 @@ function RegisterPageContent() {
     }
   };
 
+  const handleDoctorRegister = async (data: DoctorRegisterPayload) => {
+    setIsLoading(true);
+    setError('');
+    try {
+      await submitDoctorApplication(data);
+      router.push('/register/doctor/pending');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Application failed. Please try again.';
+      setError(message);
+      setIsLoading(false);
+    }
+  };
+
   const handleStaffRegister = async (data: StaffRegisterFormData) => {
     if (data.password !== data.confirmPassword) {
       setError('Passwords do not match');
@@ -162,15 +177,24 @@ function RegisterPageContent() {
   }
 
   if (!roleConfig.requiresPetInfo) {
+    const isDoctor = roleId === 'doctor';
     return (
       <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-orange-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-lg mx-auto bg-white rounded-2xl shadow-xl p-8 sm:p-12">
-          <StaffRegisterForm
-            role={roleConfig}
-            onSubmit={handleStaffRegister}
-            isLoading={isLoading}
-            error={error}
-          />
+        <div className={`mx-auto bg-white rounded-2xl shadow-xl p-8 sm:p-12 ${isDoctor ? 'max-w-xl' : 'max-w-lg'}`}>
+          {isDoctor ? (
+            <DoctorRegisterForm
+              onSubmit={handleDoctorRegister}
+              isLoading={isLoading}
+              error={error}
+            />
+          ) : (
+            <StaffRegisterForm
+              role={roleConfig}
+              onSubmit={handleStaffRegister}
+              isLoading={isLoading}
+              error={error}
+            />
+          )}
         </div>
       </div>
     );

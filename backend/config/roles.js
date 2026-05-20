@@ -25,7 +25,8 @@ const ROLES = {
     aliases: ['doctor', 'vet', 'veterinarian'],
     selfRegisterable: true,
     requiresPetInfo: false,
-    dashboardPath: '/dashboard/doctors',
+    requiresDoctorApplication: true,
+    dashboardPath: '/dashboard/doctor',
   },
   staff: {
     id: 'staff',
@@ -61,8 +62,14 @@ function getPublicRoles() {
     label: role.label,
     selfRegisterable: role.selfRegisterable,
     requiresPetInfo: role.requiresPetInfo,
+    requiresDoctorApplication: Boolean(role.requiresDoctorApplication),
     dashboardPath: role.dashboardPath,
   }));
+}
+
+function requiresDoctorApplication(roleId) {
+  const config = getRoleConfig(roleId);
+  return Boolean(config?.requiresDoctorApplication);
 }
 
 function getDashboardPath(roleId) {
@@ -83,4 +90,5 @@ module.exports = {
   getPublicRoles,
   getDashboardPath,
   canSelfRegister,
+  requiresDoctorApplication,
 };

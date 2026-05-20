@@ -5,6 +5,7 @@ export interface PublicRole {
   label: string;
   selfRegisterable: boolean;
   requiresPetInfo: boolean;
+  requiresDoctorApplication?: boolean;
   dashboardPath: string;
 }
 
@@ -29,7 +30,8 @@ export const FALLBACK_ROLES: PublicRole[] = [
     label: 'Doctor',
     selfRegisterable: true,
     requiresPetInfo: false,
-    dashboardPath: '/dashboard/doctors',
+    requiresDoctorApplication: true,
+    dashboardPath: '/dashboard/doctor',
   },
   {
     id: 'staff',
