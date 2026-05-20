@@ -17,6 +17,7 @@ const {
 const { canLogin, loginBlockMessage } = require("./config/accountStatus");
 const { getDoctorProfileByUserId } = require("./services/doctorApplicationService");
 const doctorApplicationsRouter = require("./routes/doctorApplications");
+const adminUsersRouter = require("./routes/adminUsers");
 const { JWT_SECRET, authenticateToken, requireRole } = require("./middleware/auth");
 const appointmentsRouter = require("./routes/appointments");
 const medicalRecordsRouter = require("./routes/medicalRecords");
@@ -87,6 +88,7 @@ app.get("/auth/doctor-application-meta", (req, res) => {
 app.post("/auth/register-doctor", doctorApplicationsRouter.handleDoctorRegister);
 
 app.use("/api/doctor-applications", doctorApplicationsRouter);
+app.use("/api/admin", adminUsersRouter);
 
 // POST /auth/register - Register new user
 app.post("/auth/register", async (req, res) => {

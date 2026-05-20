@@ -17,7 +17,7 @@ const ROLES = {
     aliases: ['admin', 'administrator'],
     selfRegisterable: true,
     requiresPetInfo: false,
-    dashboardPath: '/dashboard',
+    dashboardPath: '/dashboard/admin',
   },
   doctor: {
     id: 'doctor',
