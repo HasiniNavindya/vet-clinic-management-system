@@ -70,41 +70,37 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 router.post('/', authenticateToken, requireRole('user'), async (req, res) => {
-  const { doctor_id, pet_id, appointment_date, appointment_time, notes } = req.body;
+  const { payment_transaction_id: paymentTransactionId } = req.body;
   const userId = req.user.id;
 
   try {
-    const validation = await validateBookingInput({
-      doctorId: doctor_id,
-      petId: pet_id,
-      userId,
-      appointmentDate: appointment_date,
-      appointmentTime: appointment_time,
-    });
-    if (!validation.ok) {
-      return res.status(400).json({ error: validation.error });
+    if (!paymentTransactionId) {
+      return res.status(402).json({
+        error: 'Online payment is required to book an appointment. Complete checkout first.',
+        code: 'PAYMENT_REQUIRED',
+      });
     }
 
-    const insert = await pool.query(
-      `INSERT INTO appointments (
-         user_id, doctor_id, pet_id, appointment_date, appointment_time,
-         status, notes, confirmation_message
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id`,
-      [
-        userId,
-        doctor_id,
-        pet_id || null,
-        appointment_date,
-        validation.timeNorm,
-        DEFAULT_STATUS,
-        notes || null,
-        'Your appointment request was received. You will be notified when the clinic approves it.',
-      ]
+    const txnRes = await pool.query(
+      `SELECT * FROM payment_transactions
+       WHERE id = $1 AND user_id = $2 AND type = 'appointment_booking' AND status = 'succeeded'`,
+      [paymentTransactionId, userId]
     );
+    if (txnRes.rows.length === 0) {
+      return res.status(402).json({
+        error: 'Valid paid transaction required before booking.',
+        code: 'PAYMENT_REQUIRED',
+      });
+    }
 
-    const appointment = await fetchAppointmentById(insert.rows[0].id);
-    res.status(201).json(appointment);
+    if (txnRes.rows[0].reference_id) {
+      const existing = await fetchAppointmentById(txnRes.rows[0].reference_id);
+      if (existing) return res.status(201).json(existing);
+    }
+
+    return res.status(400).json({
+      error: 'Payment received but appointment not created yet. Contact support or retry checkout.',
+    });
   } catch (err) {
     console.error('Book appointment error:', err);
     res.status(500).json({ error: 'Failed to book appointment' });

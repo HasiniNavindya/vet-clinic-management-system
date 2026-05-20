@@ -7,11 +7,11 @@ import { useAuth } from '@/context/AuthContext';
 import PetOwnerShell from '@/components/pet-owner/PetOwnerShell';
 import { API_BASE_URL, authHeaders } from '@/lib/api';
 import {
-  bookAppointment,
   Doctor,
   fetchDoctorAvailability,
   fetchDoctors,
 } from '@/lib/appointments';
+import { createAppointmentCheckout, fetchPaymentConfig, formatMoney } from '@/lib/payments';
 
 type Pet = { id: number; pet_name: string; species?: string };
 
@@ -30,13 +30,20 @@ export default function BookAppointmentPage() {
     notes: '',
   });
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [bookingFeeLabel, setBookingFeeLabel] = useState('');
 
   useEffect(() => {
     fetchDoctors().then((res) => {
       if (res.ok) setDoctors(res.data);
     });
+    if (token) {
+      fetchPaymentConfig(token).then((res) => {
+        if (res.ok) {
+          setBookingFeeLabel(formatMoney(res.data.appointmentBookingFeeCents, res.data.currency));
+        }
+      });
+    }
     if (!token) return;
     fetch(`${API_BASE_URL}/api/pets`, { headers: authHeaders(token) })
       .then((r) => r.json())
@@ -65,9 +72,8 @@ export default function BookAppointmentPage() {
     if (!token) return;
     setSubmitting(true);
     setError('');
-    setSuccess('');
 
-    const res = await bookAppointment(token, {
+    const res = await createAppointmentCheckout(token, {
       doctor_id: Number(form.doctor_id),
       pet_id: form.pet_id ? Number(form.pet_id) : undefined,
       appointment_date: form.appointment_date,
@@ -77,14 +83,13 @@ export default function BookAppointmentPage() {
 
     setSubmitting(false);
     if (!res.ok) {
-      setError((res.data as { error?: string }).error || 'Booking failed');
+      setError((res.data as { error?: string }).error || 'Could not start checkout');
       return;
     }
 
-    setSuccess(res.data.confirmationMessage || 'Appointment booked successfully.');
-    setTimeout(() => {
-      router.push(`/dashboard/pet-owner/appointments/${res.data.id}`);
-    }, 1500);
+    if (res.data.url) {
+      window.location.href = res.data.url;
+    }
   };
 
   const minDate = new Date().toISOString().slice(0, 10);
@@ -97,6 +102,11 @@ export default function BookAppointmentPage() {
         </Link>
         <h1 className="mt-2 text-2xl font-bold text-gray-900 md:text-3xl">Book Appointment</h1>
         <p className="mt-1 text-gray-600">Choose veterinarian, date, and time</p>
+        {bookingFeeLabel ? (
+          <p className="mt-2 text-sm font-medium text-[#ec6d13]">
+            Online payment required: {bookingFeeLabel} to confirm your appointment
+          </p>
+        ) : null}
       </div>
 
       <form onSubmit={handleSubmit} className="max-w-xl space-y-5 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
@@ -183,14 +193,13 @@ export default function BookAppointmentPage() {
         </div>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        {success ? <p className="text-sm text-green-700">{success}</p> : null}
 
         <button
           type="submit"
           disabled={submitting || slots.length === 0}
           className="w-full rounded-lg bg-[#ec6d13] py-3 font-semibold text-white hover:bg-[#d65e0f] disabled:opacity-50"
         >
-          {submitting ? 'Booking…' : 'Confirm booking'}
+          {submitting ? 'Redirecting to payment…' : 'Proceed to payment'}
         </button>
       </form>
     </PetOwnerShell>

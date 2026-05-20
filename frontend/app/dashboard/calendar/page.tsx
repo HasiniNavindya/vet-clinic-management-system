@@ -139,8 +139,14 @@ export default function CalendarPage() {
             <h1 className="text-3xl font-bold text-gray-900">Calendar & Appointments</h1>
             <p className="text-gray-600 mt-1">Manage your pet's appointments</p>
           </div>
-          <Link href="/dashboard/appointments/manage" className="flex items-center gap-2 text-[#ec6d13] hover:text-[#d65e0f] font-semibold mr-4">
+          <Link href="/dashboard/appointments/manage" className="mr-4 flex items-center gap-2 font-semibold text-[#ec6d13] hover:text-[#d65e0f]">
             Manage queue
+          </Link>
+          <Link href="/dashboard/health/manage" className="mr-4 flex items-center gap-2 font-semibold text-[#ec6d13] hover:text-[#d65e0f]">
+            Health records
+          </Link>
+          <Link href="/dashboard/payments/manage" className="mr-4 flex items-center gap-2 font-semibold text-[#ec6d13] hover:text-[#d65e0f]">
+            Record payment
           </Link>
           <Link href="/dashboard" className="flex items-center gap-2 text-[#ec6d13] hover:text-[#d65e0f] font-semibold">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

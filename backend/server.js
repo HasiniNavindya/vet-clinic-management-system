@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
@@ -14,15 +15,43 @@ const {
 } = require("./config/roles");
 const { JWT_SECRET, authenticateToken, requireRole } = require("./middleware/auth");
 const appointmentsRouter = require("./routes/appointments");
+const medicalRecordsRouter = require("./routes/medicalRecords");
+const vaccinationsRouter = require("./routes/vaccinations");
+const prescriptionsRouter = require("./routes/prescriptions");
+const paymentsRouter = require("./routes/payments");
 const { getAvailableSlots } = require("./services/appointmentService");
+const { handleStripeCheckoutCompleted } = require("./services/paymentService");
+const { constructWebhookEvent } = require("./services/stripeService");
 
 const app = express();
 
 // CORS middleware - only once!
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true
 }));
+
+// Stripe webhook must receive raw body (register before express.json)
+app.post(
+  '/api/payments/webhook',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    const signature = req.headers['stripe-signature'];
+    const parsed = constructWebhookEvent(req.body, signature);
+    if (!parsed.ok) {
+      return res.status(400).send(parsed.error);
+    }
+    try {
+      if (parsed.event.type === 'checkout.session.completed') {
+        await handleStripeCheckoutCompleted(parsed.event.data.object);
+      }
+      res.json({ received: true });
+    } catch (err) {
+      console.error('Stripe webhook error:', err);
+      res.status(500).json({ error: 'Webhook handler failed' });
+    }
+  }
+);
 
 // Increase JSON body limit to allow image uploads as base64
 app.use(express.json({ limit: '10mb' }));
@@ -552,6 +581,22 @@ app.get("/api/doctors/:id/availability", authenticateToken, async (req, res) => 
 });
 
 app.use("/api/appointments", appointmentsRouter);
+app.use("/api/medical-records", medicalRecordsRouter);
+app.use("/api/vaccinations", vaccinationsRouter);
+app.use("/api/prescriptions", prescriptionsRouter);
+app.use("/api/payments", paymentsRouter);
+
+// GET /api/clinic/pets - Staff list all registered pets (for health record entry)
+app.get("/api/clinic/pets", authenticateToken, requireRole('admin', 'doctor', 'staff'), async (req, res) => {
+  try {
+    const { listPetsForUser } = require('./services/petAccess');
+    const pets = await listPetsForUser(req.user.id, req.user.role);
+    res.json(pets);
+  } catch (error) {
+    console.error('Clinic pets error:', error);
+    res.status(500).json({ error: 'Failed to fetch pets' });
+  }
+});
 
 // GET /api/pets - Get user's pets
 app.get("/api/pets", authenticateToken, requireRole('user'), async (req, res) => {
