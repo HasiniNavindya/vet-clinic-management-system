@@ -8,6 +8,7 @@ import PetOwnerShell from '@/components/pet-owner/PetOwnerShell';
 import AppointmentStatusBadge from '@/components/appointments/AppointmentStatusBadge';
 import {
   Appointment,
+  acceptRescheduleOffer,
   cancelAppointment,
   fetchAppointment,
   fetchDoctorAvailability,
@@ -17,6 +18,7 @@ import {
   OWNER_RESCHEDULABLE,
   rescheduleAppointment,
 } from '@/lib/appointments';
+import { createAppointmentCheckout, fetchPaymentConfig, formatMoney } from '@/lib/payments';
 
 export default function AppointmentDetailPage() {
   const params = useParams();
@@ -32,6 +34,7 @@ export default function AppointmentDetailPage() {
   const [rescheduleForm, setRescheduleForm] = useState({ appointment_date: '', appointment_time: '' });
   const [cancelReason, setCancelReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [feeLabel, setFeeLabel] = useState('');
 
   const load = async () => {
     if (!token) return;
@@ -55,6 +58,13 @@ export default function AppointmentDetailPage() {
   }, [token, id]);
 
   useEffect(() => {
+    if (!token) return;
+    fetchPaymentConfig(token).then((res) => {
+      if (res.ok) setFeeLabel(formatMoney(res.data.appointmentBookingFeeCents, res.data.currency));
+    });
+  }, [token]);
+
+  useEffect(() => {
     if (!token || !appointment || !showReschedule || !rescheduleForm.appointment_date) return;
     fetchDoctorAvailability(token, appointment.doctorId, rescheduleForm.appointment_date).then((res) => {
       if (res.ok) setSlots(res.data.slots);
@@ -73,6 +83,32 @@ export default function AppointmentDetailPage() {
       return;
     }
     setShowReschedule(false);
+    setAppointment(res.data);
+  };
+
+  const handlePay = async () => {
+    if (!token || !appointment) return;
+    setBusy(true);
+    setActionError('');
+    const res = await createAppointmentCheckout(token, { appointment_id: appointment.id });
+    setBusy(false);
+    if (!res.ok) {
+      setActionError((res.data as { error?: string }).error || 'Could not start payment');
+      return;
+    }
+    if (res.data.url) window.location.href = res.data.url;
+  };
+
+  const handleAcceptReschedule = async () => {
+    if (!token) return;
+    setBusy(true);
+    setActionError('');
+    const res = await acceptRescheduleOffer(token, id);
+    setBusy(false);
+    if (!res.ok) {
+      setActionError((res.data as { error?: string }).error || 'Could not accept');
+      return;
+    }
     setAppointment(res.data);
   };
 
@@ -110,6 +146,8 @@ export default function AppointmentDetailPage() {
 
   const canReschedule = OWNER_RESCHEDULABLE.includes(appointment.status);
   const canCancel = OWNER_CANCELLABLE.includes(appointment.status);
+  const needsPayment = appointment.status === 'awaiting_payment';
+  const hasRescheduleOffer = appointment.status === 'reschedule_offered';
 
   return (
     <PetOwnerShell>
@@ -128,6 +166,49 @@ export default function AppointmentDetailPage() {
         ) : null}
 
         <DetailsCard appointment={appointment} />
+
+        {appointment.staffResponseReason ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-semibold">Message from clinic</p>
+            <p className="mt-1">{appointment.staffResponseReason}</p>
+          </div>
+        ) : null}
+
+        {hasRescheduleOffer && appointment.proposedAppointmentDate ? (
+          <div className="rounded-xl border border-purple-200 bg-purple-50 p-4">
+            <p className="font-semibold text-purple-900">New time proposed</p>
+            <p className="mt-1 text-sm text-purple-800">
+              {formatAppointmentDate(appointment.proposedAppointmentDate)} at{' '}
+              {formatTime(appointment.proposedAppointmentTime || '')}
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={handleAcceptReschedule}
+              className="mt-3 rounded-lg bg-[#ec6d13] px-4 py-2 text-sm font-semibold text-white hover:bg-[#d65e0f] disabled:opacity-50"
+            >
+              Accept new time
+            </button>
+          </div>
+        ) : null}
+
+        {needsPayment ? (
+          <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+            <p className="font-semibold text-orange-900">Payment required to confirm</p>
+            <p className="mt-1 text-sm text-orange-800">
+              Your request was approved. Complete online payment{feeLabel ? ` (${feeLabel})` : ''} to
+              confirm your booking.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={handlePay}
+              className="mt-3 rounded-lg bg-[#ec6d13] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#d65e0f] disabled:opacity-50"
+            >
+              {busy ? 'Redirecting…' : 'Pay & confirm booking'}
+            </button>
+          </div>
+        ) : null}
 
         {showReschedule && canReschedule ? (
           <RescheduleForm

@@ -4,18 +4,28 @@
 const APPOINTMENT_STATUSES = {
   pending: {
     id: 'pending',
-    label: 'Pending',
-    description: 'Waiting for clinic approval',
+    label: 'Pending review',
+    description: 'Request submitted — waiting for clinic approval',
+  },
+  awaiting_payment: {
+    id: 'awaiting_payment',
+    label: 'Awaiting payment',
+    description: 'Approved by clinic — complete online payment to confirm',
   },
   approved: {
     id: 'approved',
-    label: 'Approved',
-    description: 'Confirmed by the clinic',
+    label: 'Confirmed',
+    description: 'Booking confirmed and payment received',
   },
   rejected: {
     id: 'rejected',
-    label: 'Rejected',
-    description: 'Not accepted by the clinic',
+    label: 'Declined',
+    description: 'Request was not accepted by the clinic',
+  },
+  reschedule_offered: {
+    id: 'reschedule_offered',
+    label: 'Reschedule offered',
+    description: 'Clinic proposed a new date and time',
   },
   completed: {
     id: 'completed',
@@ -31,17 +41,30 @@ const APPOINTMENT_STATUSES = {
 
 const DEFAULT_STATUS = 'pending';
 
-/** Map legacy DB values to canonical status */
 const LEGACY_STATUS_MAP = {
   scheduled: 'pending',
   confirmed: 'approved',
   rescheduled: 'pending',
 };
 
-const OWNER_CANCELLABLE = new Set(['pending', 'approved']);
+const OWNER_CANCELLABLE = new Set(['pending', 'awaiting_payment', 'approved', 'reschedule_offered']);
 const OWNER_RESCHEDULABLE = new Set(['pending', 'approved']);
-const STAFF_CAN_SET = new Set(['pending', 'approved', 'rejected', 'completed', 'cancelled']);
-const ACTIVE_SLOT_STATUSES = new Set(['pending', 'approved', 'completed']);
+const STAFF_CAN_SET = new Set([
+  'pending',
+  'awaiting_payment',
+  'approved',
+  'rejected',
+  'reschedule_offered',
+  'completed',
+  'cancelled',
+]);
+const ACTIVE_SLOT_STATUSES = new Set([
+  'pending',
+  'awaiting_payment',
+  'approved',
+  'completed',
+  'reschedule_offered',
+]);
 
 const CLINIC_HOURS = { start: 8, end: 17, stepMinutes: 30 };
 
@@ -73,6 +96,14 @@ function isActiveForScheduling(status) {
   return ACTIVE_SLOT_STATUSES.has(normalizeStatus(status));
 }
 
+function canOwnerPay(status) {
+  return normalizeStatus(status) === 'awaiting_payment';
+}
+
+function canStaffReview(status) {
+  return normalizeStatus(status) === 'pending';
+}
+
 module.exports = {
   APPOINTMENT_STATUSES,
   DEFAULT_STATUS,
@@ -83,4 +114,6 @@ module.exports = {
   canOwnerReschedule,
   canStaffSetStatus,
   isActiveForScheduling,
+  canOwnerPay,
+  canStaffReview,
 };

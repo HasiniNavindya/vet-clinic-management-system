@@ -1,4 +1,4 @@
-import { AppointmentStatus, statusBadgeClass } from '@/lib/appointments';
+import { AppointmentStatus, statusBadgeClass, statusLabel } from '@/lib/appointments';
 
 type Props = {
   status: AppointmentStatus;
@@ -11,7 +11,7 @@ export default function AppointmentStatusBadge({ status, label, className = '' }
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${statusBadgeClass(status)} ${className}`}
     >
-      {label || status}
+      {label || statusLabel(status)}
     </span>
   );
 }

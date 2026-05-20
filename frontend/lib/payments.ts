@@ -62,11 +62,12 @@ export function fetchTransactions(token: string) {
 export function createAppointmentCheckout(
   token: string,
   body: {
-    doctor_id: number;
+    doctor_id?: number;
     pet_id?: number;
-    appointment_date: string;
-    appointment_time: string;
+    appointment_date?: string;
+    appointment_time?: string;
     notes?: string;
+    appointment_id?: number;
   }
 ) {
   return apiFetch<{

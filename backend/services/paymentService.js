@@ -127,6 +127,58 @@ async function listTransactions({ userId, role, limit = 50 }) {
 
 async function fulfillAppointmentBooking(transaction) {
   const meta = transaction.metadata || {};
+  const appointmentId = meta.appointment_id ? Number(meta.appointment_id) : null;
+
+  if (appointmentId) {
+    const existing = await fetchAppointmentById(appointmentId);
+    if (!existing) throw new Error('Appointment not found');
+    if (existing.status !== 'awaiting_payment') {
+      throw new Error('Appointment is not awaiting payment');
+    }
+    if (Number(existing.userId) !== Number(transaction.userId)) {
+      throw new Error('Not authorized for this appointment');
+    }
+
+    await pool.query(
+      `UPDATE appointments
+       SET status = 'approved',
+           payment_status = $1,
+           booking_fee_cents = $2,
+           confirmation_message = $3,
+           confirmed_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4`,
+      [
+        APPOINTMENT_PAYMENT_STATUSES.PAID,
+        transaction.amountCents,
+        'Your appointment is confirmed. Payment received. We look forward to your visit.',
+        appointmentId,
+      ]
+    );
+
+    await updateTransaction(transaction.id, {
+      reference_type: 'appointment',
+      reference_id: appointmentId,
+      status: PAYMENT_STATUSES.SUCCEEDED,
+      paid_at: new Date(),
+    });
+
+    const appointment = await fetchAppointmentById(appointmentId);
+    try {
+      const { notifyPaymentConfirmation, notifyAppointmentBooked } = require('./notificationService');
+      const txn = await getTransactionById(transaction.id);
+      await notifyPaymentConfirmation(Number(transaction.userId), {
+        ...txn,
+        referenceType: 'appointment',
+        referenceId: appointmentId,
+      });
+      await notifyAppointmentBooked(Number(transaction.userId), appointment);
+    } catch (notifyErr) {
+      console.error('Payment notification error:', notifyErr.message);
+    }
+    return appointment;
+  }
+
   const {
     doctor_id: doctorId,
     pet_id: petId,
@@ -151,7 +203,7 @@ async function fulfillAppointmentBooking(transaction) {
     `INSERT INTO appointments (
        user_id, doctor_id, pet_id, appointment_date, appointment_time,
        status, notes, confirmation_message, payment_status, booking_fee_cents
-     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     ) VALUES ($1, $2, $3, $4, $5, 'approved', $6, $7, $8, $9)
      RETURNING id`,
     [
       userId,
@@ -159,23 +211,22 @@ async function fulfillAppointmentBooking(transaction) {
       petId || null,
       appointmentDate,
       validation.timeNorm,
-      DEFAULT_STATUS,
       notes || null,
-      'Your appointment is confirmed. Payment received. The clinic will review and approve your visit.',
+      'Your appointment is confirmed. Payment received.',
       APPOINTMENT_PAYMENT_STATUSES.PAID,
       transaction.amountCents,
     ]
   );
 
-  const appointmentId = insert.rows[0].id;
+  const newId = insert.rows[0].id;
   await updateTransaction(transaction.id, {
     reference_type: 'appointment',
-    reference_id: appointmentId,
+    reference_id: newId,
     status: PAYMENT_STATUSES.SUCCEEDED,
     paid_at: new Date(),
   });
 
-  const appointment = await fetchAppointmentById(appointmentId);
+  const appointment = await fetchAppointmentById(newId);
   try {
     const {
       notifyPaymentConfirmation,
@@ -185,13 +236,70 @@ async function fulfillAppointmentBooking(transaction) {
     await notifyPaymentConfirmation(Number(userId), {
       ...txn,
       referenceType: 'appointment',
-      referenceId: appointmentId,
+      referenceId: newId,
     });
     await notifyAppointmentBooked(Number(userId), appointment);
   } catch (notifyErr) {
     console.error('Payment notification error:', notifyErr.message);
   }
   return appointment;
+}
+
+async function createAppointmentPaymentCheckout(userId, userEmail, appointmentId) {
+  const appointment = await fetchAppointmentById(appointmentId);
+  if (!appointment) return { ok: false, error: 'Appointment not found' };
+  if (appointment.userId !== userId) return { ok: false, error: 'Not authorized' };
+  if (appointment.status !== 'awaiting_payment') {
+    return { ok: false, error: 'This appointment does not require payment' };
+  }
+
+  const description = `Appointment confirmation — ${appointment.appointmentDate} at ${appointment.appointmentTime}`;
+  const metadata = {
+    type: PAYMENT_TYPES.APPOINTMENT_BOOKING,
+    user_id: String(userId),
+    appointment_id: String(appointmentId),
+  };
+
+  const txn = await createTransaction({
+    userId,
+    type: PAYMENT_TYPES.APPOINTMENT_BOOKING,
+    amountCents: APPOINTMENT_BOOKING_FEE_CENTS,
+    description,
+    metadata,
+    referenceType: 'appointment',
+    referenceId: appointmentId,
+  });
+
+  const { isStripeConfigured } = require('../config/payments');
+  if (!isStripeConfigured()) {
+    return {
+      ok: true,
+      demoMode: true,
+      transactionId: txn.id,
+      url: `${FRONTEND_URL}/dashboard/pet-owner/payments/demo-complete?transactionId=${txn.id}`,
+    };
+  }
+
+  const session = await createCheckoutSession({
+    amountCents: APPOINTMENT_BOOKING_FEE_CENTS,
+    description,
+    metadata: { ...metadata, transaction_id: String(txn.id) },
+    successPath: '/dashboard/pet-owner/payments/success',
+    cancelPath: '/dashboard/pet-owner/payments/failed',
+    customerEmail: userEmail,
+  });
+
+  if (!session.ok) {
+    await updateTransaction(txn.id, { status: PAYMENT_STATUSES.FAILED });
+    return { ok: false, error: session.error };
+  }
+
+  await updateTransaction(txn.id, {
+    stripe_checkout_session_id: session.sessionId,
+    status: PAYMENT_STATUSES.PROCESSING,
+  });
+
+  return { ok: true, url: session.url, sessionId: session.sessionId, transactionId: txn.id };
 }
 
 async function createAppointmentCheckout(userId, userEmail, booking) {
@@ -523,6 +631,7 @@ module.exports = {
   listTransactions,
   getTransactionById,
   createAppointmentCheckout,
+  createAppointmentPaymentCheckout,
   createShopCheckout,
   completeTransactionById,
   confirmPaymentFromSession,

@@ -20,7 +20,7 @@ const vaccinationsRouter = require("./routes/vaccinations");
 const prescriptionsRouter = require("./routes/prescriptions");
 const paymentsRouter = require("./routes/payments");
 const notificationsRouter = require("./routes/notifications");
-const { getAvailableSlots } = require("./services/appointmentService");
+const { getAvailableSlots, getDoctorMonthAvailability } = require("./services/appointmentService");
 const { handleStripeCheckoutCompleted } = require("./services/paymentService");
 const { constructWebhookEvent } = require("./services/stripeService");
 
@@ -574,6 +574,23 @@ app.get("/api/doctors/:id", async (req, res) => {
   } catch (error) {
     console.error('Error fetching doctor:', error);
     res.status(500).json({ error: 'Failed to fetch doctor' });
+  }
+});
+
+// GET /api/doctors/:id/availability-calendar?month=YYYY-MM
+app.get("/api/doctors/:id/availability-calendar", authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { month } = req.query;
+    if (!month) {
+      return res.status(400).json({ error: 'Query parameter month is required (YYYY-MM)' });
+    }
+    const result = await getDoctorMonthAvailability(Number(id), month);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    res.json(result);
+  } catch (error) {
+    console.error('Availability calendar error:', error);
+    res.status(500).json({ error: 'Failed to load availability calendar' });
   }
 });
 

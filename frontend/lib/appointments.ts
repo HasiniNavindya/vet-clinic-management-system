@@ -2,8 +2,10 @@ import { API_BASE_URL, apiFetch, authHeaders } from './api';
 
 export type AppointmentStatus =
   | 'pending'
+  | 'awaiting_payment'
   | 'approved'
   | 'rejected'
+  | 'reschedule_offered'
   | 'completed'
   | 'cancelled';
 
@@ -31,6 +33,11 @@ export type Appointment = {
   ownerName?: string;
   ownerEmail?: string;
   ownerPhone?: string;
+  paymentStatus?: string;
+  staffResponseReason?: string | null;
+  proposedAppointmentDate?: string | null;
+  proposedAppointmentTime?: string | null;
+  staffRespondedAt?: string | null;
 };
 
 export type StatusMeta = {
@@ -49,8 +56,10 @@ export type Doctor = {
 
 const STATUS_STYLES: Record<AppointmentStatus, string> = {
   pending: 'bg-amber-100 text-amber-800',
+  awaiting_payment: 'bg-orange-100 text-orange-900',
   approved: 'bg-green-100 text-green-800',
   rejected: 'bg-red-100 text-red-800',
+  reschedule_offered: 'bg-purple-100 text-purple-800',
   completed: 'bg-blue-100 text-blue-800',
   cancelled: 'bg-gray-100 text-gray-700',
 };
@@ -78,7 +87,7 @@ export async function fetchAppointment(token: string, id: number | string) {
   });
 }
 
-export async function bookAppointment(
+export async function submitAppointmentRequest(
   token: string,
   body: {
     doctor_id: number;
@@ -88,10 +97,49 @@ export async function bookAppointment(
     notes?: string;
   }
 ) {
-  return apiFetch<Appointment>('/api/appointments', {
+  return apiFetch<Appointment>('/api/appointments/request', {
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify(body),
+  });
+}
+
+export async function staffRespondToAppointment(
+  token: string,
+  id: number | string,
+  body: {
+    action: 'approve' | 'reject' | 'reschedule';
+    reason?: string;
+    appointment_date?: string;
+    appointment_time?: string;
+    doctor_notes?: string;
+    confirmation_message?: string;
+  }
+) {
+  return apiFetch<Appointment>(`/api/appointments/${id}/respond`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function acceptRescheduleOffer(token: string, id: number | string) {
+  return apiFetch<Appointment>(`/api/appointments/${id}/accept-reschedule`, {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+}
+
+export async function fetchDoctorMonthCalendar(
+  token: string,
+  doctorId: number,
+  month: string
+) {
+  return apiFetch<{
+    yearMonth: string;
+    dates: Record<string, { availableCount: number; hasSlots: boolean }>;
+  }>(`/api/doctors/${doctorId}/availability-calendar?month=${month}`, {
+    headers: authHeaders(token),
   });
 }
 
@@ -170,5 +218,23 @@ export function doctorImageUrl(imagePath?: string | null): string | null {
   return imagePath;
 }
 
-export const OWNER_CANCELLABLE: AppointmentStatus[] = ['pending', 'approved'];
+export const OWNER_CANCELLABLE: AppointmentStatus[] = [
+  'pending',
+  'awaiting_payment',
+  'approved',
+  'reschedule_offered',
+];
 export const OWNER_RESCHEDULABLE: AppointmentStatus[] = ['pending', 'approved'];
+
+export function statusLabel(status: AppointmentStatus): string {
+  const labels: Record<AppointmentStatus, string> = {
+    pending: 'Pending review',
+    awaiting_payment: 'Awaiting payment',
+    approved: 'Confirmed',
+    rejected: 'Declined',
+    reschedule_offered: 'Reschedule offered',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+  };
+  return labels[status] || status;
+}

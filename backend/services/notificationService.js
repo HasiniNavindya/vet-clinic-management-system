@@ -162,7 +162,7 @@ async function notifyAppointmentBooked(userId, appointment) {
   const time = appointment.appointmentTime;
   const doctor = appointment.doctorName || 'your veterinarian';
   const title = 'Appointment booked';
-  const message = `Your appointment with Dr. ${doctor} on ${date} at ${time} is confirmed. Payment received. The clinic will review your request.`;
+  const message = `Your appointment with Dr. ${doctor} on ${date} at ${time} is confirmed. Payment received.`;
 
   return createNotification({
     userId,
@@ -182,15 +182,20 @@ async function notifyAppointmentStatusChange(userId, appointment, status) {
   if (!prefs.appointmentUpdates) return null;
 
   const labels = {
-    approved: 'Appointment approved',
+    pending: 'Appointment request received',
+    awaiting_payment: 'Appointment approved — payment required',
+    approved: 'Appointment confirmed',
     rejected: 'Appointment declined',
+    reschedule_offered: 'New time proposed',
     cancelled: 'Appointment cancelled',
     completed: 'Visit completed',
   };
   const title = labels[status] || 'Appointment update';
   const message =
     appointment.confirmationMessage ||
-    `Your appointment on ${appointment.appointmentDate} at ${appointment.appointmentTime} was updated to: ${status}.`;
+    (status === 'reschedule_offered' && appointment.proposedAppointmentDate
+      ? `The clinic proposed ${appointment.proposedAppointmentDate} at ${appointment.proposedAppointmentTime || appointment.appointmentTime}. Open your appointment to accept or contact the clinic.`
+      : `Your appointment on ${appointment.appointmentDate} at ${appointment.appointmentTime} was updated.`);
 
   return createNotification({
     userId,
