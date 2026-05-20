@@ -49,6 +49,18 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const q = new URLSearchParams(window.location.search).get('role');
+    if (
+      q &&
+      FALLBACK_ROLES.some((r) => r.id === q)
+    ) {
+      setRoleFilter(q);
+      setPage(1);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/login?role=admin');
     if (!isLoading && isAuthenticated && !hasRole('admin')) router.replace('/dashboard');
   }, [isLoading, isAuthenticated, hasRole, router]);

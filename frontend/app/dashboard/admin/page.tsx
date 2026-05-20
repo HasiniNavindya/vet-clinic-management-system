@@ -1,15 +1,59 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Header from '@/components/layout/Header';
 import { getDashboardPath } from '@/lib/roles';
+import {
+  fetchAdminOverview,
+  fetchAdminRecentActivity,
+  formatUsdFromCents,
+  type AdminOverviewStats,
+} from '@/lib/adminInsights';
+
+function StatCard({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="mt-2 text-2xl font-bold text-gray-900">{value}</p>
+      {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
+    </div>
+  );
+}
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, hasRole, logout } = useAuth();
+  const { user, token, isAuthenticated, isLoading, hasRole, logout } = useAuth();
+  const [overview, setOverview] = useState<AdminOverviewStats | null>(null);
+  const [activity, setActivity] = useState<
+    { kind: string; summary: string; meta?: string; occurredAt: string }[]
+  >([]);
+  const [statsError, setStatsError] = useState('');
+
+  const loadStats = useCallback(async () => {
+    if (!token) return;
+    setStatsError('');
+    try {
+      const [o, a] = await Promise.all([
+        fetchAdminOverview(token),
+        fetchAdminRecentActivity(token, 12),
+      ]);
+      setOverview(o.overview);
+      setActivity(a.activity);
+    } catch (e) {
+      setStatsError(e instanceof Error ? e.message : 'Could not load dashboard stats');
+    }
+  }, [token]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -22,6 +66,10 @@ export default function AdminDashboardPage() {
     }
   }, [isLoading, isAuthenticated, hasRole, router, user]);
 
+  useEffect(() => {
+    if (isAuthenticated && hasRole('admin') && token) loadStats();
+  }, [isAuthenticated, hasRole, token, loadStats]);
+
   if (isLoading || !isAuthenticated || !hasRole('admin')) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -33,13 +81,13 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <div className="container mx-auto max-w-5xl px-4 py-12 pt-28">
+      <div className="container mx-auto max-w-6xl px-4 py-12 pt-28">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Administration</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Admin overview</h1>
             <p className="mt-1 text-gray-600">
-              Signed in as <span className="font-semibold">{user?.fullName}</span>. Choose a management
-              area below.
+              Signed in as <span className="font-semibold">{user?.fullName}</span>. Snapshot of clinic
+              operations, users, and revenue — open a section below for full management screens.
             </p>
           </div>
           <button
@@ -54,18 +102,130 @@ export default function AdminDashboardPage() {
           </button>
         </div>
 
-        <div className="mt-10 grid gap-6 sm:grid-cols-2">
+        {statsError ? <p className="mt-6 text-sm text-red-600">{statsError}</p> : null}
+
+        {overview ? (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold text-gray-900">System snapshot</h2>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <StatCard label="Appointments" value={overview.totalAppointments} hint={`${overview.pendingAppointments} pending / awaiting payment`} />
+              <StatCard label="Pet owners" value={overview.totalPetOwners} />
+              <StatCard label="Doctors (profiles)" value={overview.totalDoctors} hint={`${overview.doctorsWithActiveLogin} with active login`} />
+              <StatCard
+                label="Stripe revenue (paid txs)"
+                value={formatUsdFromCents(overview.revenueCents)}
+              />
+              <StatCard label="Staff accounts" value={overview.totalStaff} />
+              <StatCard
+                label="Shop (paid orders)"
+                value={overview.shopOrdersPaid}
+                hint={formatUsdFromCents(overview.shopRevenueCents)}
+              />
+              <StatCard label="Treatment records" value={overview.medicalRecordsCount} />
+              <StatCard
+                label="Vaccinations due (30d)"
+                value={overview.vaccinationsDueSoon}
+              />
+              <StatCard label="Unread notifications" value={overview.notificationsUnread} />
+              <StatCard
+                label="Pending vet applications"
+                value={overview.doctorApplicationsPending}
+              />
+            </div>
+          </section>
+        ) : !statsError ? (
+          <div className="mt-10 flex justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ec6d13] border-t-transparent" />
+          </div>
+        ) : null}
+
+        {activity.length > 0 ? (
+          <section className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold text-gray-900">Recent activity</h2>
+              <Link href="/dashboard/admin/analytics" className="text-sm font-semibold text-[#ec6d13] hover:underline">
+                Full analytics →
+              </Link>
+            </div>
+            <ul className="mt-4 divide-y divide-gray-100 text-sm">
+              {activity.map((ev, i) => (
+                <li key={`${ev.kind}-${i}`} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
+                  <span className="text-gray-800">{ev.summary}</span>
+                  <span className="text-xs text-gray-500">
+                    {ev.meta ? `${ev.meta} · ` : ''}
+                    {ev.occurredAt ? new Date(ev.occurredAt).toLocaleString() : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+
+        <h2 className="mt-12 text-lg font-semibold text-gray-900">Management</h2>
+        <div className="mt-4 grid gap-6 sm:grid-cols-2">
+          <Link
+            href="/dashboard/admin/analytics"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Analytics</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Appointment volumes, booking status mix, revenue trends, and operational charts.
+            </p>
+            <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
+              Open analytics →
+            </span>
+          </Link>
+
+          <Link
+            href="/dashboard/admin/reports"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Monthly reports</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Bookings created, visits completed, treatment records, and paid revenue for any month.
+            </p>
+            <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
+              Open reports →
+            </span>
+          </Link>
+
+          <Link
+            href="/dashboard/admin/doctors"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Doctor profiles</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Clinic veterinarian records, schedules sample, editing details, and link to linked accounts for
+              activation.
+            </p>
+            <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
+              Manage doctors →
+            </span>
+          </Link>
+
+          <Link
+            href="/dashboard/admin/staff"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Staff</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Operational staff listings and stable links into user administration for roles and suspension.
+            </p>
+            <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
+              Staff hub →
+            </span>
+          </Link>
+
           <Link
             href="/dashboard/admin/users"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h2 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">User management</h2>
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">User management</h3>
             <p className="mt-2 text-sm text-gray-600">
-              View all accounts, suspend users, assign roles, and review activity for pet owners, vets, and
-              staff.
+              All accounts, suspend or reactivate, assign roles — pet owners, vets, and staff.
             </p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
-              Open user management →
+              Open users →
             </span>
           </Link>
 
@@ -73,14 +233,12 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/doctor-applications"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h2 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">
-              Doctor applications
-            </h2>
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Doctor applications</h3>
             <p className="mt-2 text-sm text-gray-600">
-              Review veterinarian credential submissions and approve or decline new clinic doctors.
+              Approve veterinarian registrations and onboarding before they receive active login access.
             </p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
-              Open vet applications →
+              Review applications →
             </span>
           </Link>
 
@@ -88,10 +246,8 @@ export default function AdminDashboardPage() {
             href="/dashboard/calendar"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h2 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Clinic calendar</h2>
-            <p className="mt-2 text-sm text-gray-600">
-              View schedules and booking availability like staff dashboards.
-            </p>
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Clinic calendar</h3>
+            <p className="mt-2 text-sm text-gray-600">Schedules and availability across the clinic.</p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">Open calendar →</span>
           </Link>
 
@@ -99,7 +255,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/appointments/manage"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h2 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Appointment queue</h2>
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Appointment queue</h3>
             <p className="mt-2 text-sm text-gray-600">Respond to booking requests from pet owners.</p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
               Manage appointments →
