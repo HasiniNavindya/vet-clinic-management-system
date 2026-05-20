@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, authHeaders } from '@/lib/api';
 
-type Category = 'food' | 'toys' | 'grooming' | 'health' | 'accessories';
+import { SHOP_PRODUCT_CATEGORIES, type ShopCategoryId } from '@/lib/shopCategories';
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -29,7 +29,8 @@ export default function EditProductModal({ isOpen, onClose, onSuccess, product }
     description: '',
     price: '',
     image: '',
-    category: 'food' as Category,
+    category: 'pet_food' as ShopCategoryId,
+    stockQuantity: '',
   });
 
   useEffect(() => {
@@ -39,7 +40,11 @@ export default function EditProductModal({ isOpen, onClose, onSuccess, product }
         description: product.description,
         price: product.price.toString(),
         image: product.image,
-        category: product.category as Category,
+        category: (product.category as ShopCategoryId) || 'pet_food',
+        stockQuantity:
+          'stockQuantity' in product && product.stockQuantity != null
+            ? String(product.stockQuantity)
+            : '',
       });
     }
   }, [product]);
@@ -69,6 +74,9 @@ export default function EditProductModal({ isOpen, onClose, onSuccess, product }
           price: parseFloat(formData.price),
           image: formData.image,
           category: formData.category,
+          ...(formData.stockQuantity !== ''
+            ? { stockQuantity: Number(formData.stockQuantity) }
+            : {}),
         }),
       });
 
@@ -183,11 +191,11 @@ export default function EditProductModal({ isOpen, onClose, onSuccess, product }
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ec6d13] focus:border-transparent"
                   >
-                    <option value="food">Food</option>
-                    <option value="toys">Toys</option>
-                    <option value="grooming">Grooming</option>
-                    <option value="health">Health</option>
-                    <option value="accessories">Accessories</option>
+                    {SHOP_PRODUCT_CATEGORIES.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

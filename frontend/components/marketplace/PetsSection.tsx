@@ -73,7 +73,8 @@ export default function PetsSection({
     <div className="w-full">
       <div className="bg-white rounded-lg border border-gray-200 p-4 mb-5">
         <p className="text-sm text-gray-600 mb-3 pb-3 border-b border-gray-100">
-          Pet owners can list pets here for buyers to discover. Open <strong>View Details</strong> to see the full description and contact the owner directly.
+          Pet owners can post advertisements for admin approval. Only <strong>approved</strong> listings appear here.
+          Open <strong>View Details</strong> to contact the seller directly (not sold through the shop cart).
         </p>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-sm text-gray-600">
