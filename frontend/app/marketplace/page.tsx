@@ -8,6 +8,8 @@ import ProductsSection from '@/components/marketplace/ProductsSection';
 import PetsSection from '@/components/marketplace/PetsSection';
 import AddProductModal from '@/components/marketplace/AddProductModal';
 import AddPetModal from '@/components/marketplace/AddPetModal';
+import OwnerPostPetAdModal from '@/components/marketplace/OwnerPostPetAdModal';
+import type { ProductFilterCategory } from '@/lib/shopCategories';
 import EditProductModal from '@/components/marketplace/EditProductModal';
 import EditPetModal from '@/components/marketplace/EditPetModal';
 import Cart from '@/components/marketplace/Cart';
@@ -16,7 +18,6 @@ import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, authHeaders } from '@/lib/api';
 
 type Tab = 'products' | 'pets';
-type Category = 'all' | 'food' | 'toys' | 'grooming' | 'health' | 'accessories';
 
 interface CartItem {
   id: number;
@@ -51,13 +52,15 @@ interface Pet {
 export default function MarketplacePage() {
   const { user, hasRole, token } = useAuth();
   const isAdmin = hasRole('admin');
+  const isPetOwner = hasRole('user');
   const [activeTab, setActiveTab] = useState<Tab>('products');
-  const [activeCategory, setActiveCategory] = useState<Category>('all');
+  const [activeCategory, setActiveCategory] = useState<ProductFilterCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [priceRange, setPriceRange] = useState({ min: 0, max: 1500 });
   const [sortBy, setSortBy] = useState('featured');
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showAddPetModal, setShowAddPetModal] = useState(false);
+  const [showOwnerPetModal, setShowOwnerPetModal] = useState(false);
   const [showEditProductModal, setShowEditProductModal] = useState(false);
   const [showEditPetModal, setShowEditPetModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -101,8 +104,12 @@ export default function MarketplacePage() {
   };
 
   const handlePetSuccess = () => {
-    alert('Pet added successfully!');
-    setRefreshKey(prev => prev + 1);
+    alert('Pet listing saved.');
+    setRefreshKey((prev) => prev + 1);
+  };
+
+  const handleOwnerPetSuccess = () => {
+    setRefreshKey((prev) => prev + 1);
   };
 
   const handleEditProduct = (product: Product) => {
@@ -199,23 +206,37 @@ export default function MarketplacePage() {
         setSearchQuery={setSearchQuery}
       />
 
-      {/* Add buttons - Only visible for admins */}
-      {isAdmin && (
+      {(isAdmin || isPetOwner) && (
         <div className="py-4">
           <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
             <div className="flex flex-wrap gap-2 sm:gap-4">
-                <button 
+              {isAdmin && (
+                <button
+                  type="button"
                   onClick={() => setShowAddProductModal(true)}
                   className="flex-1 sm:flex-none px-4 sm:px-6 py-2 bg-[#ec6d13] text-white rounded-lg font-semibold hover:bg-[#d55a0a] transition-colors text-sm sm:text-base"
                 >
-                  + Add Product
+                  + Add shop product
                 </button>
-                <button 
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
                   onClick={() => setShowAddPetModal(true)}
+                  className="flex-1 sm:flex-none px-4 sm:px-6 py-2 border border-[#ec6d13] text-[#ec6d13] rounded-lg font-semibold hover:bg-orange-50 transition-colors text-sm sm:text-base"
+                >
+                  + Add pet (instant publish)
+                </button>
+              )}
+              {isPetOwner && !isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setShowOwnerPetModal(true)}
                   className="flex-1 sm:flex-none px-4 sm:px-6 py-2 bg-[#ec6d13] text-white rounded-lg font-semibold hover:bg-[#d55a0a] transition-colors text-sm sm:text-base"
                 >
-                  + Add Pet
+                  + Post pet advertisement
                 </button>
+              )}
             </div>
           </div>
         </div>
@@ -287,10 +308,15 @@ export default function MarketplacePage() {
         onClose={() => setShowAddProductModal(false)}
         onSuccess={handleProductSuccess}
       />
-      <AddPetModal 
+      <AddPetModal
         isOpen={showAddPetModal}
         onClose={() => setShowAddPetModal(false)}
         onSuccess={handlePetSuccess}
+      />
+      <OwnerPostPetAdModal
+        isOpen={showOwnerPetModal}
+        onClose={() => setShowOwnerPetModal(false)}
+        onSuccess={handleOwnerPetSuccess}
       />
       <EditProductModal 
         isOpen={showEditProductModal}

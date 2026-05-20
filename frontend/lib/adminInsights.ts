@@ -16,6 +16,7 @@ export interface AdminOverviewStats {
   vaccinationsDueSoon: number;
   notificationsUnread: number;
   doctorApplicationsPending: number;
+  marketplaceAdsPending: number;
 }
 
 async function parseJson(res: Response) {

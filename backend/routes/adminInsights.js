@@ -34,6 +34,7 @@ router.get('/stats/overview', async (_req, res) => {
       vaccinationsDueSoon: 0,
       notificationsUnread: 0,
       doctorApplicationsPending: 0,
+      marketplaceAdsPending: 0,
     };
 
     try {
@@ -137,6 +138,15 @@ router.get('/stats/overview', async (_req, res) => {
         `SELECT COUNT(*)::int AS c FROM doctor_applications WHERE status = 'pending'`
       );
       overview.doctorApplicationsPending = ap?.c ?? 0;
+    } catch (e) {
+      /* optional */
+    }
+
+    try {
+      const mp = await scalar(
+        `SELECT COUNT(*)::int AS c FROM pets WHERE listing_status = 'pending_approval'`
+      );
+      overview.marketplaceAdsPending = mp?.c ?? 0;
     } catch (e) {
       /* optional */
     }

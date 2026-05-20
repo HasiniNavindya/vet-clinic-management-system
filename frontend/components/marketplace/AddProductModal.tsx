@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, authHeaders } from '@/lib/api';
 
-type Category = 'food' | 'toys' | 'grooming' | 'health' | 'accessories';
+import { SHOP_PRODUCT_CATEGORIES, type ShopCategoryId } from '@/lib/shopCategories';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -21,7 +21,8 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
     description: '',
     price: '',
     image: '',
-    category: 'food' as Category,
+    category: 'pet_food' as ShopCategoryId,
+    stockQuantity: '50',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -47,6 +48,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
           price: parseFloat(formData.price),
           image: formData.image,
           category: formData.category,
+          stockQuantity: Number(formData.stockQuantity),
         }),
       });
 
@@ -60,7 +62,8 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
         description: '',
         price: '',
         image: '',
-        category: 'food',
+        category: 'pet_food',
+        stockQuantity: '50',
       });
       
       onSuccess();
@@ -144,7 +147,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
-                    Price (LKR) *
+                    Price (USD) *
                   </label>
                   <input
                     type="number"
@@ -154,29 +157,44 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }: AddProdu
                     onChange={handleChange}
                     required
                     step="0.01"
-                    placeholder="e.g., 5000"
+                    placeholder="e.g., 24.99"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ec6d13] focus:border-transparent"
                   />
                 </div>
-
                 <div>
-                  <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                    Category *
+                  <label htmlFor="stockQuantity" className="block text-sm font-medium text-gray-700 mb-2">
+                    Stock *
                   </label>
-                  <select
-                    id="category"
-                    name="category"
-                    value={formData.category}
+                  <input
+                    type="number"
+                    id="stockQuantity"
+                    name="stockQuantity"
+                    value={formData.stockQuantity}
                     onChange={handleChange}
+                    required
+                    min="0"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ec6d13] focus:border-transparent"
-                  >
-                    <option value="food">Food</option>
-                    <option value="toys">Toys</option>
-                    <option value="grooming">Grooming</option>
-                    <option value="health">Health</option>
-                    <option value="accessories">Accessories</option>
-                  </select>
+                  />
                 </div>
+              </div>
+
+              <div>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                  Category *
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ec6d13] focus:border-transparent"
+                >
+                  {SHOP_PRODUCT_CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

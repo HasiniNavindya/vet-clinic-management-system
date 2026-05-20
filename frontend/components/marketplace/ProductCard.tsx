@@ -7,13 +7,14 @@ interface ProductCardProps {
   price: number;
   image: string;
   category: string;
+  stockQuantity?: number;
   onEdit?: (product: ProductCardProps) => void;
   onDelete?: (id: number) => void;
   onAddToCart?: (item: { id: number; name: string; price: number; image: string; type: 'product' }) => void;
   isAdmin?: boolean;
 }
 
-export default function ProductCard({ id, name, description, price, image, category, onEdit, onDelete, onAddToCart, isAdmin = false }: ProductCardProps) {
+export default function ProductCard({ id, name, description, price, image, category, stockQuantity, onEdit, onDelete, onAddToCart, isAdmin = false }: ProductCardProps) {
   return (
     <div className="group bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200">
       <div className="relative">
@@ -29,7 +30,7 @@ export default function ProductCard({ id, name, description, price, image, categ
         {isAdmin && (
           <div className="absolute top-2 right-2 flex gap-1">
             <button
-              onClick={() => onEdit?.({ id, name, description, price, image, category })}
+              onClick={() => onEdit?.({ id, name, description, price, image, category, stockQuantity })}
               className="w-8 h-8 bg-blue-500 rounded text-white flex items-center justify-center hover:bg-blue-600 transition-colors shadow-lg"
               title="Edit"
             >
@@ -64,10 +65,19 @@ export default function ProductCard({ id, name, description, price, image, categ
           <span className="text-xs text-gray-600 font-medium">4.8</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-500">Sold 18</span>
+          <span className="text-xs text-gray-500">
+            {stockQuantity != null && stockQuantity <= 5 ? (
+              <span className="font-semibold text-amber-700">Low stock: {stockQuantity}</span>
+            ) : stockQuantity != null ? (
+              `In stock: ${stockQuantity}`
+            ) : (
+              'In stock'
+            )}
+          </span>
           <button 
             onClick={() => onAddToCart?.({ id, name, price, image, type: 'product' })}
-            className="w-8 h-8 bg-[#ec6d13] rounded text-white flex items-center justify-center hover:bg-[#d65a0a] transition-colors"
+            disabled={stockQuantity !== undefined && stockQuantity <= 0}
+            className="w-8 h-8 bg-[#ec6d13] rounded text-white flex items-center justify-center hover:bg-[#d65a0a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             title="Add to Cart"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

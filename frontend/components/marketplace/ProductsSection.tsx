@@ -3,8 +3,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import FilterSidebar from './FilterSidebar';
 import ProductCard from './ProductCard';
+import type { ProductFilterCategory } from '@/lib/shopCategories';
+import { LEGACY_CATEGORY_MAP, categoryLabel } from '@/lib/shopCategories';
 
-type Category = 'all' | 'food' | 'toys' | 'grooming' | 'health' | 'accessories';
+function matchesCategory(productCategory: string, filter: ProductFilterCategory): boolean {
+  if (filter === 'all') return true;
+  const c = String(productCategory || '').toLowerCase().trim();
+  if (c === filter) return true;
+  const mapped = LEGACY_CATEGORY_MAP[c];
+  return mapped === filter;
+}
 
 interface Product {
   id: number;
@@ -13,12 +21,13 @@ interface Product {
   price: number;
   image: string;
   category: string;
+  stockQuantity?: number;
   createdAt?: string;
 }
 
 interface ProductsSectionProps {
-  activeCategory: Category;
-  setActiveCategory: (category: Category) => void;
+  activeCategory: ProductFilterCategory;
+  setActiveCategory: (category: ProductFilterCategory) => void;
   priceRange: { min: number; max: number };
   setPriceRange: (range: { min: number; max: number }) => void;
   sortBy: string;
@@ -69,12 +78,12 @@ export default function ProductsSection({
 
   const filteredProducts = useMemo(() => {
     const matches = products.filter((product) => {
-      const matchesCategory = activeCategory === 'all' || product.category === activeCategory;
+      const matchesCat = matchesCategory(product.category, activeCategory);
       const matchesSearch =
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.description.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesPrice = product.price >= priceRange.min && product.price <= priceRange.max;
-      return matchesCategory && matchesSearch && matchesPrice;
+      return matchesCat && matchesSearch && matchesPrice;
     });
 
     if (sortBy === 'priceLow') return [...matches].sort((a, b) => a.price - b.price);
@@ -90,7 +99,11 @@ export default function ProductsSection({
   }, [products, activeCategory, searchQuery, priceRange, sortBy]);
 
   const activeFilters = [
-    activeCategory !== 'all' && { key: 'category', label: activeCategory, action: () => setActiveCategory('all') },
+    activeCategory !== 'all' && {
+      key: 'category',
+      label: categoryLabel(activeCategory),
+      action: () => setActiveCategory('all'),
+    },
     priceRange.min > 0 && { key: 'priceMin', label: `Min: $${priceRange.min}`, action: () => setPriceRange({ ...priceRange, min: 0 }) },
     priceRange.max < 1500 && { key: 'priceMax', label: `Max: $${priceRange.max}`, action: () => setPriceRange({ ...priceRange, max: 1500 }) },
   ].filter(Boolean) as { key: string; label: string; action: () => void }[];

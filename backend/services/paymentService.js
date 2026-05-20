@@ -374,19 +374,58 @@ async function createShopCheckout(userId, userEmail, { items, shipping }) {
   }
 
   let totalCents = 0;
-  const normalized = items.map((item) => {
-    const unitCents = Math.round(Number(item.price) * 100);
-    const qty = Number(item.quantity) || 1;
-    totalCents += unitCents * qty;
-    return {
-      item_type: item.type,
-      item_id: item.id,
-      item_name: item.name,
-      unit_price_cents: unitCents,
-      quantity: qty,
-      image_url: item.image || null,
-    };
-  });
+  const normalized = [];
+
+  for (const item of items) {
+    const type = String(item.type || 'product').toLowerCase();
+    if (type !== 'product') {
+      return {
+        ok: false,
+        error: 'Checkout supports clinic shop products only. Pet advertisements are arranged with the seller directly.',
+      };
+    }
+
+    const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
+    const prodId = Number(item.id);
+
+    try {
+      const pr = await pool.query(
+        `SELECT id, name, price, COALESCE(stock_quantity, 0)::int AS stock_quantity,
+                COALESCE(is_active, true) AS is_active
+         FROM products WHERE id = $1`,
+        [prodId]
+      );
+      const row = pr.rows[0];
+      if (!row || !row.is_active) {
+        return { ok: false, error: item.name ? `${item.name} is unavailable` : 'A product in your cart is unavailable' };
+      }
+      if (row.stock_quantity < qty) {
+        return { ok: false, error: `Not enough stock for ${row.name}` };
+      }
+
+      const dbUnitCents = Math.round(Number(row.price) * 100);
+      const cartUnitCents = Math.round(Number(item.price) * 100);
+      if (dbUnitCents !== cartUnitCents) {
+        return {
+          ok: false,
+          error: 'Shop prices were updated. Refresh the marketplace and update your cart.',
+        };
+      }
+
+      totalCents += dbUnitCents * qty;
+      normalized.push({
+        item_type: 'product',
+        item_id: prodId,
+        item_name: item.name || row.name,
+        unit_price_cents: dbUnitCents,
+        quantity: qty,
+        image_url: item.image || null,
+      });
+    } catch (e) {
+      console.error('createShopCheckout stock check:', e.message);
+      return { ok: false, error: 'Could not verify product inventory' };
+    }
+  }
 
   if (totalCents <= 0) {
     return { ok: false, error: 'Invalid order total' };
@@ -479,14 +518,54 @@ async function fulfillShopOrder(transaction) {
   const orderId = transaction.referenceId || Number(transaction.metadata?.order_id);
   if (!orderId) throw new Error('Order not found for transaction');
 
-  await pool.query(
-    `UPDATE shop_orders SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-    [ORDER_STATUSES.PAID, orderId]
-  );
-  await updateTransaction(transaction.id, {
-    status: PAYMENT_STATUSES.SUCCEEDED,
-    paid_at: new Date(),
-  });
+  const existing = await getTransactionById(transaction.id);
+  if (existing?.status === PAYMENT_STATUSES.SUCCEEDED) {
+    return { orderId };
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const lineRes = await client.query(
+      `SELECT item_id, quantity FROM shop_order_items
+       WHERE order_id = $1 AND item_type = 'product'`,
+      [orderId]
+    );
+
+    for (const line of lineRes.rows) {
+      const dec = await client.query(
+        `UPDATE products
+         SET stock_quantity = stock_quantity - $1
+         WHERE id = $2 AND stock_quantity >= $1
+         RETURNING id`,
+        [line.quantity, line.item_id]
+      );
+      if (dec.rows.length === 0) {
+        throw new Error(`Insufficient stock to fulfill order #${orderId}`);
+      }
+    }
+
+    await client.query(
+      `UPDATE shop_orders SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [ORDER_STATUSES.PAID, orderId]
+    );
+
+    await client.query(
+      `UPDATE payment_transactions
+       SET status = $1, paid_at = $2, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [PAYMENT_STATUSES.SUCCEEDED, new Date(), transaction.id]
+    );
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+
   try {
     const { notifyPaymentConfirmation } = require('./notificationService');
     const txn = await getTransactionById(transaction.id);

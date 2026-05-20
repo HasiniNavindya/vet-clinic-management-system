@@ -131,6 +131,10 @@ export default function AdminDashboardPage() {
                 label="Pending vet applications"
                 value={overview.doctorApplicationsPending}
               />
+              <StatCard
+                label="Pending marketplace ads"
+                value={overview.marketplaceAdsPending ?? 0}
+              />
             </div>
           </section>
         ) : !statsError ? (
@@ -213,6 +217,33 @@ export default function AdminDashboardPage() {
             </p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
               Staff hub →
+            </span>
+          </Link>
+
+          <Link
+            href="/dashboard/admin/shop"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Shop</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Product catalog with categories (pet food, toys, medicines, accessories), inventory, and paid-order
+              fulfillment.
+            </p>
+            <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
+              Manage shop →
+            </span>
+          </Link>
+
+          <Link
+            href="/dashboard/admin/marketplace"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Marketplace ads</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Review pet-owner listings, approve or reject advertisements, and remove policy-violating content.
+            </p>
+            <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
+              Moderate listings →
             </span>
           </Link>
 

@@ -20,6 +20,10 @@ const doctorApplicationsRouter = require("./routes/doctorApplications");
 const adminUsersRouter = require("./routes/adminUsers");
 const adminInsightsRouter = require("./routes/adminInsights");
 const adminClinicDoctorsRouter = require("./routes/adminClinicDoctors");
+const adminShopRouter = require("./routes/adminShop");
+const adminMarketplaceRouter = require("./routes/adminMarketplace");
+const marketplacePetListingsRouter = require("./routes/marketplacePetListings");
+const { normalizeProductCategory, LISTING_STATUS } = require("./config/shop");
 const { JWT_SECRET, authenticateToken, requireRole } = require("./middleware/auth");
 const appointmentsRouter = require("./routes/appointments");
 const medicalRecordsRouter = require("./routes/medicalRecords");
@@ -93,6 +97,9 @@ app.use("/api/doctor-applications", doctorApplicationsRouter);
 app.use("/api/admin", adminUsersRouter);
 app.use("/api/admin", adminInsightsRouter);
 app.use("/api/admin", adminClinicDoctorsRouter);
+app.use("/api/admin", adminShopRouter);
+app.use("/api/admin", adminMarketplaceRouter);
+app.use("/api/marketplace", marketplacePetListingsRouter);
 
 // POST /auth/register - Register new user
 app.post("/auth/register", async (req, res) => {
@@ -847,12 +854,51 @@ app.post('/api/pets/:id/image', authenticateToken, requireRole('user'), async (r
 // PUT - update product
 app.put("/products/:id", authenticateToken, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
-  const { name, description, price, image, category } = req.body;
+  const { name, description, price, image, category, stockQuantity, isActive } = req.body;
 
   try {
+    const cat =
+      category !== undefined && category !== null
+        ? normalizeProductCategory(category)
+        : undefined;
+    const updates = [];
+    const vals = [];
+    let p = 1;
+    if (name !== undefined) {
+      updates.push(`name = $${p++}`);
+      vals.push(name);
+    }
+    if (description !== undefined) {
+      updates.push(`description = $${p++}`);
+      vals.push(description);
+    }
+    if (price !== undefined) {
+      updates.push(`price = $${p++}`);
+      vals.push(Number(price));
+    }
+    if (image !== undefined) {
+      updates.push(`image = $${p++}`);
+      vals.push(image);
+    }
+    if (cat !== undefined) {
+      updates.push(`category = $${p++}`);
+      vals.push(cat);
+    }
+    if (stockQuantity !== undefined) {
+      updates.push(`stock_quantity = $${p++}`);
+      vals.push(Math.max(0, Math.floor(Number(stockQuantity))));
+    }
+    if (isActive !== undefined) {
+      updates.push(`is_active = $${p++}`);
+      vals.push(Boolean(isActive));
+    }
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No updates provided' });
+    }
+    vals.push(id);
     const result = await pool.query(
-      "UPDATE products SET name = $1, description = $2, price = $3, image = $4, category = $5 WHERE id = $6 RETURNING *",
-      [name, description, price, image, category, id]
+      `UPDATE products SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`,
+      vals
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Product not found" });
@@ -922,8 +968,11 @@ app.post("/pets", authenticateToken, requireRole('admin'), async (req, res) => {
 
   try {
     const result = await pool.query(
-      "INSERT INTO pets (name, age, price, description, image, location, seller, contact_number) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
-      [name, age, price, description, image, location, seller, contactNumber]
+      `INSERT INTO pets (
+        name, age, price, description, image, location, seller, contact_number,
+        owner_user_id, listing_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL, $9) RETURNING *`,
+      [name, age, price, description, image, location, seller, contactNumber || null, LISTING_STATUS.APPROVED]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -934,12 +983,16 @@ app.post("/pets", authenticateToken, requireRole('admin'), async (req, res) => {
 
 // POST - add new product
 app.post("/products", authenticateToken, requireRole('admin'), async (req, res) => {
-  const { name, description, price, image, category } = req.body;
+  const { name, description, price, image, category, stockQuantity, isActive } = req.body;
 
   try {
+    const cat = normalizeProductCategory(category);
+    const stock = Math.max(0, Math.floor(Number(stockQuantity ?? 0)));
+    const active = isActive === false ? false : true;
     const result = await pool.query(
-      "INSERT INTO products (name, description, price, image, category) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [name, description, price, image, category]
+      `INSERT INTO products (name, description, price, image, category, stock_quantity, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [name, description, price, image, cat, stock, active]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -952,7 +1005,13 @@ app.post("/products", authenticateToken, requireRole('admin'), async (req, res) 
 app.get("/products", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT id, name, description, price, image, category, created_at AS \"createdAt\" FROM products ORDER BY id DESC"
+      `SELECT id, name, description, price, image, category,
+              COALESCE(stock_quantity, 0)::int AS "stockQuantity",
+              created_at AS "createdAt"
+       FROM products
+       WHERE COALESCE(is_active, true) = true
+         AND COALESCE(stock_quantity, 0) > 0
+       ORDER BY id DESC`
     );
     res.json(result.rows);
   } catch (err) {
@@ -965,7 +1024,12 @@ app.get("/products", async (req, res) => {
 app.get("/pets", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT id, name, age, price, description, image, location, seller, contact_number AS \"contactNumber\", created_at AS \"createdAt\" FROM pets ORDER BY id DESC"
+      `SELECT id, name, age, price, description, image, location, seller,
+              contact_number AS "contactNumber", created_at AS "createdAt"
+       FROM pets
+       WHERE listing_status IS NULL OR listing_status = $1
+       ORDER BY created_at DESC NULLS LAST, id DESC`,
+      [LISTING_STATUS.APPROVED]
     );
     res.json(result.rows);
   } catch (err) {
