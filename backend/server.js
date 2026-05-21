@@ -22,6 +22,9 @@ const adminInsightsRouter = require("./routes/adminInsights");
 const adminClinicDoctorsRouter = require("./routes/adminClinicDoctors");
 const adminShopRouter = require("./routes/adminShop");
 const adminMarketplaceRouter = require("./routes/adminMarketplace");
+const adminPaymentsRouter = require("./routes/adminPayments");
+const adminNotificationsRouter = require("./routes/adminNotifications");
+const adminReportsRouter = require("./routes/adminReports");
 const marketplacePetListingsRouter = require("./routes/marketplacePetListings");
 const { normalizeProductCategory, LISTING_STATUS } = require("./config/shop");
 const { JWT_SECRET, authenticateToken, requireRole } = require("./middleware/auth");
@@ -99,6 +102,9 @@ app.use("/api/admin", adminInsightsRouter);
 app.use("/api/admin", adminClinicDoctorsRouter);
 app.use("/api/admin", adminShopRouter);
 app.use("/api/admin", adminMarketplaceRouter);
+app.use("/api/admin", adminPaymentsRouter);
+app.use("/api/admin", adminNotificationsRouter);
+app.use("/api/admin", adminReportsRouter);
 app.use("/api/marketplace", marketplacePetListingsRouter);
 
 // POST /auth/register - Register new user

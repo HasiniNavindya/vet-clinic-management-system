@@ -226,6 +226,35 @@ h6 {
   animation-delay: 4000ms;
 }
 
+/* About page — team doctor horizontal slider */
+.team-slider-track {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.team-slider-track::-webkit-scrollbar {
+  display: none;
+}
+
+.team-slider-fade {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 2rem,
+    black calc(100% - 2rem),
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 2rem,
+    black calc(100% - 2rem),
+    transparent
+  );
+}
+
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
