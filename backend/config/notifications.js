@@ -4,6 +4,7 @@ const NOTIFICATION_TYPES = {
   APPOINTMENT_STATUS: 'appointment_status',
   PAYMENT_CONFIRMATION: 'payment_confirmation',
   VACCINATION_ALERT: 'vaccination_alert',
+  ANNOUNCEMENT: 'announcement',
 };
 
 const APPOINTMENT_REMINDER_HOURS_BEFORE = Number(process.env.APPOINTMENT_REMINDER_HOURS_BEFORE || 24);

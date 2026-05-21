@@ -705,6 +705,197 @@ async function listPetOwnersForStaff() {
   return result.rows;
 }
 
+async function adminListTransactions({
+  page = 1,
+  limit = 25,
+  status,
+  type,
+  search,
+} = {}) {
+  const safeLimit = Math.min(100, Math.max(1, Number(limit) || 25));
+  const offset = (Math.max(1, Number(page) || 1) - 1) * safeLimit;
+  const conditions = ['1=1'];
+  const params = [];
+  let p = 1;
+
+  if (status && String(status).trim()) {
+    conditions.push(`pt.status = $${p++}`);
+    params.push(String(status).trim().toLowerCase());
+  }
+  if (type && String(type).trim()) {
+    conditions.push(`pt.type = $${p++}`);
+    params.push(String(type).trim().toLowerCase());
+  }
+  if (search && String(search).trim()) {
+    const q = `%${String(search).trim()}%`;
+    conditions.push(
+      `(u.email ILIKE $${p} OR u.full_name ILIKE $${p} OR pt.description ILIKE $${p} OR pt.id::text = $${p + 1})`
+    );
+    params.push(q, String(search).trim());
+    p += 2;
+  }
+
+  const where = conditions.join(' AND ');
+  const countRes = await pool.query(
+    `SELECT COUNT(*)::int AS total
+     FROM payment_transactions pt
+     LEFT JOIN auth_users u ON u.id = pt.user_id
+     WHERE ${where}`,
+    params
+  );
+  const total = countRes.rows[0]?.total || 0;
+
+  const listParams = [...params, safeLimit, offset];
+  const limIdx = params.length + 1;
+  const offIdx = params.length + 2;
+
+  const listRes = await pool.query(
+    `SELECT pt.*, u.full_name AS owner_name, u.email AS owner_email
+     FROM payment_transactions pt
+     LEFT JOIN auth_users u ON pt.user_id = u.id
+     WHERE ${where}
+     ORDER BY pt.created_at DESC
+     LIMIT $${limIdx} OFFSET $${offIdx}`,
+    listParams
+  );
+
+  return {
+    transactions: listRes.rows.map(mapTransactionRow),
+    total,
+    page: Math.max(1, Number(page) || 1),
+    limit: safeLimit,
+    totalPages: Math.ceil(total / safeLimit) || 1,
+  };
+}
+
+async function getPaymentOverviewStats() {
+  const byStatus = await pool.query(
+    `SELECT status, COUNT(*)::int AS count, COALESCE(SUM(amount_cents), 0)::bigint AS cents
+     FROM payment_transactions
+     GROUP BY status`
+  );
+  const succeeded = await pool.query(
+    `SELECT COALESCE(SUM(amount_cents), 0)::bigint AS s
+     FROM payment_transactions WHERE status = $1`,
+    [PAYMENT_STATUSES.SUCCEEDED]
+  );
+  const last30 = await pool.query(
+    `SELECT COALESCE(SUM(amount_cents), 0)::bigint AS s
+     FROM payment_transactions
+     WHERE status = $1
+       AND COALESCE(paid_at, created_at) >= NOW() - INTERVAL '30 days'`,
+    [PAYMENT_STATUSES.SUCCEEDED]
+  );
+  const pending = await pool.query(
+    `SELECT COUNT(*)::int AS c FROM payment_transactions
+     WHERE status IN ($1, $2)`,
+    [PAYMENT_STATUSES.PENDING, PAYMENT_STATUSES.PROCESSING]
+  );
+  const byType = await pool.query(
+    `SELECT type, COUNT(*)::int AS count
+     FROM payment_transactions
+     WHERE status = $1
+     GROUP BY type`,
+    [PAYMENT_STATUSES.SUCCEEDED]
+  );
+
+  return {
+    totalRevenueCents: Number(succeeded.rows[0]?.s ?? 0),
+    revenueLast30DaysCents: Number(last30.rows[0]?.s ?? 0),
+    pendingCount: pending.rows[0]?.c ?? 0,
+    statusBreakdown: byStatus.rows.map((r) => ({
+      status: r.status,
+      count: r.count,
+      cents: Number(r.cents),
+    })),
+    succeededByType: byType.rows,
+  };
+}
+
+async function adminFulfillTransaction(transactionId, adminUserId) {
+  const txn = await getTransactionById(transactionId);
+  if (!txn) return { ok: false, error: 'Transaction not found' };
+  if (txn.status === PAYMENT_STATUSES.SUCCEEDED) {
+    return { ok: true, alreadyCompleted: true, transaction: txn };
+  }
+  if (txn.status === PAYMENT_STATUSES.REFUNDED) {
+    return { ok: false, error: 'Cannot verify a refunded transaction' };
+  }
+
+  if (txn.type === PAYMENT_TYPES.APPOINTMENT_BOOKING) {
+    const appointment = await fulfillAppointmentBooking(txn);
+    return {
+      ok: true,
+      appointment,
+      transaction: await getTransactionById(transactionId),
+      verifiedBy: adminUserId,
+    };
+  }
+  if (txn.type === PAYMENT_TYPES.SHOP_ORDER) {
+    await fulfillShopOrder(txn);
+    return {
+      ok: true,
+      transaction: await getTransactionById(transactionId),
+      verifiedBy: adminUserId,
+    };
+  }
+
+  await updateTransaction(transactionId, {
+    status: PAYMENT_STATUSES.SUCCEEDED,
+    paid_at: new Date(),
+  });
+  try {
+    const { notifyPaymentConfirmation } = require('./notificationService');
+    const fresh = await getTransactionById(transactionId);
+    await notifyPaymentConfirmation(fresh.userId, fresh);
+  } catch (_e) {
+    /* */
+  }
+  return {
+    ok: true,
+    transaction: await getTransactionById(transactionId),
+    verifiedBy: adminUserId,
+  };
+}
+
+async function adminRefundTransaction(transactionId, adminUserId, { reason } = {}) {
+  const txn = await getTransactionById(transactionId);
+  if (!txn) return { ok: false, error: 'Transaction not found' };
+  if (txn.status !== PAYMENT_STATUSES.SUCCEEDED) {
+    return { ok: false, error: 'Only succeeded payments can be refunded' };
+  }
+
+  const meta =
+    typeof txn.metadata === 'object' && txn.metadata
+      ? { ...txn.metadata, refund_reason: reason || '', refunded_by: adminUserId }
+      : { refund_reason: reason || '', refunded_by: adminUserId };
+
+  await updateTransaction(transactionId, {
+    status: PAYMENT_STATUSES.REFUNDED,
+    metadata: typeof meta === 'string' ? meta : JSON.stringify(meta),
+  });
+
+  try {
+    const { createNotification } = require('./notificationService');
+    const { NOTIFICATION_TYPES } = require('../config/notifications');
+    await createNotification({
+      userId: txn.userId,
+      type: NOTIFICATION_TYPES.PAYMENT_CONFIRMATION,
+      title: 'Payment refunded',
+      message: `A refund was issued for ${txn.description || 'your payment'}${reason ? `: ${reason}` : '.'}`,
+      linkPath: '/dashboard/pet-owner/payments',
+      referenceType: 'payment',
+      referenceId: transactionId,
+      emailSubject: 'Payment refund processed',
+      emailBody: `Your payment has been marked as refunded.${reason ? ` Reason: ${reason}` : ''}`,
+    });
+  } catch (_e) {
+    /* */
+  }
+
+  return { ok: true, transaction: await getTransactionById(transactionId) };
+}
+
 module.exports = {
   mapTransactionRow,
   listTransactions,
@@ -717,5 +908,9 @@ module.exports = {
   handleStripeCheckoutCompleted,
   recordOfflinePayment,
   listPetOwnersForStaff,
+  adminListTransactions,
+  getPaymentOverviewStats,
+  adminFulfillTransaction,
+  adminRefundTransaction,
   APPOINTMENT_BOOKING_FEE_CENTS,
 };

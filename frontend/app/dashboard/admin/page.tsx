@@ -8,7 +8,6 @@ import Header from '@/components/layout/Header';
 import { getDashboardPath } from '@/lib/roles';
 import {
   fetchAdminOverview,
-  fetchAdminRecentActivity,
   formatUsdFromCents,
   type AdminOverviewStats,
 } from '@/lib/adminInsights';
@@ -33,23 +32,16 @@ function StatCard({
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { user, token, isAuthenticated, isLoading, hasRole, logout } = useAuth();
+  const { user, token, isAuthenticated, isLoading, hasRole } = useAuth();
   const [overview, setOverview] = useState<AdminOverviewStats | null>(null);
-  const [activity, setActivity] = useState<
-    { kind: string; summary: string; meta?: string; occurredAt: string }[]
-  >([]);
   const [statsError, setStatsError] = useState('');
 
   const loadStats = useCallback(async () => {
     if (!token) return;
     setStatsError('');
     try {
-      const [o, a] = await Promise.all([
-        fetchAdminOverview(token),
-        fetchAdminRecentActivity(token, 12),
-      ]);
+      const o = await fetchAdminOverview(token);
       setOverview(o.overview);
-      setActivity(a.activity);
     } catch (e) {
       setStatsError(e instanceof Error ? e.message : 'Could not load dashboard stats');
     }
@@ -82,24 +74,12 @@ export default function AdminDashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="container mx-auto max-w-6xl px-4 py-12 pt-28">
-        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Admin overview</h1>
-            <p className="mt-1 text-gray-600">
-              Signed in as <span className="font-semibold">{user?.fullName}</span>. Snapshot of clinic
-              operations, users, and revenue — open a section below for full management screens.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              logout();
-              router.push('/login?role=admin');
-            }}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
-          >
-            Log out
-          </button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Admin overview</h1>
+          <p className="mt-1 text-gray-600">
+            Signed in as <span className="font-semibold">{user?.fullName}</span>. Snapshot of clinic
+            operations, users, and revenue — open a section below for full management screens.
+          </p>
         </div>
 
         {statsError ? <p className="mt-6 text-sm text-red-600">{statsError}</p> : null}
@@ -143,28 +123,6 @@ export default function AdminDashboardPage() {
           </div>
         ) : null}
 
-        {activity.length > 0 ? (
-          <section className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold text-gray-900">Recent activity</h2>
-              <Link href="/dashboard/admin/analytics" className="text-sm font-semibold text-[#ec6d13] hover:underline">
-                Full analytics →
-              </Link>
-            </div>
-            <ul className="mt-4 divide-y divide-gray-100 text-sm">
-              {activity.map((ev, i) => (
-                <li key={`${ev.kind}-${i}`} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
-                  <span className="text-gray-800">{ev.summary}</span>
-                  <span className="text-xs text-gray-500">
-                    {ev.meta ? `${ev.meta} · ` : ''}
-                    {ev.occurredAt ? new Date(ev.occurredAt).toLocaleString() : ''}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
         <h2 className="mt-12 text-lg font-semibold text-gray-900">Management</h2>
         <div className="mt-4 grid gap-6 sm:grid-cols-2">
           <Link
@@ -173,7 +131,7 @@ export default function AdminDashboardPage() {
           >
             <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Analytics</h3>
             <p className="mt-2 text-sm text-gray-600">
-              Appointment volumes, booking status mix, revenue trends, and operational charts.
+              Analytics snapshot with donut charts, revenue breakdown, activity mix, and 30-day booking and payment trends.
             </p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
               Open analytics →
@@ -184,12 +142,39 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/reports"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Monthly reports</h3>
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Reports & export</h3>
             <p className="mt-2 text-sm text-gray-600">
-              Bookings created, visits completed, treatment records, and paid revenue for any month.
+              Monthly dashboards, CSV exports, and printable summaries for revenue, appointments, treatments, and shop
+              sales.
             </p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
               Open reports →
+            </span>
+          </Link>
+
+          <Link
+            href="/dashboard/admin/payments"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Payments</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Transaction history, revenue monitoring, verify payments, refunds, and shop order payment tracking.
+            </p>
+            <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
+              Payment dashboard →
+            </span>
+          </Link>
+
+          <Link
+            href="/dashboard/admin/notifications"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Notifications</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Broadcast announcements, run appointment and vaccination reminders, and review sent notifications.
+            </p>
+            <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
+              Notification center →
             </span>
           </Link>
 

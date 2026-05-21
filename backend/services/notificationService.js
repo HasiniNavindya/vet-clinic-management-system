@@ -286,6 +286,87 @@ async function processAppointmentReminders() {
   return { sent, checked: result.rows.length };
 }
 
+async function listNotificationsAdmin({ limit = 80, type } = {}) {
+  const params = [];
+  let sql = `
+    SELECT n.*, u.email AS user_email, u.full_name AS user_full_name
+    FROM notifications n
+    LEFT JOIN auth_users u ON u.id = n.user_id
+    WHERE 1=1
+  `;
+  if (type) {
+    params.push(type);
+    sql += ` AND n.type = $${params.length}`;
+  }
+  sql += ` ORDER BY n.created_at DESC LIMIT ${Number(limit)}`;
+  const result = await pool.query(sql, params);
+  return result.rows.map((row) => ({
+    ...mapNotificationRow(row),
+    userEmail: row.user_email,
+    userFullName: row.user_full_name,
+  }));
+}
+
+async function broadcastAnnouncement({
+  title,
+  message,
+  roleFilter = null,
+  sendEmail = true,
+  linkPath = '/dashboard/pet-owner/notifications',
+}) {
+  if (!title || !message) {
+    return { ok: false, error: 'title and message are required' };
+  }
+
+  let usersSql = `SELECT id FROM auth_users WHERE COALESCE(account_status, 'active') = 'active'`;
+  const params = [];
+  if (roleFilter && roleFilter !== 'all') {
+    params.push(roleFilter);
+    usersSql += ` AND LOWER(TRIM(role)) = $${params.length}`;
+  }
+
+  const users = await pool.query(usersSql, params);
+  let sent = 0;
+  for (const row of users.rows) {
+    await createNotification({
+      userId: row.id,
+      type: NOTIFICATION_TYPES.ANNOUNCEMENT,
+      title,
+      message,
+      linkPath,
+      referenceType: 'announcement',
+      sendEmail,
+      emailSubject: title,
+      emailBody: message,
+    });
+    sent += 1;
+  }
+  return { ok: true, sent, audience: roleFilter || 'all_active' };
+}
+
+async function processAllVaccinationReminders() {
+  const owners = await pool.query(
+    `SELECT DISTINCT p.user_id FROM pets_owned p
+     INNER JOIN vaccinations v ON v.pet_id = p.id
+     WHERE v.administered_date IS NULL`
+  );
+  let sent = 0;
+  let usersProcessed = 0;
+  const { processAndGetReminders } = require('./vaccinationService');
+  for (const row of owners.rows) {
+    usersProcessed += 1;
+    const result = await processAndGetReminders(row.user_id);
+    if (result?.active?.length) sent += result.active.length;
+  }
+  return { sent, usersProcessed };
+}
+
+async function runAllReminderJobs() {
+  const appointment = await processAppointmentReminders();
+  const vaccination = await processAllVaccinationReminders();
+  return { appointment, vaccination };
+}
+
 module.exports = {
   mapNotificationRow,
   createNotification,
@@ -299,5 +380,9 @@ module.exports = {
   notifyVaccinationAlert,
   notifyAppointmentReminder,
   processAppointmentReminders,
+  listNotificationsAdmin,
+  broadcastAnnouncement,
+  processAllVaccinationReminders,
+  runAllReminderJobs,
   NOTIFICATION_TYPES,
 };

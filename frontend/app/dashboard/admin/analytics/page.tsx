@@ -5,7 +5,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Header from '@/components/layout/Header';
+import AdminDashboardCharts from '@/components/admin/AdminDashboardCharts';
 import {
+  fetchAdminOverview,
+  fetchAdminRecentActivity,
   fetchAppointmentBreakdown,
   fetchAppointmentsDaily,
   fetchRevenueDaily,
@@ -18,11 +21,19 @@ function barHeight(count: number, max: number) {
   return Math.max(4, Math.round((count / max) * 96));
 }
 
+const SNAPSHOT_DAYS = 14;
+const TREND_DAYS = 30;
+
 export default function AdminAnalyticsPage() {
   const router = useRouter();
   const { token, isAuthenticated, isLoading, hasRole } = useAuth();
-  const [days] = useState(30);
+  const [overview, setOverview] = useState<Awaited<ReturnType<typeof fetchAdminOverview>>['overview'] | null>(null);
   const [breakdown, setBreakdown] = useState<{ status: string; count: number }[]>([]);
+  const [activity, setActivity] = useState<
+    { kind: string; summary: string; meta?: string; occurredAt: string }[]
+  >([]);
+  const [apSnapshot, setApSnapshot] = useState<{ day: string; count: number }[]>([]);
+  const [revSnapshot, setRevSnapshot] = useState<{ day: string; cents: number }[]>([]);
   const [apSeries, setApSeries] = useState<{ day: string; count: number }[]>([]);
   const [revSeries, setRevSeries] = useState<{ day: string; cents: number }[]>([]);
   const [vacCount, setVacCount] = useState<number | null>(null);
@@ -34,22 +45,30 @@ export default function AdminAnalyticsPage() {
     setLoading(true);
     setError('');
     try {
-      const [b, a, r, v] = await Promise.all([
+      const [o, a, b, apSnap, revSnap, apTrend, revTrend, v] = await Promise.all([
+        fetchAdminOverview(token),
+        fetchAdminRecentActivity(token, 30),
         fetchAppointmentBreakdown(token),
-        fetchAppointmentsDaily(token, days),
-        fetchRevenueDaily(token, days),
+        fetchAppointmentsDaily(token, SNAPSHOT_DAYS),
+        fetchRevenueDaily(token, SNAPSHOT_DAYS),
+        fetchAppointmentsDaily(token, TREND_DAYS),
+        fetchRevenueDaily(token, TREND_DAYS),
         fetchVaccinationsDue(token, 30).catch(() => ({ items: [] })),
       ]);
+      setOverview(o.overview);
+      setActivity(a.activity);
       setBreakdown(b.breakdown);
-      setApSeries(a.series);
-      setRevSeries(r.series);
+      setApSnapshot(apSnap.series);
+      setRevSnapshot(revSnap.series);
+      setApSeries(apTrend.series);
+      setRevSeries(revTrend.series);
       setVacCount(Array.isArray(v.items) ? v.items.length : 0);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load analytics');
     } finally {
       setLoading(false);
     }
-  }, [token, days]);
+  }, [token]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/login?role=admin');
@@ -82,7 +101,7 @@ export default function AdminAnalyticsPage() {
             </Link>
             <h1 className="mt-2 text-2xl font-bold text-gray-900">Analytics</h1>
             <p className="text-gray-600">
-              Appointment activity, status distribution, paid revenue by day, and vaccination reminder load.
+              Snapshot charts, trends, and operational metrics for clinic management.
             </p>
           </div>
         </div>
@@ -93,8 +112,18 @@ export default function AdminAnalyticsPage() {
           <div className="mt-12 flex justify-center">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />
           </div>
-        ) : (
+        ) : overview ? (
           <div className="mt-8 space-y-10">
+            <AdminDashboardCharts
+              overview={overview}
+              breakdown={breakdown}
+              apSeries={apSnapshot}
+              revSeries={revSnapshot}
+              activity={activity}
+              showFullAnalyticsLink={false}
+              className="mt-0"
+            />
+
             {vacCount !== null ? (
               <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
                 <h2 className="text-sm font-bold uppercase tracking-wide text-amber-900">
@@ -102,28 +131,14 @@ export default function AdminAnalyticsPage() {
                 </h2>
                 <p className="mt-2 text-gray-800">
                   <span className="text-2xl font-bold">{vacCount}</span> upcoming due dates within the next 30 days
-                  (not yet administered). Full list is available from health-record workflows.
+                  (not yet administered).
                 </p>
               </section>
             ) : null}
 
             <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900">Appointments by status</h2>
-              <div className="mt-4 flex flex-wrap gap-3">
-                {breakdown.map((row) => (
-                  <span
-                    key={row.status}
-                    className="inline-flex rounded-full bg-gray-100 px-4 py-2 text-sm font-medium text-gray-800"
-                  >
-                    {row.status}: <strong className="ml-2">{row.count}</strong>
-                  </span>
-                ))}
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900">
-                New bookings per day (last {days} days)
+                New bookings per day (last {TREND_DAYS} days)
               </h2>
               <p className="text-sm text-gray-500">Based on when the appointment row was created.</p>
               <div className="mt-6 flex h-28 items-end gap-0.5 overflow-x-auto pb-1">
@@ -144,9 +159,9 @@ export default function AdminAnalyticsPage() {
 
             <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900">
-                Paid payment volume per day (last {days} days)
+                Paid payment volume per day (last {TREND_DAYS} days)
               </h2>
-              <p className="text-sm text-gray-500">Successful Stripe payment transactions only.</p>
+              <p className="text-sm text-gray-500">Successful payment transactions only.</p>
               <div className="mt-6 flex h-28 items-end gap-0.5 overflow-x-auto pb-1">
                 {revSeries.map((p) => (
                   <div
@@ -171,7 +186,7 @@ export default function AdminAnalyticsPage() {
               page.
             </p>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
