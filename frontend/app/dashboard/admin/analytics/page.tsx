@@ -99,7 +99,7 @@ export default function AdminAnalyticsPage() {
             <Link href="/dashboard/admin" className="text-sm font-semibold text-[#ec6d13] hover:underline">
               ← Admin home
             </Link>
-            <h1 className="mt-2 text-2xl font-bold text-gray-900">Analytics</h1>
+            <h1 className="mt-2 text-gray-900">Analytics</h1>
             <p className="text-gray-600">
               Snapshot charts, trends, and operational metrics for clinic management.
             </p>
@@ -137,9 +137,9 @@ export default function AdminAnalyticsPage() {
             ) : null}
 
             <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-gray-900">
                 New bookings per day (last {TREND_DAYS} days)
-              </h2>
+              </h3>
               <p className="text-sm text-gray-500">Based on when the appointment row was created.</p>
               <div className="mt-6 flex h-28 items-end gap-0.5 overflow-x-auto pb-1">
                 {apSeries.map((p) => (
@@ -158,9 +158,9 @@ export default function AdminAnalyticsPage() {
             </section>
 
             <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-gray-900">
                 Paid payment volume per day (last {TREND_DAYS} days)
-              </h2>
+              </h3>
               <p className="text-sm text-gray-500">Successful payment transactions only.</p>
               <div className="mt-6 flex h-28 items-end gap-0.5 overflow-x-auto pb-1">
                 {revSeries.map((p) => (

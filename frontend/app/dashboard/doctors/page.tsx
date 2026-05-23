@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import BookAppointmentModal from '@/components/dashboard/BookAppointmentModal';
+import { useAuth } from '@/context/AuthContext';
 
 interface Doctor {
   id: number;
@@ -21,24 +23,28 @@ interface Pet {
 }
 
 export default function DoctorsPage() {
+  const router = useRouter();
+  const { token, isAuthenticated, isLoading: authLoading } = useAuth();
   const [selectedSpecialty, setSelectedSpecialty] = useState('All');
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [pets, setPets] = useState<Pet[]>([]);
   const [showBookModal, setShowBookModal] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authToken, setAuthToken] = useState<string>('');
 
   const specialties = ['All', 'Cardiologist', 'Surgeon', 'Therapist', 'Nutritionist', 'Allergist', 'Dermatologist'];
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      setAuthToken(token);
-      fetchPets(token);
-    }
     fetchDoctors();
   }, []);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login');
+      return;
+    }
+    if (token) fetchPets(token);
+  }, [authLoading, isAuthenticated, token, router]);
 
   const fetchDoctors = async () => {
     try {
@@ -91,7 +97,7 @@ export default function DoctorsPage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Our Veterinarians</h1>
+            <h1 className="text-gray-900">Our Veterinarians</h1>
             <p className="text-gray-600 mt-1">Find the perfect specialist for your pet</p>
           </div>
           <Link href="/dashboard" className="flex items-center gap-2 text-[#ec6d13] hover:text-[#d65e0f] font-semibold">
@@ -104,7 +110,7 @@ export default function DoctorsPage() {
 
         {/* Specialty Filter */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Filter by Specialty</h3>
+          <h3 className="text-gray-900 mb-4">Filter by Specialty</h3>
           <div className="flex flex-wrap gap-3">
             {specialties.map(specialty => (
               <button
@@ -150,7 +156,7 @@ export default function DoctorsPage() {
               </div>
               
               <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{doctor.name}</h3>
+                <h3 className="text-gray-900 mb-2">{doctor.name}</h3>
                 <p className="text-[#ec6d13] font-semibold mb-3">{doctor.specialization}</p>
                 
                 <div className="text-sm text-gray-600 mb-4 line-clamp-2">
@@ -196,7 +202,7 @@ export default function DoctorsPage() {
           setSelectedDoctor(null);
         }}
         onSuccess={handleAppointmentBooked}
-        token={authToken}
+        token={token || ''}
         pets={pets}
         selectedDoctorId={selectedDoctor}
       />

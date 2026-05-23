@@ -85,7 +85,7 @@ export default function StaffPaymentsManagePage() {
           <Link href="/dashboard/calendar" className="text-sm font-medium text-[#ec6d13]">
             ← Calendar
           </Link>
-          <h1 className="mt-2 text-3xl font-bold text-gray-900">Record offline payment</h1>
+          <h1 className="mt-2 text-gray-900">Record offline payment</h1>
           <p className="mt-1 text-gray-600">
             After consultation, record medicine and other fees paid in person. These appear on the
             pet owner&apos;s transaction history.
@@ -196,7 +196,7 @@ export default function StaffPaymentsManagePage() {
           </form>
 
           <section className="mt-10">
-            <h2 className="text-lg font-bold text-gray-900">Recent clinic payments</h2>
+            <h3 className="text-gray-900">Recent clinic payments</h3>
             <ul className="mt-4 space-y-2">
               {transactions.slice(0, 15).map((tx) => (
                 <li key={tx.id} className="rounded-lg bg-white p-4 shadow-sm ring-1 ring-gray-100">

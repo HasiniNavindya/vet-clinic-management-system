@@ -66,7 +66,7 @@ function DonutChart({
       <div
         className="absolute inset-[22%] flex items-center justify-center rounded-full bg-white text-center"
       >
-        <span className="text-lg font-bold text-gray-900">{total}</span>
+        <span className="text-gray-900">{total}</span>
       </div>
     </div>
   );
@@ -219,7 +219,7 @@ export default function AdminDashboardCharts({
     <section className={`rounded-2xl border border-gray-200 bg-white p-6 shadow-sm ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Analytics snapshot</h2>
+          <h3 className="text-gray-900">Analytics snapshot</h3>
           <p className="text-sm text-gray-500">Visual overview of clinic activity and revenue</p>
         </div>
         {showFullAnalyticsLink ? (

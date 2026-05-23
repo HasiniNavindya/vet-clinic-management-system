@@ -20,7 +20,7 @@ export default function MarketplaceHeader({
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Pet Marketplace</h1>
+            <h1 className="text-xl sm:text-gray-900 mb-1">Pet Marketplace</h1>
             <p className="text-sm text-gray-600">
               {activeTab === 'pets'
                 ? 'Pet owner listings — contact sellers directly'

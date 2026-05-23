@@ -135,7 +135,7 @@ export default function AdminDoctorDetailPage() {
           </div>
         ) : doctor ? (
           <>
-            <h1 className="mt-2 text-2xl font-bold text-gray-900">{doctor.name}</h1>
+            <h1 className="mt-2 text-gray-900">{doctor.name}</h1>
             <p className="text-gray-600">{doctor.specialization}</p>
 
             {doctor.linkedUser ? (
@@ -163,7 +163,7 @@ export default function AdminDoctorDetailPage() {
 
             <div className="mt-8 grid gap-8 lg:grid-cols-2">
               <form onSubmit={save} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900">Clinic-visible profile</h2>
+                <h3 className="text-gray-900">Clinic-visible profile</h3>
                 <div className="mt-4 space-y-4">
                   <div>
                     <label className="text-xs font-semibold uppercase text-gray-500">Name</label>
@@ -241,7 +241,7 @@ export default function AdminDoctorDetailPage() {
               </form>
 
               <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900">Recent schedule snapshot</h2>
+                <h3 className="text-gray-900">Recent schedule snapshot</h3>
                 <p className="mt-1 text-sm text-gray-500">
                   Upcoming and recent bookings for this veterinarian (past week through next slots).
                 </p>

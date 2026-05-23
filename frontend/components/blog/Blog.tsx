@@ -2,174 +2,115 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import SectionHeader from '@/components/home/SectionHeader';
+
+const BLOG_POSTS = [
+  {
+    id: 1,
+    date: { day: '12', month: 'MAY' },
+    title: '5 signs your dog needs a wellness check this season',
+    excerpt:
+      'From appetite changes to coat quality — learn when to book a routine visit before small issues become urgent.',
+    image: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=900&q=80',
+    featured: true,
+  },
+  {
+    id: 2,
+    date: { day: '08', month: 'MAY' },
+    title: 'Indoor cats: vaccination schedules that actually work',
+    excerpt:
+      'Even stay-at-home cats benefit from core vaccines. We break down timing, boosters, and what to expect at the clinic.',
+    image: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&q=80',
+    featured: false,
+  },
+  {
+    id: 3,
+    date: { day: '01', month: 'MAY' },
+    title: 'Grooming at home vs. professional grooming',
+    excerpt:
+      'Brushing, nail trims, and ear care — when DIY is enough and when to bring your pet in for a full groom.',
+    image: 'https://images.unsplash.com/photo-1516734212184-a967f81ad0d4?w=400&q=80',
+    featured: false,
+  },
+  {
+    id: 4,
+    date: { day: '22', month: 'APR' },
+    title: 'What to pack for your pet’s first daycare visit',
+    excerpt:
+      'Vaccination records, comfort items, and feeding notes help our team give your pet a calm, happy day.',
+    image: 'https://images.unsplash.com/photo-1450778869485-4d7b8fffb879?w=400&q=80',
+    featured: false,
+  },
+];
 
 export default function Blog() {
-  const blogs = [
-    {
-      id: 1,
-      date: {
-        day: '28',
-        month: 'OCT'
-      },
-      title: 'These two dogs are best friends for life',
-      excerpt: 'Love to play with owner\'s hair lie cats secretly make all the worlds muffins kick up litter dream about hunting birds.',
-      likes: 32,
-      comments: 16,
-      image: '/images/blog1.jpg',
-      featured: true
-    },
-    {
-      id: 2,
-      date: {
-        day: '29',
-        month: 'OCT'
-      },
-      title: 'These two dogs are best friends for life',
-      excerpt: 'Love to play with owner\'s hair lie cats secretly make all the worlds muffins kick up litter dream about hunting birds.',
-      likes: 28,
-      comments: 18,
-      image: '/images/blog2.jpg',
-      featured: false
-    },
-    {
-      id: 3,
-      date: {
-        day: '01',
-        month: 'NOV'
-      },
-      title: 'These two dogs are best friends for life',
-      excerpt: 'Love to play with owner\'s hair lie cats secretly make all the worlds muffins kick up litter dream about hunting birds.',
-      likes: 18,
-      comments: 9,
-      image: '/images/blog3.jpg',
-      featured: false
-    },
-    {
-      id: 4,
-      date: {
-        day: '03',
-        month: 'NOV'
-      },
-      title: 'These two dogs are best friends for life',
-      excerpt: 'Love to play with owner\'s hair lie cats secretly make all the worlds muffins kick up litter dream about hunting birds.',
-      likes: 15,
-      comments: 10,
-      image: '/images/blog4.jpg',
-      featured: false
-    }
-  ];
-
-  const featuredBlog = blogs.find(blog => blog.featured);
-  const sideBlogs = blogs.filter(blog => !blog.featured);
+  const featuredBlog = BLOG_POSTS.find((b) => b.featured);
+  const sideBlogs = BLOG_POSTS.filter((b) => !b.featured);
 
   return (
-    <section className="py-20 bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            LATEST BLOG
-          </h2>
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="h-0.5 w-16 bg-[#ec6d13]"></div>
-            <svg className="w-6 h-6 text-[#ec6d13]" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
-            </svg>
-            <div className="h-0.5 w-16 bg-[#ec6d13]"></div>
-          </div>
-          <p className="text-gray-600 max-w-3xl mx-auto">
-            Thug cat destroy couch eat the fat cats food chirp at birds lie on your belly and purr when you are asleep with tail in the air.
-          </p>
-        </div>
+    <section className="bg-gray-50 py-24 md:py-28">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <SectionHeader
+          title="Latest From Our Blog"
+          subtitle="Practical tips on nutrition, preventive care, grooming, and everyday pet wellness."
+        />
 
-        {/* Blog Grid */}
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Featured Blog */}
+        <div className="grid gap-8 lg:grid-cols-2">
           {featuredBlog && (
-            <div className="group">
-              <div className="relative overflow-hidden rounded-lg shadow-lg mb-6">
-                <div className="relative h-56 sm:h-72 md:h-96">
-                  <Image
-                    src={featuredBlog.image}
-                    alt={featuredBlog.title}
-                    fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                </div>
-                
-                {/* Date Badge */}
-                <div className="absolute bottom-6 left-6 bg-[#ec6d13] text-white text-center p-3 rounded">
-                  <div className="text-2xl font-bold">{featuredBlog.date.day}</div>
-                  <div className="text-sm">{featuredBlog.date.month}</div>
-                </div>
-
-                {/* Stats Overlay */}
-                <div className="absolute bottom-6 right-6 flex gap-4 text-white text-sm">
-                  <div className="flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                    <span>{featuredBlog.likes} Likes</span>
+            <article className="group">
+              <Link href="/blog" className="block">
+                <div className="relative mb-6 overflow-hidden rounded-2xl shadow-lg">
+                  <div className="relative h-72 sm:h-80 md:h-96">
+                    <Image
+                      src={featuredBlog.image}
+                      alt={featuredBlog.title}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                    />
                   </div>
-                  <div className="flex items-center gap-1">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <span>{featuredBlog.comments} Comments</span>
+                  <div className="absolute bottom-6 left-6 rounded bg-[#ec6d13] p-3 text-center text-white">
+                    <div className="text-2xl font-bold">{featuredBlog.date.day}</div>
+                    <div className="text-sm">{featuredBlog.date.month}</div>
                   </div>
                 </div>
-              </div>
-
-              <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-[#ec6d13] transition-colors">
-                {featuredBlog.title}
-              </h3>
-              <p className="text-gray-600 mb-4 leading-relaxed">
-                {featuredBlog.excerpt}
-              </p>
-              <Link href="/blog" className="text-green-500 font-semibold text-sm flex items-center gap-2 hover:gap-4 transition-all duration-300">
-                READ MORE
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <h3 className="mb-3 text-gray-900 transition-colors group-hover:text-[#ec6d13]">
+                  {featuredBlog.title}
+                </h3>
+                <p className="mb-4 leading-relaxed text-gray-600">{featuredBlog.excerpt}</p>
+                <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#ec6d13] transition group-hover:gap-3">
+                  Read more →
+                </span>
               </Link>
-            </div>
+            </article>
           )}
 
-          {/* Side Blogs */}
           <div className="space-y-6">
             {sideBlogs.map((blog) => (
-              <Link key={blog.id} href="/blog" className="flex flex-col sm:flex-row gap-4 sm:gap-6 group">
-                {/* Date Badge */}
-                <div className="shrink-0 bg-[#ec6d13] text-white text-center p-3 rounded h-fit">
-                  <div className="text-xl font-bold">{blog.date.day}</div>
-                  <div className="text-xs">{blog.date.month}</div>
+              <Link
+                key={blog.id}
+                href="/blog"
+                className="group flex gap-4 overflow-hidden rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition hover:shadow-md sm:gap-5"
+              >
+                <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-lg sm:h-28 sm:w-32">
+                  <Image
+                    src={blog.image}
+                    alt={blog.title}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    sizes="128px"
+                  />
                 </div>
-
-                {/* Content */}
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-[#ec6d13] transition-colors duration-300 line-clamp-2">
+                <div className="min-w-0 flex-1 py-1">
+                  <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-[#ec6d13]">
+                    <span>
+                      {blog.date.day} {blog.date.month}
+                    </span>
+                  </div>
+                  <h3 className="line-clamp-2 font-bold text-gray-900 transition-colors group-hover:text-[#ec6d13]">
                     {blog.title}
                   </h3>
-                  
-                  {/* Stats */}
-                  <div className="flex gap-4 text-gray-500 text-sm mb-3">
-                    <div className="flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                      </svg>
-                      <span>{blog.likes} Likes</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                      </svg>
-                      <span>{blog.comments} Comments</span>
-                    </div>
-                  </div>
-
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    {blog.excerpt}
-                  </p>
+                  <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-gray-600">{blog.excerpt}</p>
                 </div>
               </Link>
             ))}

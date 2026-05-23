@@ -34,7 +34,7 @@ function DemoCompleteContent() {
   return (
     <PetOwnerShell>
       <div className="mx-auto max-w-lg rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center">
-        <h1 className="text-xl font-bold text-gray-900">Demo payment</h1>
+        <h1 className="text-gray-900">Demo payment</h1>
         {!error && !done ? (
           <p className="mt-3 text-gray-600">Processing demo payment…</p>
         ) : null}

@@ -27,13 +27,50 @@ body {
   font-family: var(--font-body);
 }
 
+/* Site-wide heading scale — one size per level everywhere */
 h1,
-h2,
-h3,
-h4,
+h2 {
+  font-family: var(--font-display);
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+h3 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 700;
+}
+
+h4 {
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
 h5,
 h6 {
   font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+
+/* Large numeric displays (not semantic headings) */
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+@media (min-width: 768px) {
+  .stat-value {
+    font-size: 3.75rem;
+  }
 }
 
 /* Custom Animations */

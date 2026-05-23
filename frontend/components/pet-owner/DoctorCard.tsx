@@ -22,7 +22,7 @@ export default function DoctorCard({ doctor }: Props) {
       </div>
 
       <div className="flex flex-1 flex-col p-5">
-        <h2 className="text-xl font-bold text-gray-900">{doctor.name}</h2>
+        <h2 className="text-gray-900">{doctor.name}</h2>
         <p className="mt-0.5 font-semibold text-[#ec6d13]">{doctor.specialization}</p>
 
         {doctor.bio ? (

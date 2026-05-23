@@ -107,7 +107,7 @@ export default function Team() {
     <section className="bg-white py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-10 text-center">
-          <h2 className="mb-3 text-3xl font-bold text-gray-800 md:text-4xl">OUR TEAM</h2>
+          <h2 className="mb-3 text-gray-800 md:text-4xl">OUR TEAM</h2>
           <div className="mb-4 flex items-center justify-center gap-3">
             <div className="h-0.5 w-16 bg-[#ec6d13]" />
             <svg className="h-6 w-6 text-[#ec6d13]" fill="currentColor" viewBox="0 0 24 24" aria-hidden>

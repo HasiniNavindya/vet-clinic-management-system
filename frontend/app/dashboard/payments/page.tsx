@@ -82,7 +82,7 @@ export default function PaymentsPage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Payments</h1>
+            <h1 className="text-gray-900">Payments</h1>
             <p className="text-gray-600 mt-1">Manage your payment history and upcoming bills</p>
           </div>
           <Link href="/dashboard" className="flex items-center gap-2 text-[#ec6d13] hover:text-[#d65e0f] font-semibold">
@@ -104,7 +104,7 @@ export default function PaymentsPage() {
               </div>
             </div>
             <p className="text-white/80 text-sm mb-1">Total Paid</p>
-            <h3 className="text-3xl font-bold">${totalPaid.toFixed(2)}</h3>
+            <p className="stat-value text-white">${totalPaid.toFixed(2)}</p>
           </div>
 
           <div className="bg-linear-to-br from-yellow-500 to-yellow-600 rounded-2xl p-6 text-white">
@@ -116,7 +116,7 @@ export default function PaymentsPage() {
               </div>
             </div>
             <p className="text-white/80 text-sm mb-1">Pending</p>
-            <h3 className="text-3xl font-bold">${totalPending.toFixed(2)}</h3>
+            <p className="stat-value text-white">${totalPending.toFixed(2)}</p>
           </div>
 
           <div className="bg-linear-to-br from-[#ec6d13] to-[#d65e0f] rounded-2xl p-6 text-white">
@@ -128,7 +128,7 @@ export default function PaymentsPage() {
               </div>
             </div>
             <p className="text-white/80 text-sm mb-1">Upcoming</p>
-            <h3 className="text-3xl font-bold">${totalUpcoming.toFixed(2)}</h3>
+            <p className="stat-value text-white">${totalUpcoming.toFixed(2)}</p>
           </div>
         </div>
 
@@ -179,7 +179,7 @@ export default function PaymentsPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-gray-900">${payment.amount.toFixed(2)}</p>
+                    <p className="text-gray-900">${payment.amount.toFixed(2)}</p>
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
                       payment.status === 'paid'
                         ? 'bg-green-100 text-green-700'
@@ -212,7 +212,7 @@ export default function PaymentsPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-gray-900">${payment.amount.toFixed(2)}</p>
+                    <p className="text-gray-900">${payment.amount.toFixed(2)}</p>
                     <p className="text-sm text-[#ec6d13] font-semibold">Due in {payment.dueIn}</p>
                     <button className="mt-2 px-4 py-1 bg-[#ec6d13] hover:bg-[#d65e0f] text-white text-xs font-semibold rounded-lg transition-all">
                       Pay Now
@@ -226,7 +226,7 @@ export default function PaymentsPage() {
 
         {/* Payment Methods */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Payment Methods</h3>
+          <h3 className="text-gray-900 mb-4">Payment Methods</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="p-4 border-2 border-gray-200 rounded-xl hover:border-[#ec6d13] transition-all cursor-pointer">
               <div className="flex items-center justify-between">

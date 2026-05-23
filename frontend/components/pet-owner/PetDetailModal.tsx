@@ -57,7 +57,7 @@ export default function PetDetailModal({ isOpen, pet, onClose }: PetDetailModalP
 
         <div className="p-6 sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#ec6d13] mb-2">My pet profile</p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">{pet.pet_name}</h2>
+          <h2 className="text-gray-900 mb-6">{pet.pet_name}</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div className="rounded-xl bg-gray-50 p-4">

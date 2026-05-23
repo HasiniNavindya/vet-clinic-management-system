@@ -80,7 +80,7 @@ export default function CoreValues() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className="text-gray-900 mb-4">
             Our Core Values
           </h2>
           <div className="flex items-center justify-center gap-3 mb-6">
@@ -127,7 +127,7 @@ export default function CoreValues() {
               {/* Content */}
               <div className="p-6">
                 {/* Title with underline effect */}
-                <h3 className="text-xl font-bold text-gray-900 mb-3 relative inline-block">
+                <h3 className="text-gray-900 mb-3 relative inline-block">
                   {value.title}
                   <div className={`absolute -bottom-1 left-0 h-0.5 bg-[#ec6d13] transition-all duration-300 ${
                     hoveredIndex === index ? 'w-full' : 'w-0'
@@ -152,7 +152,7 @@ export default function CoreValues() {
         <div className="mt-16 grid md:grid-cols-2 gap-8 items-center">
           {/* Text Content */}
           <div className="bg-gray-50 rounded-2xl p-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+            <h3 className="text-gray-900 mb-4">
               Living Our Values Every Day
             </h3>
             <p className="text-gray-700 leading-relaxed mb-6">

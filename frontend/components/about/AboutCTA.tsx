@@ -7,7 +7,7 @@ export default function AboutCTA() {
       <div className="absolute inset-0 bg-linear-to-r from-[#ec6d13]/95 to-[#d65e0f]/95"></div>
       
       <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+        <h2 className="text-white mb-6">
           Ready to Experience the Best Pet Care?
         </h2>
         <p className="text-xl text-white/90 mb-8">

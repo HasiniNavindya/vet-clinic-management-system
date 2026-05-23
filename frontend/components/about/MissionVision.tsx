@@ -44,7 +44,7 @@ export default function MissionVision() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className="text-gray-900 mb-4">
             Mission & Vision
           </h2>
           <div className="flex items-center justify-center gap-3 mb-6">
@@ -94,7 +94,7 @@ export default function MissionVision() {
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent"></div>
             <div className="absolute bottom-8 left-8 right-8">
-              <h3 className="text-3xl font-bold text-white mb-2">
+              <h3 className="text-white mb-2">
                 {content[activeTab].title}
               </h3>
               <p className="text-white/90 text-lg">

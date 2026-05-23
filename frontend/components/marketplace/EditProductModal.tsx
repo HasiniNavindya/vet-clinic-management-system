@@ -110,7 +110,7 @@ export default function EditProductModal({ isOpen, onClose, onSuccess, product }
           <div className="bg-white px-8 pt-8 pb-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900">Edit Product</h2>
+                <h2 className="text-gray-900">Edit Product</h2>
                 <p className="text-gray-600 mt-1">Update product information</p>
               </div>
               <button

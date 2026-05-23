@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import BookAppointmentModal from '@/components/dashboard/BookAppointmentModal';
 import AppointmentStatusBadge from '@/components/appointments/AppointmentStatusBadge';
+import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, authHeaders } from '@/lib/api';
 import { Appointment, AppointmentStatus } from '@/lib/appointments';
 
@@ -15,6 +17,8 @@ interface Pet {
 }
 
 export default function CalendarPage() {
+  const router = useRouter();
+  const { token, isAuthenticated, isLoading: authLoading } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -23,27 +27,15 @@ export default function CalendarPage() {
   const [showBookModal, setShowBookModal] = useState(false);
   const [pets, setPets] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(true);
-  const [authToken, setAuthToken] = useState<string>('');
 
   const monthNames = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
 
-  useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      setAuthToken(token);
-      fetchAppointments(token);
-      fetchPets(token);
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchAppointments = async (token: string) => {
+  const fetchAppointments = useCallback(async (sessionToken: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/appointments`, {
-        headers: authHeaders(token),
+        headers: authHeaders(sessionToken),
       });
 
       if (response.ok) {
@@ -55,12 +47,12 @@ export default function CalendarPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchPets = async (token: string) => {
+  const fetchPets = useCallback(async (sessionToken: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/pets`, {
-        headers: authHeaders(token),
+        headers: authHeaders(sessionToken),
       });
 
       if (response.ok) {
@@ -70,12 +62,24 @@ export default function CalendarPage() {
     } catch (error) {
       console.error('Error fetching pets:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login');
+      return;
+    }
+    if (token) {
+      setLoading(true);
+      fetchAppointments(token);
+      fetchPets(token);
+    } else if (!authLoading) {
+      setLoading(false);
+    }
+  }, [authLoading, isAuthenticated, token, router, fetchAppointments, fetchPets]);
 
   const handleAppointmentBooked = () => {
-    if (authToken) {
-      fetchAppointments(authToken);
-    }
+    if (token) fetchAppointments(token);
   };
 
   const getDaysInMonth = (date: Date) => {
@@ -136,7 +140,7 @@ export default function CalendarPage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Calendar & Appointments</h1>
+            <h1 className="text-gray-900">Calendar & Appointments</h1>
             <p className="text-gray-600 mt-1">Manage your pet's appointments</p>
           </div>
           <Link href="/dashboard/appointments/manage" className="mr-4 flex items-center gap-2 font-semibold text-[#ec6d13] hover:text-[#d65e0f]">
@@ -161,7 +165,7 @@ export default function CalendarPage() {
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
+                <h2 className="text-gray-900">
                   {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
                 </h2>
                 <div className="flex gap-2">
@@ -251,7 +255,7 @@ export default function CalendarPage() {
           {/* Upcoming Appointments */}
           <div className="space-y-4">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Upcoming Appointments</h3>
+              <h3 className="text-gray-900 mb-4">Upcoming Appointments</h3>
               
               {loading ? (
                 <div className="flex items-center justify-center py-8">
@@ -356,7 +360,7 @@ export default function CalendarPage() {
             <div className="bg-gradient-to-r from-[#ec6d13] to-[#d65e0f] text-white p-6 rounded-t-2xl">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold mb-1">Appointment Details</h2>
+                  <h2 className="mb-1">Appointment Details</h2>
                   <p className="text-white/90">
                     {new Date(selectedAppointment.appointmentDate).toLocaleDateString('en-US', { 
                       weekday: 'long', 
@@ -389,7 +393,7 @@ export default function CalendarPage() {
                   />
                 )}
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">
+                  <h3 className="text-gray-900 mb-1">
                     {selectedAppointment.doctorName}
                   </h3>
                   <p className="text-[#ec6d13] font-semibold mb-2">
@@ -410,7 +414,7 @@ export default function CalendarPage() {
                     </svg>
                     <span className="text-sm font-medium">Time</span>
                   </div>
-                  <p className="text-lg font-bold text-gray-900">{selectedAppointment.appointmentTime}</p>
+                  <p className="text-gray-900">{selectedAppointment.appointmentTime}</p>
                 </div>
 
                 {selectedAppointment.petName && (
@@ -421,7 +425,7 @@ export default function CalendarPage() {
                       </svg>
                       <span className="text-sm font-medium">Pet</span>
                     </div>
-                    <p className="text-lg font-bold text-gray-900">{selectedAppointment.petName}</p>
+                    <p className="text-gray-900">{selectedAppointment.petName}</p>
                   </div>
                 )}
               </div>
@@ -492,7 +496,7 @@ export default function CalendarPage() {
         isOpen={showBookModal}
         onClose={() => setShowBookModal(false)}
         onSuccess={handleAppointmentBooked}
-        token={authToken}
+        token={token || ''}
         pets={pets}
         selectedDoctorId={null}
       />

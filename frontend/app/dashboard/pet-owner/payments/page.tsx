@@ -58,7 +58,7 @@ export default function TransactionHistoryPage() {
   return (
     <PetOwnerShell>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Transaction History</h1>
+        <h1 className="text-gray-900">Transaction History</h1>
         <p className="mt-1 text-gray-600">
           Online payments for appointments and shop orders. Consultation and medicine fees paid at the
           clinic appear here after staff records them.
@@ -104,7 +104,7 @@ export default function TransactionHistoryPage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-gray-900">
+                  <p className="text-gray-900">
                     {formatMoney(tx.amountCents, tx.currency)}
                   </p>
                   <StatusBadge status={tx.status} />

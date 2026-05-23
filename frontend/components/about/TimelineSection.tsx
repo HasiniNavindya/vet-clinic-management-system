@@ -62,7 +62,7 @@ export default function TimelineSection() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center mb-16 opacity-0 animate-[fadeIn_0.8s_ease-out_forwards]">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className="text-gray-900 mb-4">
             Our Journey Through the Years
           </h2>
           <p className="text-gray-600 text-base md:text-lg max-w-2xl mx-auto">
@@ -102,7 +102,7 @@ export default function TimelineSection() {
                   <div className={`flex-1 bg-white/95 backdrop-blur-sm border-2 border-gray-100 p-6 md:p-8 rounded-2xl shadow-lg hover:shadow-xl hover:border-[#ec6d13] transition-all duration-300 ${
                     visibleItems.includes(index) ? 'scale-100' : 'scale-95'
                   }`}>
-                    <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-3">
+                    <h3 className="text-xl md:text-gray-900 mb-3">
                       {item.event}
                     </h3>
                     <p className="text-gray-600 text-sm md:text-base leading-relaxed">

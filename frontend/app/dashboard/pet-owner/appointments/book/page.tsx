@@ -81,7 +81,7 @@ function BookAppointmentContent() {
         <Link href="/dashboard/pet-owner/appointments" className="text-sm font-medium text-[#ec6d13] hover:text-[#d65e0f]">
           ← My appointments
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900 md:text-3xl">Request appointment</h1>
+        <h1 className="mt-2 text-gray-900">Request appointment</h1>
         <p className="mt-1 text-gray-600">
           View the doctor&apos;s calendar, pick an available slot, and submit a request. Payment is only
           required after the clinic approves your booking.

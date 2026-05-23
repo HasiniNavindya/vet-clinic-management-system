@@ -153,7 +153,7 @@ function ModalPanel({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Book Appointment</h2>
+        <h2 className="text-gray-900">Book Appointment</h2>
         <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
           ×
         </button>

@@ -44,9 +44,11 @@ export default function Hero() {
                 <span className="text-white text-sm font-semibold tracking-wide">Welcome to Carlisle Pet Care</span>
               </div>
               
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
+              <h1 className="mb-6 font-serif text-[clamp(3.25rem,8vw,6rem)] font-bold leading-[1.05] tracking-tight text-white drop-shadow-[0_4px_28px_rgba(0,0,0,0.65)]">
                 We Care For Your
-                <span className="block text-[#ec6d13] mt-2">Beloved Pets</span>
+                <span className="mt-2 block text-[#ec6d13] drop-shadow-[0_2px_16px_rgba(0,0,0,0.5)]">
+                  Beloved Pets
+                </span>
               </h1>
               
               <p className="text-white/90 text-lg md:text-xl leading-relaxed mb-10 max-w-2xl mx-auto">

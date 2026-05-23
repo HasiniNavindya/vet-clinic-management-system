@@ -44,7 +44,7 @@ export default function InteractiveFAQ() {
               <span className="text-[#ec6d13] font-semibold text-sm uppercase tracking-wider">
                 Have Questions?
               </span>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mt-2 mb-4">
+              <h2 className="text-gray-900 mt-2 mb-4">
                 Frequently Asked Questions
               </h2>
               <p className="text-gray-600 text-lg">
@@ -139,7 +139,7 @@ export default function InteractiveFAQ() {
                       😊
                     </div>
                     <div>
-                      <div className="text-3xl font-bold text-gray-900">99%</div>
+                      <div className="text-gray-900">99%</div>
                       <div className="text-sm text-gray-600">Client Satisfaction</div>
                     </div>
                   </div>
@@ -151,7 +151,7 @@ export default function InteractiveFAQ() {
                       ⏱️
                     </div>
                     <div>
-                      <div className="text-3xl font-bold text-gray-900">&lt;15min</div>
+                      <div className="text-gray-900">&lt;15min</div>
                       <div className="text-sm text-gray-600">Average Wait Time</div>
                     </div>
                   </div>
@@ -163,7 +163,7 @@ export default function InteractiveFAQ() {
                       ✅
                     </div>
                     <div>
-                      <div className="text-3xl font-bold text-gray-900">50K+</div>
+                      <div className="text-gray-900">50K+</div>
                       <div className="text-sm text-gray-600">Successful Treatments</div>
                     </div>
                   </div>

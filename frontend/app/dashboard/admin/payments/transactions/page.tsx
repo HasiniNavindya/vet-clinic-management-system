@@ -98,7 +98,7 @@ export default function AdminPaymentTransactionsPage() {
         <Link href="/dashboard/admin/payments" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Payment dashboard
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Transaction history</h1>
+        <h1 className="mt-2 text-gray-900">Transaction history</h1>
 
         <div className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white p-4">
           <div>

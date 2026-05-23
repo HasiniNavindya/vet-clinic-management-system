@@ -62,7 +62,7 @@ export default function AdminMonthlyReportPage() {
         <Link href="/dashboard/admin/reports" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Reports dashboard
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Monthly summary</h1>
+        <h1 className="mt-2 text-gray-900">Monthly summary</h1>
         <p className="text-gray-600">
           Consolidated counts for a calendar month — bookings logged, visits completed, treatment records filed,
           and commerce where payment data exists.
@@ -112,29 +112,29 @@ export default function AdminMonthlyReportPage() {
           </div>
         ) : report ? (
           <div className="mt-8 space-y-4 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900">{monthLabel}</h2>
+            <h2 className="text-gray-900">{monthLabel}</h2>
             <dl className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg bg-gray-50 p-4">
                 <dt className="text-xs font-semibold uppercase text-gray-500">Bookings created</dt>
-                <dd className="mt-2 text-2xl font-bold text-gray-900">{report.bookingsCreated}</dd>
+                <dd className="mt-2 text-gray-900">{report.bookingsCreated}</dd>
               </div>
               <div className="rounded-lg bg-gray-50 p-4">
                 <dt className="text-xs font-semibold uppercase text-gray-500">Visits completed</dt>
-                <dd className="mt-2 text-2xl font-bold text-gray-900">{report.visitsCompleted}</dd>
+                <dd className="mt-2 text-gray-900">{report.visitsCompleted}</dd>
               </div>
               <div className="rounded-lg bg-gray-50 p-4">
                 <dt className="text-xs font-semibold uppercase text-gray-500">Treatment records</dt>
-                <dd className="mt-2 text-2xl font-bold text-gray-900">{report.treatmentsRecorded}</dd>
+                <dd className="mt-2 text-gray-900">{report.treatmentsRecorded}</dd>
               </div>
               <div className="rounded-lg bg-gray-50 p-4">
                 <dt className="text-xs font-semibold uppercase text-gray-500">Payment revenue</dt>
-                <dd className="mt-2 text-2xl font-bold text-gray-900">
+                <dd className="mt-2 text-gray-900">
                   {formatUsdFromCents(report.paymentRevenueCents)}
                 </dd>
               </div>
               <div className="rounded-lg bg-gray-50 p-4 sm:col-span-2">
                 <dt className="text-xs font-semibold uppercase text-gray-500">Shop (paid orders)</dt>
-                <dd className="mt-2 text-2xl font-bold text-gray-900">
+                <dd className="mt-2 text-gray-900">
                   {report.shopPaidOrders} orders · {formatUsdFromCents(report.shopRevenueCents)}
                 </dd>
               </div>

@@ -234,7 +234,7 @@ function RegisterPageContent() {
             {currentStep === 1 && (
               <div className="space-y-6 animate-fade-in">
                 <div className="text-center mb-8">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  <h1 className="text-gray-900 mb-2">
                     Create your account
                   </h1>
                   <p className="text-gray-600">
@@ -374,7 +374,7 @@ function RegisterPageContent() {
             {currentStep === 2 && (
               <div className="space-y-8 animate-fade-in">
                 <div className="text-center mb-8">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  <h1 className="text-gray-900 mb-2">
                     Welcome to PetCare Clinic
                   </h1>
                   <p className="text-gray-600">
@@ -390,7 +390,7 @@ function RegisterPageContent() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900">Account Details</h2>
+                    <h2 className="text-gray-900">Account Details</h2>
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-4">
@@ -477,7 +477,7 @@ function RegisterPageContent() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                       </svg>
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900">Pet Owner Profile</h2>
+                    <h2 className="text-gray-900">Pet Owner Profile</h2>
                   </div>
 
                   <div className="space-y-4">
@@ -519,7 +519,7 @@ function RegisterPageContent() {
                         <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-.5a1.5 1.5 0 000 3h.5a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-.5a1.5 1.5 0 00-3 0v.5a1 1 0 01-1 1H6a1 1 0 01-1-1v-3a1 1 0 00-1-1h-.5a1.5 1.5 0 010-3H4a1 1 0 001-1V6a1 1 0 011-1h3a1 1 0 001-1v-.5z"/>
                       </svg>
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900">Pet Information</h2>
+                    <h2 className="text-gray-900">Pet Information</h2>
                   </div>
 
                   <div className="grid sm:grid-cols-2 gap-4">
@@ -640,7 +640,7 @@ function RegisterPageContent() {
             {currentStep === 3 && (
               <div className="space-y-8 animate-fade-in">
                 <div className="text-center mb-8">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  <h1 className="text-gray-900 mb-2">
                     Notification Preferences
                   </h1>
                   <p className="text-gray-600">
@@ -653,7 +653,7 @@ function RegisterPageContent() {
                   {/* Vaccination Reminders */}
                   <div className="bg-white border border-gray-200 rounded-xl p-6 flex items-center justify-between hover:border-[#ec6d13] transition-colors duration-200">
                     <div className="flex-1">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      <h3 className="text-gray-900 mb-1">
                         Vaccination Reminders
                       </h3>
                       <p className="text-gray-600 text-sm">
@@ -678,7 +678,7 @@ function RegisterPageContent() {
                   {/* Appointment Updates */}
                   <div className="bg-white border border-gray-200 rounded-xl p-6 flex items-center justify-between hover:border-[#ec6d13] transition-colors duration-200">
                     <div className="flex-1">
-                      <h3 className="text-lg font-bold text-gray-900 mb-1">
+                      <h3 className="text-gray-900 mb-1">
                         Appointment Updates
                       </h3>
                       <p className="text-gray-600 text-sm">

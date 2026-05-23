@@ -133,10 +133,10 @@ export default function AdminShopProductsPage() {
         <Link href="/dashboard/admin/shop" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Shop hub
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Product management</h1>
+        <h1 className="mt-2 text-gray-900">Product management</h1>
 
         <form onSubmit={submit} className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">{editingId ? `Edit product #${editingId}` : 'New product'}</h2>
+          <h3 className="text-gray-900">{editingId ? `Edit product #${editingId}` : 'New product'}</h3>
           {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block sm:col-span-2">
@@ -226,7 +226,7 @@ export default function AdminShopProductsPage() {
           </div>
         </form>
 
-        <h2 className="mt-10 text-lg font-semibold text-gray-900">All products</h2>
+        <h3 className="mt-10 text-gray-900">All products</h3>
         {loading ? (
           <div className="mt-6 flex justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ec6d13] border-t-transparent" />

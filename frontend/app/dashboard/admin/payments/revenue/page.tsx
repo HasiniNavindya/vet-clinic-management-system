@@ -48,7 +48,7 @@ export default function AdminPaymentRevenuePage() {
         <Link href="/dashboard/admin/payments" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Payment dashboard
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Revenue monitoring</h1>
+        <h1 className="mt-2 text-gray-900">Revenue monitoring</h1>
         <p className="text-gray-600">
           Aggregated from recorded payment transactions (succeeded). Use Export Center for monthly CSV/PDF
           downloads.
@@ -67,14 +67,14 @@ export default function AdminPaymentRevenuePage() {
               </div>
               <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                 <p className="text-xs font-semibold uppercase text-gray-500">Rolling 30 days</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">
+                <p className="mt-2 text-gray-900">
                   {formatUsdFromCents(overview.revenueLast30DaysCents)}
                 </p>
               </div>
             </div>
 
             <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900">By payment status</h2>
+              <h3 className="text-gray-900">By payment status</h3>
               <table className="mt-4 w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs uppercase text-gray-500">
@@ -96,7 +96,7 @@ export default function AdminPaymentRevenuePage() {
             </section>
 
             <section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900">Succeeded by type</h2>
+              <h3 className="text-gray-900">Succeeded by type</h3>
               <ul className="mt-4 space-y-2 text-sm">
                 {overview.succeededByType.length === 0 ? (
                   <li className="text-gray-500">No succeeded payments yet.</li>

@@ -53,7 +53,7 @@ export default function AboutHero() {
                 ✨ About Us
               </span>
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight hover:scale-105 transition-transform duration-300 text-gray-900">
+            <h1 className=" mb-6 leading-tight hover:scale-105 transition-transform duration-300 text-gray-900">
               Caring for Your Pets Like Family
             </h1>
             <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed">
@@ -96,7 +96,7 @@ export default function AboutHero() {
                     </svg>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-gray-800">24/7</div>
+                    <div className="text-gray-800">24/7</div>
                     <div className="text-sm text-gray-600">Emergency Care</div>
                   </div>
                 </div>

@@ -94,7 +94,7 @@ export default function AdminMarketplaceModerationPage() {
         <Link href="/dashboard/admin" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Admin home
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Marketplace moderation</h1>
+        <h1 className="mt-2 text-gray-900">Marketplace moderation</h1>
         <p className="text-gray-600">
           Pet owner advertisements require approval before they appear publicly. Pending queue:{' '}
           <strong>{pendingCount}</strong>
@@ -128,7 +128,7 @@ export default function AdminMarketplaceModerationPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-lg font-bold text-gray-900">{L.name}</h2>
+                      <h3 className="text-gray-900">{L.name}</h3>
                       <StatusBadge s={L.listingStatus} />
                     </div>
                     <p className="mt-1 text-sm text-gray-600">

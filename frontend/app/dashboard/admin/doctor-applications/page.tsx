@@ -86,7 +86,7 @@ export default function AdminDoctorApplicationsPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="container mx-auto max-w-5xl px-4 py-8 pt-28">
-        <h1 className="text-2xl font-bold text-gray-900">Doctor applications</h1>
+        <h1 className="text-gray-900">Doctor applications</h1>
         <p className="mt-1 text-gray-600">Review credentials and approve or decline veterinarians.</p>
 
         <div className="mt-6 flex flex-wrap gap-2">
@@ -159,7 +159,7 @@ export default function AdminDoctorApplicationsPage() {
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-            <h2 className="text-xl font-bold text-gray-900">{selected.applicant.fullName}</h2>
+            <h2 className="text-gray-900">{selected.applicant.fullName}</h2>
             <dl className="mt-4 space-y-2 text-sm text-gray-700">
               <div>
                 <dt className="font-semibold text-gray-900">Email</dt>

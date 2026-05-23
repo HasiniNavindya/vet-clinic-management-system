@@ -104,7 +104,7 @@ export default function AdminNotificationsPage() {
         <Link href="/dashboard/admin" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Admin home
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Notification center</h1>
+        <h1 className="mt-2 text-gray-900">Notification center</h1>
         <p className="text-gray-600">
           Appointment reminders, vaccination alerts, payment confirmations, and clinic-wide announcements.
           Email delivery requires SMTP configuration on the server.
@@ -124,7 +124,7 @@ export default function AdminNotificationsPage() {
             onSubmit={sendBroadcast}
             className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
           >
-            <h2 className="text-lg font-semibold text-gray-900">Send announcement</h2>
+            <h3 className="text-gray-900">Send announcement</h3>
             <p className="mt-1 text-sm text-gray-500">Broadcast to all users or filter by role.</p>
             <div className="mt-4 space-y-3">
               <div>
@@ -179,7 +179,7 @@ export default function AdminNotificationsPage() {
           </form>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">Automated reminders</h2>
+            <h3 className="text-gray-900">Automated reminders</h3>
             <p className="mt-2 text-sm text-gray-600">
               Run appointment reminders (upcoming visits) and vaccination due-date alerts now. These jobs also run
               on a schedule when the server cron is configured.
@@ -197,7 +197,7 @@ export default function AdminNotificationsPage() {
 
         <section className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-gray-900">Recent notifications</h2>
+            <h3 className="text-gray-900">Recent notifications</h3>
             <select
               className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm"
               value={typeFilter}
