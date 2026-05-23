@@ -48,7 +48,7 @@ export default function MyAppointmentsPage() {
     <PetOwnerShell>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">My Appointments</h1>
+          <h1 className="text-gray-900">My Appointments</h1>
           <p className="mt-1 text-gray-600">View status, reschedule, or cancel</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">

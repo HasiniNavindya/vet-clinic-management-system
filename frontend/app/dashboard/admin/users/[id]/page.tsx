@@ -112,14 +112,14 @@ export default function AdminUserDetailPage() {
           <p className="mt-8 text-red-600">{error}</p>
         ) : du ? (
           <>
-            <h1 className="mt-4 text-2xl font-bold text-gray-900">{du.fullName}</h1>
+            <h1 className="mt-4 text-gray-900">{du.fullName}</h1>
             <p className="text-gray-600">{du.email}</p>
 
             {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
             <div className="mt-8 grid gap-6 lg:grid-cols-2">
               <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-gray-900">Account</h2>
+                <h3 className="text-gray-900">Account</h3>
                 <dl className="mt-4 space-y-2 text-sm text-gray-700">
                   <div>
                     <dt className="font-semibold text-gray-900">User ID</dt>
@@ -145,7 +145,7 @@ export default function AdminUserDetailPage() {
               </section>
 
               <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-gray-900">Role assignment</h2>
+                <h3 className="text-gray-900">Role assignment</h3>
                 <p className="mt-2 text-xs text-gray-500">
                   Assign clinic role. Demoting an approved doctor unlinks their public doctor profile until
                   re-linked.
@@ -179,7 +179,7 @@ export default function AdminUserDetailPage() {
             </div>
 
             <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-900">Suspend / unblock</h2>
+              <h3 className="text-gray-900">Suspend / unblock</h3>
               <p className="mt-1 text-sm text-gray-600">
                 Suspended users cannot log in or use the API until reactivated.
               </p>
@@ -205,7 +205,7 @@ export default function AdminUserDetailPage() {
 
             {detail?.summary ? (
               <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-gray-900">Summary</h2>
+                <h3 className="text-gray-900">Summary</h3>
                 <ul className="mt-3 list-inside list-disc text-sm text-gray-700">
                   {typeof detail.summary.petCount === 'number' ? (
                     <li>Pets registered: {detail.summary.petCount}</li>
@@ -239,7 +239,7 @@ export default function AdminUserDetailPage() {
             ) : null}
 
             <section className="mt-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-gray-900">Recent activity</h2>
+              <h3 className="text-gray-900">Recent activity</h3>
               <p className="text-xs text-gray-500">
                 Appointments, payments, and notifications (last records on file).
               </p>

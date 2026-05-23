@@ -54,7 +54,7 @@ export default function NotificationCenterPage() {
     <PetOwnerShell>
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Notification Center</h1>
+          <h1 className="text-gray-900">Notification Center</h1>
           <p className="mt-1 text-gray-600">
             Appointment reminders, payment confirmations, and vaccination alerts
           </p>

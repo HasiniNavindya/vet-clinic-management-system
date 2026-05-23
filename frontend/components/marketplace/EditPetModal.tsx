@@ -112,7 +112,7 @@ export default function EditPetModal({ isOpen, onClose, onSuccess, pet }: EditPe
           <div className="bg-white px-8 pt-8 pb-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900">Edit Pet</h2>
+                <h2 className="text-gray-900">Edit Pet</h2>
                 <p className="text-gray-600 mt-1">Update pet information</p>
               </div>
               <button

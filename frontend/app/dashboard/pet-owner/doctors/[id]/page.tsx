@@ -58,7 +58,7 @@ export default function DoctorProfilePage() {
               <span className="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
                 Accepting bookings
               </span>
-              <h1 className="mt-3 text-2xl font-bold text-gray-900">{doctor.name}</h1>
+              <h1 className="mt-3 text-gray-900">{doctor.name}</h1>
               <p className="mt-1 text-lg font-semibold text-[#ec6d13]">{doctor.specialization}</p>
             </div>
           </div>

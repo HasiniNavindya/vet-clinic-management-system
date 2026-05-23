@@ -94,7 +94,7 @@ export default function OurStory() {
               </span>
             </div>
             
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 hover:text-[#ec6d13] transition-colors duration-300">
+            <h2 className="text-gray-900 mb-6 hover:text-[#ec6d13] transition-colors duration-300">
               A Legacy of Compassionate Pet Care
             </h2>
 

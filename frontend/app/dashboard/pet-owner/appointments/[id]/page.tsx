@@ -156,7 +156,7 @@ export default function AppointmentDetailPage() {
       </Link>
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Appointment Details</h1>
+        <h1 className="text-gray-900">Appointment Details</h1>
         <AppointmentStatusBadge status={appointment.status} />
       </div>
 

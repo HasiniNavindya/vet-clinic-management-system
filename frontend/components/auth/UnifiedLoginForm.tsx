@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useRoles } from '@/hooks/useRoles';
 import RolePicker from '@/components/auth/RolePicker';
+import SiteLogo from '@/components/layout/SiteLogo';
 import { getRoleFromList, normalizeRoleId } from '@/lib/roles';
 
 type Props = {
@@ -69,9 +70,9 @@ export default function UnifiedLoginForm({
   return (
     <div className="w-full max-w-xl">
       <div className="rounded-2xl border border-gray-100 bg-white p-8 shadow-xl sm:p-10">
-        <div className="mb-8 text-center">
-          <p className="text-sm font-semibold uppercase tracking-wide text-[#ec6d13]">Carlisle Pet Care</p>
-          <h1 className="mt-2 text-3xl font-bold text-gray-900 sm:text-4xl">{title}</h1>
+        <div className="mb-8 flex flex-col items-center text-center">
+          <SiteLogo href="/" height={100} />
+          <h1 className="mt-4 text-gray-900 sm:text-4xl">{title}</h1>
           <p className="mt-2 text-sm text-gray-600">{subtitle}</p>
         </div>
 

@@ -69,7 +69,7 @@ export default function PetDetailModal({ isOpen, pet, onClose }: PetDetailModalP
           <p className="text-xs font-semibold uppercase tracking-wide text-[#ec6d13] mb-2">
             Pet listing
           </p>
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">{pet.name}</h2>
+          <h2 className="text-gray-900 mb-4">{pet.name}</h2>
 
           <div className="flex flex-wrap gap-3 text-sm text-gray-600 mb-6">
             <span className="inline-flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-full">
@@ -93,7 +93,7 @@ export default function PetDetailModal({ isOpen, pet, onClose }: PetDetailModalP
           </div>
 
           <div className="rounded-xl border-2 border-[#ec6d13]/20 bg-orange-50/50 p-5">
-            <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+            <h3 className="text-gray-900 mb-1 flex items-center gap-2">
               <svg className="w-5 h-5 text-[#ec6d13]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>

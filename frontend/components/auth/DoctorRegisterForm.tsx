@@ -147,7 +147,7 @@ export default function DoctorRegisterForm({
       )}
 
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Veterinarian application</h1>
+        <h1 className="text-gray-900">Veterinarian application</h1>
         <p className="mt-2 text-sm text-gray-600">
           Submit your credentials for admin verification. You can log in after approval.
         </p>

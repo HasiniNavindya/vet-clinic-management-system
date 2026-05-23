@@ -61,7 +61,7 @@ export default function AdminReportsDashboardPage() {
         <Link href="/dashboard/admin" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Admin home
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Reports dashboard</h1>
+        <h1 className="mt-2 text-gray-900">Reports dashboard</h1>
         <p className="text-gray-600">
           Operational metrics for any month. Export detailed CSV rows or printable summaries from the export center.
         </p>
@@ -109,7 +109,7 @@ export default function AdminReportsDashboardPage() {
             href="/dashboard/admin/reports/monthly"
             className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md"
           >
-            <h2 className="text-lg font-bold text-gray-900">Monthly summary</h2>
+            <h3 className="text-gray-900">Monthly summary</h3>
             <p className="mt-2 text-sm text-gray-600">Classic month rollup view (bookings, visits, treatments, revenue).</p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">Open →</span>
           </Link>
@@ -117,7 +117,7 @@ export default function AdminReportsDashboardPage() {
             href="/dashboard/admin/reports/export"
             className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md"
           >
-            <h2 className="text-lg font-bold text-gray-900">Export center</h2>
+            <h3 className="text-gray-900">Export center</h3>
             <p className="mt-2 text-sm text-gray-600">
               CSV downloads and printable HTML for payments, appointments, treatments, and shop sales.
             </p>
@@ -131,7 +131,7 @@ export default function AdminReportsDashboardPage() {
           </div>
         ) : dash ? (
           <div className="mt-10 space-y-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900">{monthLabel}</h2>
+            <h2 className="text-gray-900">{monthLabel}</h2>
             <dl className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-lg bg-gray-50 p-4">
                 <dt className="text-xs font-semibold uppercase text-gray-500">Bookings created</dt>

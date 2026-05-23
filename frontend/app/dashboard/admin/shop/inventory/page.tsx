@@ -76,7 +76,7 @@ export default function AdminInventoryPage() {
         <Link href="/dashboard/admin/shop" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Shop hub
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Inventory dashboard</h1>
+        <h1 className="mt-2 text-gray-900">Inventory dashboard</h1>
         <p className="text-gray-600">
           Products at or below 10 units in stock. Total catalog items with zero stock:{' '}
           <strong>{outOfStock}</strong>

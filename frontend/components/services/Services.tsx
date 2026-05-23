@@ -77,7 +77,7 @@ export default function Services() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-2">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-1">
+          <h2 className="text-gray-900 mb-1">
             SERVICES WE OFFER
           </h2>
           <div className="flex items-center justify-center gap-3 mb-1">
@@ -101,7 +101,7 @@ export default function Services() {
                 className="flex items-start gap-6 group"
               >
                 <div className="flex-1 text-right">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-[#ec6d13] transition-colors duration-300">
+                  <h3 className="text-gray-900 mb-2 group-hover:text-[#ec6d13] transition-colors duration-300">
                     {service.title}
                   </h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
@@ -138,7 +138,7 @@ export default function Services() {
                   {service.icon}
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-[#ec6d13] transition-colors duration-300">
+                  <h3 className="text-gray-900 mb-2 group-hover:text-[#ec6d13] transition-colors duration-300">
                     {service.title}
                   </h3>
                   <p className="text-gray-600 text-sm leading-relaxed">

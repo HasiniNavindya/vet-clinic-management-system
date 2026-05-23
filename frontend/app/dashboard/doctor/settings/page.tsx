@@ -107,7 +107,7 @@ export default function DoctorSettingsPage() {
 
   return (
     <DoctorShell>
-      <h1 className="text-2xl font-bold text-gray-900">Profile settings</h1>
+      <h1 className="text-gray-900">Profile settings</h1>
       <p className="mt-1 text-gray-600">Update your account and clinic availability.</p>
 
       {message && (

@@ -60,7 +60,7 @@ export default function AdminPaymentsHubPage() {
         <Link href="/dashboard/admin" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Admin home
         </Link>
-        <h1 className="mt-4 text-3xl font-bold text-gray-900">Payment management</h1>
+        <h1 className="mt-4 text-gray-900">Payment management</h1>
         <p className="mt-2 text-gray-600">
           Monitor revenue, verify pending payments, issue refunds, and track shop order payments. Appointment
           bookings stay in awaiting payment until a successful transaction is recorded.
@@ -73,23 +73,23 @@ export default function AdminPaymentsHubPage() {
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase text-gray-500">Total revenue</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">
+                <p className="mt-2 text-gray-900">
                   {formatUsdFromCents(overview.totalRevenueCents)}
                 </p>
               </div>
               <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase text-gray-500">Last 30 days</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">
+                <p className="mt-2 text-gray-900">
                   {formatUsdFromCents(overview.revenueLast30DaysCents)}
                 </p>
               </div>
               <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase text-gray-500">Pending / processing</p>
-                <p className="mt-2 text-2xl font-bold text-gray-900">{overview.pendingCount}</p>
+                <p className="mt-2 text-gray-900">{overview.pendingCount}</p>
               </div>
               <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase text-gray-500">Stripe online</p>
-                <p className="mt-2 text-lg font-bold text-gray-900">
+                <p className="mt-2 text-gray-900">
                   {overview.stripeEnabled ? 'Enabled' : 'Demo / offline only'}
                 </p>
               </div>
@@ -100,7 +100,7 @@ export default function AdminPaymentsHubPage() {
                 href="/dashboard/admin/payments/transactions"
                 className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md"
               >
-                <h2 className="text-lg font-bold text-gray-900">Transaction history</h2>
+                <h3 className="text-gray-900">Transaction history</h3>
                 <p className="mt-2 text-sm text-gray-600">
                   Search, filter by status or type, verify payments, and manage refunds.
                 </p>
@@ -110,7 +110,7 @@ export default function AdminPaymentsHubPage() {
                 href="/dashboard/admin/payments/revenue"
                 className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md"
               >
-                <h2 className="text-lg font-bold text-gray-900">Revenue reports</h2>
+                <h3 className="text-gray-900">Revenue reports</h3>
                 <p className="mt-2 text-sm text-gray-600">Status breakdown and revenue by payment type.</p>
                 <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">Open →</span>
               </Link>
@@ -119,7 +119,7 @@ export default function AdminPaymentsHubPage() {
             {overview.recentTransactions.length > 0 ? (
               <section className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-gray-900">Recent transactions</h2>
+                  <h3 className="text-gray-900">Recent transactions</h3>
                   <Link
                     href="/dashboard/admin/payments/transactions"
                     className="text-sm font-semibold text-[#ec6d13] hover:underline"
@@ -143,7 +143,7 @@ export default function AdminPaymentsHubPage() {
 
             {orders.length > 0 ? (
               <section className="mt-10 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900">Order payment tracking</h2>
+                <h3 className="text-gray-900">Order payment tracking</h3>
                 <p className="mt-1 text-sm text-gray-500">Shop orders linked to payment transactions.</p>
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full text-left text-sm">

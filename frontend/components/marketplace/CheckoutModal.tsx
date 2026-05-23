@@ -86,7 +86,7 @@ export default function CheckoutModal({
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto pointer-events-auto shadow-2xl">
           <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
-            <h2 className="text-2xl font-bold text-gray-900">Checkout</h2>
+            <h2 className="text-gray-900">Checkout</h2>
             <button type="button" onClick={onClose} className="text-gray-500 hover:text-gray-700">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -100,7 +100,7 @@ export default function CheckoutModal({
             </p>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-lg font-semibold mb-4 text-gray-900">Order Summary</h3>
+                <h3 className="mb-4 text-gray-900">Order Summary</h3>
                 <div className="space-y-3 mb-4">
                   {items.map((item) => (
                     <div key={`${item.type}-${item.id}`} className="flex gap-3 p-3 bg-gray-50 rounded-lg">
@@ -124,7 +124,7 @@ export default function CheckoutModal({
               </div>
 
               <div>
-                <h3 className="text-lg font-semibold mb-4 text-gray-900">Customer Information</h3>
+                <h3 className="mb-4 text-gray-900">Customer Information</h3>
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">

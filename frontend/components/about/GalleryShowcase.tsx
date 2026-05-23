@@ -50,7 +50,7 @@ export default function GalleryShowcase() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className="text-gray-900 mb-4">
             Experience Our Clinic
           </h2>
           <div className="flex items-center justify-center gap-3 mb-6">
@@ -126,7 +126,7 @@ export default function GalleryShowcase() {
                 />
               </div>
               <div className="mt-6 text-center">
-                <h3 className="text-white text-2xl font-bold mb-2">
+                <h3 className="text-white mb-2">
                   {images[selectedImage].title}
                 </h3>
                 <p className="text-white/80">

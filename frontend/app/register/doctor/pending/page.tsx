@@ -11,7 +11,7 @@ export default function DoctorApplicationPendingPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Application submitted</h1>
+        <h1 className="text-gray-900">Application submitted</h1>
         <p className="mt-4 text-gray-600 leading-relaxed">
           Thank you for applying to join our clinic. An administrator will verify your license and
           qualifications. You will receive access to log in once your application is approved.

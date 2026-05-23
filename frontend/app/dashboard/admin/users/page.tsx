@@ -104,7 +104,7 @@ export default function AdminUsersPage() {
       <div className="container mx-auto max-w-7xl px-4 py-8 pt-28">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">User management</h1>
+            <h1 className="text-gray-900">User management</h1>
             <p className="text-gray-600">
               Search, filter by role and status, and open a user for role assignment or suspension.
             </p>

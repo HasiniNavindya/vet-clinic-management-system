@@ -33,7 +33,7 @@ export default function PetHistoryTimelinePage() {
       <Link href="/dashboard/pet-owner/health?tab=medical" className="text-sm font-medium text-[#ec6d13]">
         ← Pet Health
       </Link>
-      <h1 className="mt-4 text-2xl font-bold text-gray-900 md:text-3xl">
+      <h1 className="mt-4 text-gray-900">
         {data?.petName || 'Pet'} — History timeline
       </h1>
       <p className="mt-1 text-gray-600">Complete medical history in chronological order</p>

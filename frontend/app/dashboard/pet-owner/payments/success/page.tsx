@@ -41,7 +41,7 @@ function SuccessContent() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Payment successful</h1>
+        <h1 className="text-gray-900">Payment successful</h1>
         {error ? (
           <p className="mt-3 text-red-600">{error}</p>
         ) : (

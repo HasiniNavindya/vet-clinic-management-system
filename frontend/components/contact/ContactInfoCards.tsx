@@ -22,7 +22,7 @@ export default function ContactInfoCards() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">Phone</h3>
+              <h3 className="text-gray-900 mb-3">Phone</h3>
               <p className="text-gray-700 font-medium mb-4 text-base">Mon-Fri from 8am to 5pm</p>
               <a href="tel:+15551234567" className="text-[#ec6d13] font-bold text-lg hover:text-[#d65e0f] transition-colors">
                 +1 (555) 123-4567
@@ -47,7 +47,7 @@ export default function ContactInfoCards() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">Email</h3>
+              <h3 className="text-gray-900 mb-3">Email</h3>
               <p className="text-gray-700 font-medium mb-4 text-base">We'll respond within 24 hours</p>
               <a href="mailto:info@vetcare.com" className="text-[#ec6d13] font-bold text-lg hover:text-[#d65e0f] transition-colors">
                 info@vetcare.com
@@ -73,7 +73,7 @@ export default function ContactInfoCards() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">Location</h3>
+              <h3 className="text-gray-900 mb-3">Location</h3>
               <p className="text-gray-700 font-medium mb-4 text-base">Visit our clinic</p>
               <p className="text-[#ec6d13] font-bold text-lg">
                 123 Pet Street, Anytown, USA

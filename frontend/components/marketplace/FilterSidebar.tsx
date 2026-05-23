@@ -20,7 +20,7 @@ export default function FilterSidebar({
   return (
     <div className="w-full lg:w-64 shrink-0">
       <div className="bg-white rounded-lg border border-gray-200 p-5 lg:sticky lg:top-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-5 pb-3 border-b border-gray-200">Filter</h3>
+        <h3 className="text-gray-900 mb-5 pb-3 border-b border-gray-200">Filter</h3>
 
         {type === 'products' && (
           <div className="mb-6 pb-6 border-b border-gray-200">

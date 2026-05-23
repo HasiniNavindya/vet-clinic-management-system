@@ -24,7 +24,7 @@ function StatCard({
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-gray-900">{value}</p>
+      <p className="mt-2 text-gray-900">{value}</p>
       {hint ? <p className="mt-1 text-xs text-gray-500">{hint}</p> : null}
     </div>
   );
@@ -75,7 +75,7 @@ export default function AdminDashboardPage() {
       <Header />
       <div className="container mx-auto max-w-6xl px-4 py-12 pt-28">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin overview</h1>
+          <h1 className="text-gray-900">Admin overview</h1>
           <p className="mt-1 text-gray-600">
             Signed in as <span className="font-semibold">{user?.fullName}</span>. Snapshot of clinic
             operations, users, and revenue — open a section below for full management screens.
@@ -86,7 +86,7 @@ export default function AdminDashboardPage() {
 
         {overview ? (
           <section className="mt-8">
-            <h2 className="text-lg font-semibold text-gray-900">System snapshot</h2>
+            <h3 className="text-gray-900">System snapshot</h3>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <StatCard label="Appointments" value={overview.totalAppointments} hint={`${overview.pendingAppointments} pending / awaiting payment`} />
               <StatCard label="Pet owners" value={overview.totalPetOwners} />
@@ -123,13 +123,13 @@ export default function AdminDashboardPage() {
           </div>
         ) : null}
 
-        <h2 className="mt-12 text-lg font-semibold text-gray-900">Management</h2>
+        <h3 className="mt-12 text-gray-900">Management</h3>
         <div className="mt-4 grid gap-6 sm:grid-cols-2">
           <Link
             href="/dashboard/admin/analytics"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Analytics</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Analytics</h3>
             <p className="mt-2 text-sm text-gray-600">
               Analytics snapshot with donut charts, revenue breakdown, activity mix, and 30-day booking and payment trends.
             </p>
@@ -142,7 +142,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/reports"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Reports & export</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Reports & export</h3>
             <p className="mt-2 text-sm text-gray-600">
               Monthly dashboards, CSV exports, and printable summaries for revenue, appointments, treatments, and shop
               sales.
@@ -156,7 +156,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/payments"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Payments</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Payments</h3>
             <p className="mt-2 text-sm text-gray-600">
               Transaction history, revenue monitoring, verify payments, refunds, and shop order payment tracking.
             </p>
@@ -169,7 +169,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/notifications"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Notifications</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Notifications</h3>
             <p className="mt-2 text-sm text-gray-600">
               Broadcast announcements, run appointment and vaccination reminders, and review sent notifications.
             </p>
@@ -182,7 +182,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/doctors"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Doctor profiles</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Doctor profiles</h3>
             <p className="mt-2 text-sm text-gray-600">
               Clinic veterinarian records, schedules sample, editing details, and link to linked accounts for
               activation.
@@ -196,7 +196,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/staff"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Staff</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Staff</h3>
             <p className="mt-2 text-sm text-gray-600">
               Operational staff listings and stable links into user administration for roles and suspension.
             </p>
@@ -209,7 +209,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/shop"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Shop</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Shop</h3>
             <p className="mt-2 text-sm text-gray-600">
               Product catalog with categories (pet food, toys, medicines, accessories), inventory, and paid-order
               fulfillment.
@@ -223,7 +223,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/marketplace"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Marketplace ads</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Marketplace ads</h3>
             <p className="mt-2 text-sm text-gray-600">
               Review pet-owner listings, approve or reject advertisements, and remove policy-violating content.
             </p>
@@ -236,7 +236,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/users"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">User management</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">User management</h3>
             <p className="mt-2 text-sm text-gray-600">
               All accounts, suspend or reactivate, assign roles — pet owners, vets, and staff.
             </p>
@@ -249,7 +249,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/doctor-applications"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Doctor applications</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Doctor applications</h3>
             <p className="mt-2 text-sm text-gray-600">
               Approve veterinarian registrations and onboarding before they receive active login access.
             </p>
@@ -262,7 +262,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/calendar"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Clinic calendar</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Clinic calendar</h3>
             <p className="mt-2 text-sm text-gray-600">Schedules and availability across the clinic.</p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">Open calendar →</span>
           </Link>
@@ -271,7 +271,7 @@ export default function AdminDashboardPage() {
             href="/dashboard/appointments/manage"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#ec6d13]">Appointment queue</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Appointment queue</h3>
             <p className="mt-2 text-sm text-gray-600">Respond to booking requests from pet owners.</p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
               Manage appointments →

@@ -70,7 +70,7 @@ export default function AdminExportCenterPage() {
         <Link href="/dashboard/admin/reports" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Reports dashboard
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Export center</h1>
+        <h1 className="mt-2 text-gray-900">Export center</h1>
         <p className="text-gray-600">
           Download CSV files for detailed rows, or open a printable HTML summary (use Print → Save as PDF).
         </p>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, isAuthFailure } from '@/lib/api';
 import Header from '@/components/layout/Header';
+import SiteLogo from '@/components/layout/SiteLogo';
 import AddPetModal from '@/components/dashboard/AddPetModal';
 import BookAppointmentModal from '@/components/dashboard/BookAppointmentModal';
 
@@ -247,16 +248,8 @@ export default function Dashboard() {
       <div className="flex pt-28">
         {/* Sidebar */}
         <aside className="w-64 bg-white h-[calc(100vh-112px)] p-6 border-r border-gray-200 flex flex-col fixed left-0 top-28 overflow-y-auto">
-          <div className="mb-6">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-[#ec6d13] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">🐾</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">CARLISLE</h1>
-                <p className="text-xs text-gray-500">Pet Care</p>
-              </div>
-            </div>
+          <div className="mb-6 flex justify-center">
+            <SiteLogo href="/" height={88} />
           </div>
 
           {/* User Profile Section */}
@@ -363,7 +356,7 @@ export default function Dashboard() {
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900">Welcome, {user?.fullName}!</h2>
+              <h2 className="text-gray-900">Welcome, {user?.fullName}!</h2>
               <p className="text-gray-600 mt-1">Here's your overview</p>
             </div>
             <div className="flex items-center gap-4">
@@ -386,7 +379,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-1">{dashboardData?.stats.visits || 0}</h3>
+              <h3 className="text-gray-900 mb-1">{dashboardData?.stats.visits || 0}</h3>
               <p className="text-sm text-gray-500">Visits</p>
             </div>
 
@@ -398,7 +391,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-1">{dashboardData?.stats.yearsOfService || 0}</h3>
+              <h3 className="text-gray-900 mb-1">{dashboardData?.stats.yearsOfService || 0}</h3>
               <p className="text-sm text-gray-500">Years of service</p>
             </div>
 
@@ -410,7 +403,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-1">{dashboardData?.stats.favouriteDoctors || 0}</h3>
+              <h3 className="text-gray-900 mb-1">{dashboardData?.stats.favouriteDoctors || 0}</h3>
               <p className="text-sm text-gray-500">Favourite doctors</p>
             </div>
 
@@ -422,7 +415,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
               </div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-1">{dashboardData?.stats.vetcoins || 0}</h3>
+              <h3 className="text-gray-900 mb-1">{dashboardData?.stats.vetcoins || 0}</h3>
               <p className="text-sm text-gray-500">Vetcoins</p>
             </div>
           </div>
@@ -430,7 +423,7 @@ export default function Dashboard() {
           {/* Chart - Only show if user has pets */}
           {dashboardData?.pets && dashboardData.pets.length > 0 && (
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-6">Statistics of your pet health</h3>
+              <h3 className="text-gray-900 mb-6">Statistics of your pet health</h3>
               <div className="h-64 flex items-end justify-between gap-4">
                 {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'].map((month, i) => {
                   const chartData = [65, 45, 70, 55, 85, 60, 75, 50, 65, 80, 90, 75];
@@ -451,7 +444,7 @@ export default function Dashboard() {
           {/* Appointments */}
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Treatment & Appointments</h3>
+              <h3 className="text-gray-900">Treatment & Appointments</h3>
               <div className="flex gap-2">
                 <button className="p-2 hover:bg-gray-100 rounded-lg">
                   <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -525,7 +518,7 @@ export default function Dashboard() {
           {dashboardData?.pets && dashboardData.pets.length > 0 ? (
             <div className="bg-gray-50 rounded-2xl p-6 mb-6">
               <img src="https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80" alt="Pet" className="w-20 h-20 rounded-full object-cover mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-1">{dashboardData.pets[0].pet_name}</h3>
+              <h3 className="text-gray-900 mb-1">{dashboardData.pets[0].pet_name}</h3>
               <p className="text-sm text-gray-500 mb-4">Pet ID: {dashboardData.pets[0].id}</p>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {dashboardData.pets[0].species && (
@@ -561,7 +554,7 @@ export default function Dashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">No Pet Added</h3>
+              <h3 className="text-gray-900 mb-2">No Pet Added</h3>
               <p className="text-sm text-gray-500 mb-4">Add your pet information to get personalized care</p>
               <button 
                 onClick={() => setIsAddPetModalOpen(true)}
@@ -715,7 +708,7 @@ export default function Dashboard() {
             <div className="bg-gradient-to-r from-[#ec6d13] to-[#d65e0f] text-white p-6 rounded-t-2xl">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold mb-1">Appointment Request</h2>
+                  <h2 className="mb-1">Appointment Request</h2>
                   <p className="text-white/90">
                     {new Date(selectedAppointment.appointment_date).toLocaleDateString('en-US', { 
                       weekday: 'long', 
@@ -748,7 +741,7 @@ export default function Dashboard() {
                   />
                 )}
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">
+                  <h3 className="text-gray-900 mb-1">
                     {selectedAppointment.doctor_name}
                   </h3>
                   <p className="text-[#ec6d13] font-semibold mb-2">
@@ -779,7 +772,7 @@ export default function Dashboard() {
                     </svg>
                     <span className="text-sm font-medium">Time</span>
                   </div>
-                  <p className="text-lg font-bold text-gray-900">{selectedAppointment.appointment_time}</p>
+                  <p className="text-gray-900">{selectedAppointment.appointment_time}</p>
                 </div>
 
                 {selectedAppointment.pet_name && (
@@ -790,7 +783,7 @@ export default function Dashboard() {
                       </svg>
                       <span className="text-sm font-medium">Pet</span>
                     </div>
-                    <p className="text-lg font-bold text-gray-900">{selectedAppointment.pet_name}</p>
+                    <p className="text-gray-900">{selectedAppointment.pet_name}</p>
                   </div>
                 )}
               </div>

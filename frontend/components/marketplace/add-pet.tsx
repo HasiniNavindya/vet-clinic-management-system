@@ -69,7 +69,7 @@ export default function AddPetPage() {
 
       <div className="max-w-2xl mx-auto px-6 py-12">
         <div className="bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Add New Pet</h1>
+          <h1 className="text-gray-900 mb-2">Add New Pet</h1>
           <p className="text-gray-600 mb-8">Fill in the form below to list a pet</p>
 
           {error && (

@@ -86,7 +86,7 @@ export default function EditPetModal({ isOpen, pet, onClose, onSuccess }: EditPe
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#ec6d13] mb-2">Edit pet profile</p>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">{pet.pet_name}</h2>
+              <h2 className="text-gray-900">{pet.pet_name}</h2>
             </div>
             <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -128,7 +128,7 @@ export default function SettingsPage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+            <h1 className="text-gray-900">Settings</h1>
             <p className="text-gray-600 mt-1">Manage your account and preferences</p>
           </div>
           <Link href="/dashboard/pet-owner" className="flex items-center gap-2 text-[#ec6d13] hover:text-[#d65e0f] font-semibold">
@@ -204,7 +204,7 @@ export default function SettingsPage() {
               {/* Profile Tab */}
               {selectedTab === 'profile' && (
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Profile Information</h2>
+                  <h2 className="text-gray-900 mb-6">Profile Information</h2>
                   
                   <div className="space-y-6">
                     <div>
@@ -276,7 +276,7 @@ export default function SettingsPage() {
               {/* Preferences Tab */}
               {selectedTab === 'preferences' && (
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Notification Preferences</h2>
+                  <h2 className="text-gray-900 mb-6">Notification Preferences</h2>
                   
                   <div className="space-y-6">
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -364,7 +364,7 @@ export default function SettingsPage() {
               {/* Security Tab */}
               {selectedTab === 'security' && (
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Change Password</h2>
+                  <h2 className="text-gray-900 mb-6">Change Password</h2>
                   
                   <div className="space-y-6">
                     <div>

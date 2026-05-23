@@ -63,7 +63,7 @@ function PetHealthContent() {
   return (
     <PetOwnerShell>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Pet Health</h1>
+        <h1 className="text-gray-900">Pet Health</h1>
         <p className="mt-1 text-gray-600">Medical records, vaccinations, and prescriptions</p>
       </div>
 
@@ -219,7 +219,7 @@ function VaccinationsPanel() {
 
       {reminders && reminders.active.length > 0 ? (
         <section className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
-          <h2 className="text-lg font-bold text-gray-900">Vaccination reminders</h2>
+          <h3 className="text-gray-900">Vaccination reminders</h3>
           <p className="mt-1 text-sm text-gray-600">
             Automated alerts when vaccines are due within {reminders.reminderDaysBefore} days
           </p>
@@ -398,7 +398,7 @@ function StatCard({
   return (
     <div className={`rounded-xl p-4 shadow-sm ring-1 ${ring}`}>
       <p className="text-xs font-medium uppercase text-gray-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+      <p className="mt-1 text-gray-900">{value}</p>
     </div>
   );
 }

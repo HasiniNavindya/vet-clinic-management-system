@@ -63,7 +63,7 @@ export default function Timeline() {
         {/* Section Header */}
         <div className="text-center mb-12">
           <div className="inline-block bg-white/80 backdrop-blur-sm px-8 py-6 rounded-2xl shadow-xl mb-6">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            <h2 className="text-gray-900 mb-4">
               Our Journey Through Time
             </h2>
             <div className="flex items-center justify-center gap-3 mb-4">
@@ -116,7 +116,7 @@ export default function Timeline() {
                           <span className="inline-block w-2 h-2 bg-[#ec6d13] rounded-full animate-pulse"></span>
                           {milestone.year}
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2 group-hover:text-[#ec6d13] transition-colors duration-300">
+                        <h3 className="text-gray-900 mb-2 group-hover:text-[#ec6d13] transition-colors duration-300">
                           {milestone.title}
                         </h3>
                         <p className="text-gray-600 leading-relaxed text-sm">

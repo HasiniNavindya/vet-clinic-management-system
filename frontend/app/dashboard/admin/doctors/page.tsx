@@ -69,7 +69,7 @@ export default function AdminDoctorsPage() {
             <Link href="/dashboard/admin" className="text-sm font-semibold text-[#ec6d13] hover:underline">
               ← Admin home
             </Link>
-            <h1 className="mt-2 text-2xl font-bold text-gray-900">Doctor profiles</h1>
+            <h1 className="mt-2 text-gray-900">Doctor profiles</h1>
             <p className="text-gray-600">
               Every veterinarian row shown to pet owners, whether or not a login is linked. Approve new vets under{' '}
               <Link href="/dashboard/admin/doctor-applications" className="font-semibold text-[#ec6d13] hover:underline">

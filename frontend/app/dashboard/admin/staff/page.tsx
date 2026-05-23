@@ -30,7 +30,7 @@ export default function AdminStaffManagementPage() {
         <Link href="/dashboard/admin" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Admin home
         </Link>
-        <h1 className="mt-4 text-3xl font-bold text-gray-900">Staff management</h1>
+        <h1 className="mt-4 text-gray-900">Staff management</h1>
         <p className="mt-2 text-gray-600">
           Staff accounts are clinic teammates with the{' '}
           <code className="rounded bg-gray-200 px-1">staff</code> role. Create them via registration (requires an
@@ -38,7 +38,7 @@ export default function AdminStaffManagementPage() {
         </p>
 
         <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Role & permissions</h2>
+          <h3 className="text-gray-900">Role & permissions</h3>
           <p className="mt-3 text-gray-700">
             In this codebase, granular permissions inside the clinic app are enforced by{' '}
             <strong>role identity</strong> (admin · doctor · staff · pet owner) on each API route, not custom

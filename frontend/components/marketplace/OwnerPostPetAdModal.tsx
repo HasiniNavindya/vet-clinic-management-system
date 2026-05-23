@@ -72,7 +72,7 @@ export default function OwnerPostPetAdModal({ isOpen, onClose, onSuccess }: Owne
           onClick={(e) => e.stopPropagation()}
         >
           <div className="border-b px-6 py-4">
-            <h2 className="text-xl font-bold text-gray-900">Post a pet advertisement</h2>
+            <h2 className="text-gray-900">Post a pet advertisement</h2>
             <p className="mt-1 text-sm text-amber-800 bg-amber-50 rounded-lg px-3 py-2 mt-2">
               Listings are hidden until a clinic administrator approves them.
             </p>

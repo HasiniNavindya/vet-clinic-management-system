@@ -58,7 +58,7 @@ function DetailContent({ rx, docUrl }: { rx: Prescription; docUrl: string | null
     <div className="mt-6 space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{rx.prescriptionNumber}</h1>
+          <h1 className="text-gray-900">{rx.prescriptionNumber}</h1>
           <p className="mt-1 text-gray-600">
             {rx.petName} · {formatIssuedDate(rx.issuedDate)}
             {rx.doctorName ? ` · Dr. ${rx.doctorName}` : ''}

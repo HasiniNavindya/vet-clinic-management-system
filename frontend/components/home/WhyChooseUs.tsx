@@ -36,7 +36,7 @@ export default function WhyChooseUs() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+          <h2 className="text-gray-900 mb-6">
             WHY CHOOSE US
           </h2>
           <div className="flex items-center justify-center gap-3 mb-4">
@@ -76,7 +76,7 @@ export default function WhyChooseUs() {
                   <div className="h-1 w-12 bg-gray-200 rounded"></div>
                 </div>
                 
-                <h3 className="text-xl font-bold text-gray-900 mb-4">
+                <h3 className="text-gray-900 mb-4">
                   {service.title}
                 </h3>
                 

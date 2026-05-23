@@ -108,7 +108,7 @@ export default function AdminShopOrdersPage() {
         <Link href="/dashboard/admin/shop" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Shop hub
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-gray-900">Order management</h1>
+        <h1 className="mt-2 text-gray-900">Order management</h1>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <label className="text-sm text-gray-600">

@@ -64,7 +64,7 @@ export default function ContactPage() {
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 animate-fade-in">
+            <h1 className="text-white mb-6 animate-fade-in">
               Get In Touch
             </h1>
             <p className="text-xl text-white/90 max-w-2xl mx-auto animate-fade-in">
@@ -95,7 +95,7 @@ export default function ContactPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Phone</h3>
+                <h3 className="text-gray-900 mb-3">Phone</h3>
                 <p className="text-gray-700 font-medium mb-4 text-base">Mon-Fri from 8am to 5pm</p>
                 <a href="tel:+15551234567" className="text-[#ec6d13] font-bold text-lg hover:text-[#d65e0f] transition-colors">
                   +1 (555) 123-4567
@@ -120,7 +120,7 @@ export default function ContactPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Email</h3>
+                <h3 className="text-gray-900 mb-3">Email</h3>
                 <p className="text-gray-700 font-medium mb-4 text-base">We'll respond within 24 hours</p>
                 <a href="mailto:info@vetcare.com" className="text-[#ec6d13] font-bold text-lg hover:text-[#d65e0f] transition-colors">
                   info@vetcare.com
@@ -146,7 +146,7 @@ export default function ContactPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">Location</h3>
+                <h3 className="text-gray-900 mb-3">Location</h3>
                 <p className="text-gray-700 font-medium mb-4 text-base">Visit our clinic</p>
                 <p className="text-[#ec6d13] font-bold text-lg">
                   123 Pet Street, Anytown, USA
@@ -164,7 +164,7 @@ export default function ContactPage() {
             {/* Contact Form */}
             <div>
               <div className="mb-8">
-                <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                <h2 className="text-gray-900 mb-4">
                   Send Us a Message
                 </h2>
                 <p className="text-gray-600 text-lg">
@@ -314,7 +314,7 @@ export default function ContactPage() {
 
               {/* Operating Hours */}
               <div className="bg-gray-50 rounded-2xl p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                <h3 className="text-gray-900 mb-6 flex items-center gap-3">
                   <svg className="w-7 h-7 text-[#ec6d13]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -342,7 +342,7 @@ export default function ContactPage() {
 
               {/* Social Media */}
               <div className="bg-gray-50 rounded-2xl p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">
+                <h3 className="text-gray-900 mb-6">
                   Follow Us
                 </h3>
                 <div className="flex gap-4">
@@ -377,7 +377,7 @@ export default function ContactPage() {
       <section className="py-20 bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-gray-900 mb-4">
               Frequently Asked Questions
             </h2>
             <p className="text-gray-600 text-lg">

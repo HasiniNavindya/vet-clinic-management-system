@@ -17,7 +17,7 @@ function FailedContent() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Payment failed or cancelled</h1>
+        <h1 className="text-gray-900">Payment failed or cancelled</h1>
         <p className="mt-3 text-gray-600">
           {reason || 'Your payment was not completed. No appointment or order was confirmed.'}
         </p>

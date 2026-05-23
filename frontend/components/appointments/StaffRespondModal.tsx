@@ -60,9 +60,9 @@ export default function StaffRespondModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="text-lg font-bold text-gray-900">
+        <h3 className="text-gray-900">
           {action === 'reject' ? 'Decline request' : 'Offer new time'}
-        </h2>
+        </h3>
         <p className="mt-1 text-sm text-gray-600">
           {action === 'reject'
             ? 'A reason is required. The pet owner will be notified.'

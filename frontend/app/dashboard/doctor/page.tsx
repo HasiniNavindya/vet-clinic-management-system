@@ -69,7 +69,7 @@ export default function DoctorDashboardPage() {
       ) : data ? (
         <div className="space-y-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-gray-900">
               Welcome, {user?.fullName?.split(' ')[0]}
             </h1>
             <p className="mt-1 text-gray-600">{data.profile.specialization}</p>
@@ -86,7 +86,7 @@ export default function DoctorDashboardPage() {
 
           <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Upcoming appointments</h2>
+              <h3 className="text-gray-900">Upcoming appointments</h3>
               <Link
                 href="/dashboard/appointments/manage"
                 className="text-sm font-semibold text-[#ec6d13] hover:underline"
@@ -138,7 +138,7 @@ function StatCard({
   const inner = (
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
       <p className="text-sm text-gray-500">{label}</p>
-      <p className="mt-1 text-3xl font-bold text-gray-900">{value}</p>
+      <p className="mt-1 text-gray-900">{value}</p>
     </div>
   );
   if (href) {

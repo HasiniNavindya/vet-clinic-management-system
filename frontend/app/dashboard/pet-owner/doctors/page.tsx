@@ -33,7 +33,7 @@ export default function PetOwnerDoctorsPage() {
   return (
     <PetOwnerShell>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Our Veterinarians</h1>
+        <h1 className="text-gray-900">Our Veterinarians</h1>
         <p className="mt-1 max-w-2xl text-gray-600">
           Browse doctor profiles, see availability, and book an appointment with the specialist that
           fits your pet&apos;s needs.

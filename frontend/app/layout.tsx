@@ -18,6 +18,10 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "Carlisle Pet Care",
   description: "Veterinary Clinic Management System",
+  icons: {
+    icon: "/images/carlisle-logo.png",
+    apple: "/images/carlisle-logo.png",
+  },
 };
 
 export default function RootLayout({

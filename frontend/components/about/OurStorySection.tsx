@@ -23,7 +23,7 @@ export default function OurStorySection() {
           </div>
           
           <div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
+            <h2 className="text-gray-900 mb-6">
               Our Story: A Journey of Compassion
             </h2>
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">

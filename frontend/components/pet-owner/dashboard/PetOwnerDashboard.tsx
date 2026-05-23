@@ -110,7 +110,7 @@ export default function PetOwnerDashboard() {
           <p className="text-sm text-gray-500">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
+          <h1 className="mt-1 tracking-tight text-gray-900">
             Welcome back, {welcomeName.split(' ')[0]}!
           </h1>
           <p className="mt-2 max-w-lg text-gray-600">
@@ -211,7 +211,7 @@ export default function PetOwnerDashboard() {
       <section>
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">Upcoming appointments</h2>
+            <h3 className="text-gray-900">Upcoming appointments</h3>
             <Link
               href="/dashboard/pet-owner/appointments"
               className="text-sm font-semibold text-[#ec6d13] hover:text-[#d65e0f]"
@@ -301,7 +301,7 @@ function StatCard({
           : 'border-gray-100 bg-white'
       }`}
     >
-      <p className="text-xl font-bold text-gray-900">{value}</p>
+      <p className="text-gray-900">{value}</p>
       <p className="mt-0.5 text-xs text-gray-500">{label}</p>
     </div>
   );
