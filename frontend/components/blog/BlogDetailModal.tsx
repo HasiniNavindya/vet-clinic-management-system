@@ -2,22 +2,11 @@
 
 import React from 'react';
 import Image from 'next/image';
-
-interface BlogPost {
-  id: number;
-  title: string;
-  excerpt: string;
-  content?: string;
-  image: string;
-  author: string;
-  date: string;
-  category: string;
-  readTime: string;
-}
+import type { BlogPostDisplay } from '@/lib/blog';
 
 interface BlogDetailModalProps {
   isOpen: boolean;
-  blog: BlogPost | null;
+  blog: BlogPostDisplay | null;
   onClose: () => void;
 }
 

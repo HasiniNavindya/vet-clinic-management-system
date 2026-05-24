@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { EMERGENCY_PHONE_DISPLAY, EMERGENCY_PHONE_TEL } from '@/lib/site';
 
 export default function EmergencyBanner() {
   return (
@@ -15,8 +16,8 @@ export default function EmergencyBanner() {
           </div>
         </div>
         <div className="flex flex-col items-center gap-3 sm:flex-row">
-          <a href="tel:+0123456789" className="text-lg font-bold hover:underline">
-            📞 +01 234 56789
+          <a href={EMERGENCY_PHONE_TEL} className="text-lg font-bold hover:underline">
+            📞 {EMERGENCY_PHONE_DISPLAY}
           </a>
           <Link
             href="/login?role=user"
