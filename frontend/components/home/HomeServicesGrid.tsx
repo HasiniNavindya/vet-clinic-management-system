@@ -35,14 +35,14 @@ const SERVICES = [
     description:
       'Guidance on responsible adoption, health checks for new pets, and integration tips for your household.',
     href: '/marketplace',
-    icon: '🐕',
+    icon: '🐾',
   },
   {
     title: 'Pet Sitting',
     description:
       'Trusted in-clinic boarding and sitter referrals so your pets are cared for when you travel.',
     href: '/services',
-    icon: '🛋️',
+    icon: '❤️',
   },
 ];
 
@@ -59,7 +59,7 @@ export default function HomeServicesGrid() {
             <Link
               key={s.title}
               href={s.href}
-              className="group flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#ec6d13]/25 hover:shadow-lg"
+              className="group flex h-full flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-8 hover:border-[#ec6d13]/25 hover:shadow-2xl"
             >
               <span className="text-3xl" aria-hidden>
                 {s.icon}

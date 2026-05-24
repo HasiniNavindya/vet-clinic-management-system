@@ -60,7 +60,7 @@ export default function Hero() {
               <div className="flex flex-wrap gap-4 justify-center">
                 <button 
                   onClick={() => setIsLoginModalOpen(true)}
-                  className="group bg-[#ec6d13] text-white px-8 py-4 rounded-xl font-semibold hover:bg-[#d65e0f] transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-105 flex items-center gap-2"
+                  className="group bg-[#ec6d13] text-white px-8 py-4 rounded-xl font-semibold hover:bg-[#d65e0f] transition-all duration-300 shadow-xl hover:shadow-2xl hover:scale-[1.03] flex items-center gap-2"
                 >
                   Book Appointment
                   <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,7 +69,7 @@ export default function Hero() {
                 </button>
                 <Link 
                   href="/services"
-                  className="bg-white/10 backdrop-blur-md text-white px-8 py-4 rounded-xl font-semibold border-2 border-white/30 hover:bg-white hover:text-gray-900 transition-all duration-300 hover:scale-105"
+                  className="bg-white/10 backdrop-blur-md text-white px-8 py-4 rounded-xl font-semibold border-2 border-white/30 hover:bg-white hover:text-gray-900 transition-all duration-300 hover:scale-[1.03]"
                 >
                   Our Services
                 </Link>

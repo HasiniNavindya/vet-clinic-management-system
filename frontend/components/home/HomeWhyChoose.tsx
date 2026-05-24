@@ -41,7 +41,7 @@ export default function HomeWhyChoose() {
           {HIGHLIGHTS.map((service) => (
             <article
               key={service.title}
-              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-md transition-all duration-300 hover:-translate-y-2.5 hover:shadow-xl"
+              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-md transition-all duration-300 hover:-translate-y-8 hover:shadow-2xl"
             >
               <div className="relative h-56 shrink-0 overflow-hidden">
                 <Image
@@ -57,7 +57,7 @@ export default function HomeWhyChoose() {
                 <p className="mt-3 flex-1 text-sm leading-relaxed text-gray-600">{service.description}</p>
                 <Link
                   href={`/services/${service.slug}`}
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#ec6d13] transition group-hover:gap-3"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#ec6d13] transition-all duration-300 hover:scale-[1.03] group-hover:gap-3"
                 >
                   Learn more
                   <span aria-hidden>→</span>
