@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import WhyChooseUs from '@/components/home/WhyChooseUs';
+import ServicesOfferLayout from '@/components/services/ServicesOfferLayout';
 type ServiceCategory = 'all' | 'medical' | 'grooming' | 'emergency' | 'preventive';
 
 export default function ServicesPage() {
@@ -196,122 +197,7 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* Services We Offer Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Services Layout */}
-          <div className="grid lg:grid-cols-3 gap-12 items-center">
-            {/* Left Column Services */}
-            <div className="space-y-12">
-              {[
-                {
-                  title: 'PET ADOPTION',
-                  description: 'Find your perfect companion from our selection of loving pets waiting for their forever home.',
-                  icon: (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                  )
-                },
-                {
-                  title: 'PET GROOMING',
-                  description: 'Professional grooming services to keep your pet looking and feeling their absolute best.',
-                  icon: (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )
-                },
-                {
-                  title: 'PET DAYCARE',
-                  description: 'Safe and engaging daycare services where your pet can play, socialize, and be cared for.',
-                  icon: (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                  )
-                }
-              ].map((service, index) => (
-                <div key={index} className="text-right">
-                  <div className="flex items-start justify-end gap-4">
-                    <div className="flex-1">
-                      <h3 className="text-gray-900 mb-2">
-                        {service.title}
-                      </h3>
-                      <p className="text-gray-600">
-                        {service.description}
-                      </p>
-                    </div>
-                    <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-[#ec6d13] border-2 border-dashed border-gray-300 shrink-0 hover:border-[#ec6d13] hover:bg-orange-50 transition-all duration-300">
-                      {service.icon}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Center Image */}
-            <div className="relative">
-              <div className="rounded-3xl overflow-hidden shadow-2xl">
-                <img
-                  src="https://images.unsplash.com/photo-1450778869180-41d0601e046e?w=800&q=80"
-                  alt="Happy pets"
-                  className="w-full h-auto"
-                />
-              </div>
-            </div>
-
-            {/* Right Column Services */}
-            <div className="space-y-12">
-              {[
-                {
-                  title: 'VACCINATION',
-                  description: 'Essential vaccinations to protect your pet from serious diseases and maintain optimal health.',
-                  icon: (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                    </svg>
-                  )
-                },
-                {
-                  title: 'DOG TRAINING',
-                  description: 'Expert training programs to help your dog develop good behavior and social skills.',
-                  icon: (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  )
-                },
-                {
-                  title: 'PET SITTER',
-                  description: 'Reliable pet sitting services providing loving care for your pet while you\'re away.',
-                  icon: (
-                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )
-                }
-              ].map((service, index) => (
-                <div key={index} className="text-left">
-                  <div className="flex items-start gap-4">
-                    <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-[#ec6d13] border-2 border-dashed border-gray-300 shrink-0 hover:border-[#ec6d13] hover:bg-orange-50 transition-all duration-300">
-                      {service.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-gray-900 mb-2">
-                        {service.title}
-                      </h3>
-                      <p className="text-gray-600">
-                        {service.description}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <ServicesOfferLayout />
 
       {/* Why Choose Us Section */}
       <WhyChooseUs />
