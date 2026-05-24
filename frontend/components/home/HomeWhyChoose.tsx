@@ -9,21 +9,21 @@ const HIGHLIGHTS = [
     title: 'Care Advice',
     description:
       'Nutrition, preventive care, and home wellness tips from our veterinary team — tailored to your pet’s age, breed, and lifestyle.',
-    image: 'https://images.unsplash.com/photo-1450778869485-4d7b8fffb879?w=800&q=80',
+    image: '/images/services/care-advice.jpg',
     slug: 'care-advice',
   },
   {
     title: 'Veterinary Help',
     description:
       'Book consultations, follow-up visits, and treatment plans with doctors who know your pet’s history.',
-    image: 'https://images.unsplash.com/photo-1629909615215-170ad9aebccc?w=800&q=80',
+    image: '/images/services/veterinary-help.jpg',
     slug: 'veterinary-help',
   },
   {
     title: 'Emergency Service',
     description:
       'Rapid assessment for injuries, sudden illness, or post-surgery concerns — we prioritize urgent cases.',
-    image: 'https://images.unsplash.com/photo-1576201836106-db1758fd1c76?w=800&q=80',
+    image: '/images/services/emergency-service.jpg',
     slug: 'emergency-service',
   },
 ];

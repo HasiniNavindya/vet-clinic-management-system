@@ -19,6 +19,7 @@ import {
   rescheduleAppointment,
 } from '@/lib/appointments';
 import { createAppointmentCheckout, fetchPaymentConfig, formatMoney } from '@/lib/payments';
+import AppointmentFeedbackForm from '@/components/appointments/AppointmentFeedbackForm';
 
 export default function AppointmentDetailPage() {
   const params = useParams();
@@ -148,6 +149,7 @@ export default function AppointmentDetailPage() {
   const canCancel = OWNER_CANCELLABLE.includes(appointment.status);
   const needsPayment = appointment.status === 'awaiting_payment';
   const hasRescheduleOffer = appointment.status === 'reschedule_offered';
+  const isCompleted = appointment.status === 'completed';
 
   return (
     <PetOwnerShell>
@@ -166,6 +168,10 @@ export default function AppointmentDetailPage() {
         ) : null}
 
         <DetailsCard appointment={appointment} />
+
+        {isCompleted && token ? (
+          <AppointmentFeedbackForm token={token} appointmentId={appointment.id} />
+        ) : null}
 
         {appointment.staffResponseReason ? (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

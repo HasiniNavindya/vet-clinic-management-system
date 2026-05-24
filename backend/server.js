@@ -26,6 +26,9 @@ const adminPaymentsRouter = require("./routes/adminPayments");
 const adminNotificationsRouter = require("./routes/adminNotifications");
 const adminReportsRouter = require("./routes/adminReports");
 const marketplacePetListingsRouter = require("./routes/marketplacePetListings");
+const publicStatsRouter = require("./routes/publicStats");
+const publicBlogRouter = require("./routes/publicBlog");
+const feedbackRouter = require("./routes/feedback");
 const { normalizeProductCategory, LISTING_STATUS } = require("./config/shop");
 const { JWT_SECRET, authenticateToken, requireRole } = require("./middleware/auth");
 const appointmentsRouter = require("./routes/appointments");
@@ -89,6 +92,9 @@ app.get("/", (req, res) => {
 app.get("/auth/roles", (req, res) => {
   res.json({ roles: getPublicRoles() });
 });
+
+app.use("/api/public", publicStatsRouter);
+app.use("/api/public", publicBlogRouter);
 
 // Public veterinarian application (same handlers as /api/doctor-applications — avoids 404 if router order/version differs)
 app.get("/auth/doctor-application-meta", (req, res) => {
@@ -687,6 +693,7 @@ app.get("/api/doctors/:id/availability", authenticateToken, async (req, res) => 
 });
 
 app.use("/api/appointments", appointmentsRouter);
+app.use("/api/feedback", feedbackRouter);
 app.use("/api/medical-records", medicalRecordsRouter);
 app.use("/api/vaccinations", vaccinationsRouter);
 app.use("/api/prescriptions", prescriptionsRouter);
