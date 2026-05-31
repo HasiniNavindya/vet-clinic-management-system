@@ -1,0 +1,209 @@
+const express = require('express');
+const pool = require('../db');
+const { authenticateToken, requireRole } = require('../middleware/auth');
+const { ALL_FULFILLMENT } = require('../config/shop');
+const {
+  getOverview,
+  listPetsWithOwners,
+  listPetOwners,
+} = require('../services/receptionistDashboardService');
+const {
+  listNotificationsAdmin,
+  broadcastAnnouncement,
+  runAllReminderJobs,
+} = require('../services/notificationService');
+const { isEmailConfigured } = require('../config/notifications');
+
+const router = express.Router();
+const STAFF = ['receptionist', 'admin', 'doctor'];
+
+router.use(authenticateToken, requireRole('receptionist', 'admin'));
+
+router.get('/overview', async (_req, res) => {
+  try {
+    const overview = await getOverview();
+    res.json({ overview });
+  } catch (err) {
+    console.error('Receptionist overview:', err.message);
+    res.status(500).json({ error: 'Failed to load overview' });
+  }
+});
+
+router.get('/pets', async (req, res) => {
+  try {
+    const search = typeof req.query.search === 'string' ? req.query.search : '';
+    const pets = await listPetsWithOwners(search);
+    res.json({ pets });
+  } catch (err) {
+    console.error('Receptionist pets:', err.message);
+    res.status(500).json({ error: 'Failed to load pets' });
+  }
+});
+
+router.get('/owners', async (req, res) => {
+  try {
+    const search = typeof req.query.search === 'string' ? req.query.search : '';
+    const owners = await listPetOwners(search);
+    res.json({ owners });
+  } catch (err) {
+    console.error('Receptionist owners:', err.message);
+    res.status(500).json({ error: 'Failed to load owners' });
+  }
+});
+
+router.get('/vaccinations-due', async (req, res) => {
+  const withinDays = Math.min(90, Math.max(1, parseInt(String(req.query.withinDays), 10) || 30));
+  try {
+    const r = await pool.query(
+      `SELECT v.id, v.pet_id, v.vaccine_name, v.due_date, v.status,
+              p.pet_name, u.full_name AS owner_name, u.email AS owner_email
+       FROM vaccinations v
+       JOIN pets_owned p ON p.id = v.pet_id
+       JOIN auth_users u ON u.id = p.user_id
+       WHERE v.due_date IS NOT NULL
+         AND v.due_date <= CURRENT_DATE + ($1::int * INTERVAL '1 day')
+         AND v.status IN ('scheduled', 'overdue')
+       ORDER BY v.due_date ASC
+       LIMIT 50`,
+      [withinDays]
+    );
+    res.json({ items: r.rows, withinDays });
+  } catch (err) {
+    console.error('Receptionist vaccinations-due:', err.message);
+    res.status(500).json({ error: 'Failed to load vaccinations' });
+  }
+});
+
+router.get('/orders', async (req, res) => {
+  const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+  const limit = Math.min(50, Math.max(5, parseInt(String(req.query.limit), 10) || 15));
+  const offset = (page - 1) * limit;
+  const payStatus =
+    typeof req.query.paymentStatus === 'string' ? req.query.paymentStatus.trim() : '';
+
+  try {
+    const conditions = ['1=1'];
+    const params = [];
+    let pi = 1;
+    if (payStatus === 'paid' || payStatus === 'pending_payment' || payStatus === 'cancelled') {
+      conditions.push(`o.status = $${pi++}`);
+      params.push(payStatus);
+    }
+    const where = conditions.join(' AND ');
+    const countRes = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM shop_orders o WHERE ${where}`,
+      params
+    );
+    const total = countRes.rows[0]?.total || 0;
+    const listParams = [...params, limit, offset];
+    const r = await pool.query(
+      `SELECT o.*, u.email AS user_email, u.full_name AS user_full_name
+       FROM shop_orders o
+       JOIN auth_users u ON u.id = o.user_id
+       WHERE ${where}
+       ORDER BY o.created_at DESC
+       LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      listParams
+    );
+    const orders = r.rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      userEmail: row.user_email,
+      userFullName: row.user_full_name,
+      paymentStatus: row.status,
+      totalCents: row.total_cents,
+      fulfillmentStatus: row.fulfillment_status || 'unfulfilled',
+      trackingNote: row.tracking_note,
+      createdAt: row.created_at,
+    }));
+    res.json({
+      orders,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    });
+  } catch (err) {
+    console.error('Receptionist orders:', err.message);
+    res.status(500).json({ error: 'Failed to list orders' });
+  }
+});
+
+router.patch('/orders/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+  const { fulfillmentStatus, trackingNote } = req.body || {};
+  if (fulfillmentStatus === undefined && trackingNote === undefined) {
+    return res.status(400).json({ error: 'Provide fulfillmentStatus and/or trackingNote' });
+  }
+  if (
+    fulfillmentStatus !== undefined &&
+    !ALL_FULFILLMENT.includes(String(fulfillmentStatus).trim().toLowerCase())
+  ) {
+    return res.status(400).json({ error: 'Invalid fulfillmentStatus', allowed: ALL_FULFILLMENT });
+  }
+  try {
+    const updates = [];
+    const values = [];
+    let pi = 1;
+    if (fulfillmentStatus !== undefined) {
+      updates.push(`fulfillment_status = $${pi++}`);
+      values.push(String(fulfillmentStatus).trim().toLowerCase());
+    }
+    if (trackingNote !== undefined) {
+      updates.push(`tracking_note = $${pi++}`);
+      values.push(trackingNote);
+    }
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(id);
+    await pool.query(
+      `UPDATE shop_orders SET ${updates.join(', ')} WHERE id = $${pi}`,
+      values
+    );
+    res.json({ message: 'Order updated' });
+  } catch (err) {
+    console.error('Receptionist patch order:', err.message);
+    res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+router.get('/notifications', async (req, res) => {
+  try {
+    const type = typeof req.query.type === 'string' ? req.query.type : undefined;
+    const limit = Math.min(200, parseInt(String(req.query.limit), 10) || 80);
+    const notifications = await listNotificationsAdmin({ limit, type });
+    res.json({ notifications, emailConfigured: isEmailConfigured() });
+  } catch (err) {
+    console.error('Receptionist notifications:', err.message);
+    res.status(500).json({ error: 'Failed to load notifications' });
+  }
+});
+
+router.post('/notifications/broadcast', async (req, res) => {
+  const { title, message, role, sendEmail } = req.body || {};
+  try {
+    const result = await broadcastAnnouncement({
+      title,
+      message,
+      roleFilter: role || 'all',
+      sendEmail: sendEmail !== false,
+    });
+    if (!result.ok) return res.status(400).json({ error: result.error });
+    res.json(result);
+  } catch (err) {
+    console.error('Receptionist broadcast:', err.message);
+    res.status(500).json({ error: 'Broadcast failed' });
+  }
+});
+
+router.post('/notifications/run-reminders', async (_req, res) => {
+  try {
+    const result = await runAllReminderJobs();
+    res.json({ message: 'Reminder jobs completed', ...result });
+  } catch (err) {
+    console.error('Receptionist reminders:', err.message);
+    res.status(500).json({ error: 'Failed to run reminders' });
+  }
+});
+
+module.exports = router;

@@ -7,7 +7,7 @@ import { userHasRole } from '@/lib/roles';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  /** Canonical role ids from config (user, admin, doctor, staff). Empty = any authenticated user. */
+  /** Canonical role ids from config (user, admin, doctor, receptionist). Empty = any authenticated user. */
   allowedRoles?: string[];
   loginPath?: string;
 }

@@ -160,7 +160,7 @@ export function recordOfflinePayment(
 
 export function fetchPetOwnersForStaff(token: string) {
   return apiFetch<Array<{ id: number; full_name: string; email: string }>>(
-    '/api/payments/staff/pet-owners',
+    '/api/payments/receptionist/pet-owners',
     { headers: authHeaders(token) }
   );
 }

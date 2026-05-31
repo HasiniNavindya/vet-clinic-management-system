@@ -172,6 +172,18 @@ export default function UnifiedLoginForm({
               and wait for admin approval before signing in.
             </p>
           ) : null}
+          {selectedRole?.requiresReceptionistApplication ? (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              New receptionists must{' '}
+              <Link
+                href="/register?role=receptionist"
+                className="font-semibold text-[#ec6d13] hover:underline"
+              >
+                apply first
+              </Link>{' '}
+              and wait for admin approval before signing in.
+            </p>
+          ) : null}
 
           <button
             type="submit"

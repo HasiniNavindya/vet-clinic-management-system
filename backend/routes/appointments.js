@@ -247,7 +247,7 @@ router.post('/:id/cancel', authenticateToken, requireRole('user'), async (req, r
 });
 
 /** Staff: approve (→ awaiting payment), reject, or reschedule with reason */
-router.patch('/:id/respond', authenticateToken, requireRole('admin', 'doctor', 'staff'), async (req, res) => {
+router.patch('/:id/respond', authenticateToken, requireRole('admin', 'doctor', 'receptionist'), async (req, res) => {
   const { action, reason, appointment_date, appointment_time, doctor_notes, confirmation_message } =
     req.body;
 
@@ -372,7 +372,7 @@ router.patch('/:id/respond', authenticateToken, requireRole('admin', 'doctor', '
   }
 });
 
-router.patch('/:id/status', authenticateToken, requireRole('admin', 'doctor', 'staff'), async (req, res) => {
+router.patch('/:id/status', authenticateToken, requireRole('admin', 'doctor', 'receptionist'), async (req, res) => {
   const { status, doctor_notes, confirmation_message } = req.body;
 
   try {

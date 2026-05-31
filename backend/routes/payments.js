@@ -107,7 +107,7 @@ router.post('/demo-complete/:id', authenticateToken, requireRole('user'), async 
   }
 });
 
-router.get('/staff/pet-owners', authenticateToken, requireRole('admin', 'doctor', 'staff'), async (req, res) => {
+async function listPetOwnersHandler(req, res) {
   try {
     const owners = await listPetOwnersForStaff();
     res.json(owners);
@@ -115,9 +115,12 @@ router.get('/staff/pet-owners', authenticateToken, requireRole('admin', 'doctor'
     console.error('List pet owners error:', err);
     res.status(500).json({ error: 'Failed to load pet owners' });
   }
-});
+}
 
-router.post('/offline', authenticateToken, requireRole('admin', 'doctor', 'staff'), async (req, res) => {
+router.get('/receptionist/pet-owners', authenticateToken, requireRole('admin', 'doctor', 'receptionist'), listPetOwnersHandler);
+router.get('/staff/pet-owners', authenticateToken, requireRole('admin', 'doctor', 'receptionist'), listPetOwnersHandler);
+
+router.post('/offline', authenticateToken, requireRole('admin', 'doctor', 'receptionist'), async (req, res) => {
   try {
     const result = await recordOfflinePayment(req.user.id, req.body);
     if (!result.ok) return res.status(400).json({ error: result.error });

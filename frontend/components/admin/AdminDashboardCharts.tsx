@@ -167,7 +167,7 @@ export default function AdminDashboardCharts({
   const userSegments = [
     { label: 'Pet owners', value: overview.totalPetOwners, color: ORANGE },
     { label: 'Doctors', value: overview.totalDoctors, color: COLORS[1] },
-    { label: 'Staff', value: overview.totalStaff, color: COLORS[2] },
+    { label: 'Receptionists', value: overview.totalReceptionists, color: COLORS[2] },
     { label: 'Admins', value: overview.totalAdmins, color: COLORS[3] },
   ].filter((s) => s.value > 0);
 

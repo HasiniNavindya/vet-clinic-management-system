@@ -25,7 +25,7 @@ router.get('/stats/overview', async (_req, res) => {
       totalDoctors: 0,
       doctorsWithActiveLogin: 0,
       totalPetOwners: 0,
-      totalStaff: 0,
+      totalReceptionists: 0,
       totalAdmins: 0,
       revenueCents: 0,
       shopOrdersPaid: 0,
@@ -72,9 +72,9 @@ router.get('/stats/overview', async (_req, res) => {
       );
       overview.totalPetOwners = po?.c ?? 0;
       const st = await scalar(
-        `SELECT COUNT(*)::int AS c FROM auth_users WHERE LOWER(TRIM(role)) = 'staff'`
+        `SELECT COUNT(*)::int AS c FROM auth_users WHERE LOWER(TRIM(role)) IN ('receptionist', 'staff')`
       );
-      overview.totalStaff = st?.c ?? 0;
+      overview.totalReceptionists = st?.c ?? 0;
       const ad = await scalar(
         `SELECT COUNT(*)::int AS c FROM auth_users WHERE LOWER(TRIM(role)) = 'admin'`
       );
@@ -138,6 +138,15 @@ router.get('/stats/overview', async (_req, res) => {
         `SELECT COUNT(*)::int AS c FROM doctor_applications WHERE status = 'pending'`
       );
       overview.doctorApplicationsPending = ap?.c ?? 0;
+    } catch (e) {
+      /* optional */
+    }
+
+    try {
+      const rp = await scalar(
+        `SELECT COUNT(*)::int AS c FROM receptionist_applications WHERE status = 'pending'`
+      );
+      overview.receptionistApplicationsPending = rp?.c ?? 0;
     } catch (e) {
       /* optional */
     }

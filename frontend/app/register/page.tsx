@@ -6,8 +6,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useRoles } from '@/hooks/useRoles';
 import StaffRegisterForm, { type StaffRegisterFormData } from '@/components/auth/StaffRegisterForm';
+import ReceptionistRegisterForm, {
+  type ReceptionistRegisterFormData,
+} from '@/components/auth/ReceptionistRegisterForm';
 import DoctorRegisterForm from '@/components/auth/DoctorRegisterForm';
 import { submitDoctorApplication, type DoctorRegisterPayload } from '@/lib/doctorApplications';
+import { submitReceptionistApplication } from '@/lib/receptionistApplications';
 import { getRoleFromList, normalizeRoleId } from '@/lib/roles';
 
 function RegisterPageContent() {
@@ -131,7 +135,7 @@ function RegisterPageContent() {
     }
   };
 
-  const handleStaffRegister = async (data: StaffRegisterFormData) => {
+  const handleAdminRegister = async (data: StaffRegisterFormData) => {
     if (data.password !== data.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -152,6 +156,29 @@ function RegisterPageContent() {
       router.push(redirectPath);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      setError(message);
+      setIsLoading(false);
+    }
+  };
+
+  const handleReceptionistRegister = async (data: ReceptionistRegisterFormData) => {
+    if (data.password !== data.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+    try {
+      await submitReceptionistApplication({
+        email: data.email,
+        password: data.password,
+        fullName: data.fullName,
+        mobileNumber: data.mobileNumber,
+        address: data.address,
+      });
+      router.push('/register/receptionist/pending');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Application failed. Please try again.';
       setError(message);
       setIsLoading(false);
     }
@@ -178,6 +205,7 @@ function RegisterPageContent() {
 
   if (!roleConfig.requiresPetInfo) {
     const isDoctor = roleId === 'doctor';
+    const isReceptionist = roleId === 'receptionist';
     return (
       <div className="min-h-screen bg-linear-to-br from-gray-50 via-white to-orange-50 py-12 px-4 sm:px-6 lg:px-8">
         <div className={`mx-auto bg-white rounded-2xl shadow-xl p-8 sm:p-12 ${isDoctor ? 'max-w-xl' : 'max-w-lg'}`}>
@@ -187,10 +215,17 @@ function RegisterPageContent() {
               isLoading={isLoading}
               error={error}
             />
+          ) : isReceptionist ? (
+            <ReceptionistRegisterForm
+              role={roleConfig}
+              onSubmit={handleReceptionistRegister}
+              isLoading={isLoading}
+              error={error}
+            />
           ) : (
             <StaffRegisterForm
               role={roleConfig}
-              onSubmit={handleStaffRegister}
+              onSubmit={handleAdminRegister}
               isLoading={isLoading}
               error={error}
             />

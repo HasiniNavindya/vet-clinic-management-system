@@ -7,7 +7,8 @@ export interface AdminOverviewStats {
   totalDoctors: number;
   doctorsWithActiveLogin: number;
   totalPetOwners: number;
-  totalStaff: number;
+  totalReceptionists: number;
+  receptionistApplicationsPending?: number;
   totalAdmins: number;
   revenueCents: number;
   shopOrdersPaid: number;

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import { useAuth } from '@/context/AuthContext';
 
-export default function AdminStaffManagementPage() {
+export default function AdminReceptionistHubPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading, hasRole } = useAuth();
 
@@ -30,37 +30,39 @@ export default function AdminStaffManagementPage() {
         <Link href="/dashboard/admin" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Admin home
         </Link>
-        <h1 className="mt-4 text-gray-900">Staff management</h1>
+        <h1 className="mt-4 text-gray-900">Receptionist management</h1>
         <p className="mt-2 text-gray-600">
-          Staff accounts are clinic teammates with the{' '}
-          <code className="rounded bg-gray-200 px-1">staff</code> role. Create them via registration (requires an
-          administrator) or elevate an existing pet-owner account carefully from user management.
+          Receptionist accounts use the <code className="rounded bg-gray-200 px-1">receptionist</code> role.
+          New applicants register online and must be approved before they can sign in.
         </p>
 
         <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <h3 className="text-gray-900">Role & permissions</h3>
           <p className="mt-3 text-gray-700">
-            In this codebase, granular permissions inside the clinic app are enforced by{' '}
-            <strong>role identity</strong> (admin · doctor · staff · pet owner) on each API route, not custom
-            ACL rows. To elevate or downgrade someone, promote them to{' '}
-            <strong>doctor</strong> or <strong>admin</strong> from user management once you approve their onboarding
-            path.
+            Receptionists manage appointments, record payments, and support clinic operations. Access is
+            enforced by role identity (admin · doctor · receptionist · pet owner) on each API route.
           </p>
           <p className="mt-4 text-gray-700">
-            To deactivate a teammate, suspend their login from the user sheet — inactive accounts cannot authenticate.
+            To deactivate a receptionist, suspend their account from user management.
           </p>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <Link
-            href="/dashboard/admin/users?role=staff"
+            href="/dashboard/admin/receptionist-applications"
             className="rounded-2xl border border-[#ec6d13]/30 bg-orange-50/80 p-6 font-semibold text-[#b6530f] shadow-sm transition-colors hover:bg-orange-100"
           >
-            Open staff roster (user list preset to staff →)
+            Review pending applications →
+          </Link>
+          <Link
+            href="/dashboard/admin/users?role=receptionist"
+            className="rounded-2xl border border-[#ec6d13]/30 bg-orange-50/80 p-6 font-semibold text-[#b6530f] shadow-sm transition-colors hover:bg-orange-100"
+          >
+            Open receptionist roster →
           </Link>
           <Link
             href="/dashboard/admin/users"
-            className="rounded-2xl border border-gray-200 bg-white p-6 font-semibold text-gray-800 shadow-sm hover:border-gray-300"
+            className="rounded-2xl border border-gray-200 bg-white p-6 font-semibold text-gray-800 shadow-sm hover:border-gray-300 sm:col-span-2"
           >
             All users & roles →
           </Link>

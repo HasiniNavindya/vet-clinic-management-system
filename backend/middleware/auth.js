@@ -41,7 +41,7 @@ function authenticateToken(req, res, next) {
   });
 }
 
-/** Restrict route to one or more roles (use canonical ids: user, admin, doctor, staff). */
+/** Restrict route to one or more roles (use canonical ids: user, admin, doctor, receptionist). */
 function requireRole(...allowedRoles) {
   const allowed = allowedRoles
     .map((r) => normalizeRole(r))
