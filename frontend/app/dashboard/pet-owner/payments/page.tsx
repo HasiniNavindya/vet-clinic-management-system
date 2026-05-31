@@ -61,7 +61,7 @@ export default function TransactionHistoryPage() {
         <h1 className="text-gray-900">Transaction History</h1>
         <p className="mt-1 text-gray-600">
           Online payments for appointments and shop orders. Consultation and medicine fees paid at the
-          clinic appear here after staff records them.
+          clinic appear here after a receptionist records them.
         </p>
         {config ? (
           <p className="mt-2 text-sm text-gray-500">

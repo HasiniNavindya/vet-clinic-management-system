@@ -6,6 +6,7 @@ export interface PublicRole {
   selfRegisterable: boolean;
   requiresPetInfo: boolean;
   requiresDoctorApplication?: boolean;
+  requiresReceptionistApplication?: boolean;
   dashboardPath: string;
 }
 
@@ -34,17 +35,19 @@ export const FALLBACK_ROLES: PublicRole[] = [
     dashboardPath: '/dashboard/doctor',
   },
   {
-    id: 'staff',
-    label: 'Staff',
+    id: 'receptionist',
+    label: 'Receptionist',
     selfRegisterable: true,
     requiresPetInfo: false,
-    dashboardPath: '/dashboard/calendar',
+    requiresReceptionistApplication: true,
+    dashboardPath: '/dashboard/receptionist',
   },
 ];
 
 export function normalizeRoleId(input?: string | null): string | null {
   if (!input) return null;
   const value = input.toLowerCase().trim();
+  if (value === 'staff') return 'receptionist';
   for (const role of FALLBACK_ROLES) {
     if (role.id === value) return role.id;
     if (value === 'pet owner' || value === 'petowner' || value === 'owner') {
@@ -52,7 +55,7 @@ export function normalizeRoleId(input?: string | null): string | null {
     }
     if (value === role.label.toLowerCase()) return role.id;
   }
-  if (['admin', 'doctor', 'staff'].includes(value)) return value;
+  if (['admin', 'doctor', 'receptionist', 'user'].includes(value)) return value;
   return null;
 }
 
@@ -80,10 +83,17 @@ export function getRoleLabel(roles: PublicRole[], roleId?: string | null): strin
 export async function fetchPublicRoles(): Promise<PublicRole[]> {
   try {
     const res = await fetch(`${API_BASE_URL}/auth/roles`, { cache: 'no-store' });
-    if (!res.ok) return FALLBACK_ROLES;
-    const data = await res.json();
+    if (!res.ok) {
+      console.warn(
+        `[roles] GET /auth/roles returned ${res.status}. Is the backend running? (cd backend && npm start)`
+      );
+      return FALLBACK_ROLES;
+    }
+    const text = await res.text();
+    const data = JSON.parse(text) as { roles?: PublicRole[] };
     return Array.isArray(data.roles) ? data.roles : FALLBACK_ROLES;
-  } catch {
+  } catch (err) {
+    console.warn('[roles] Failed to load roles from API, using fallback.', err);
     return FALLBACK_ROLES;
   }
 }

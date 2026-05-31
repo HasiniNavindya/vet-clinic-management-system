@@ -96,7 +96,7 @@ export default function ManageAppointmentsPage() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'doctor', 'staff']}>
+    <ProtectedRoute allowedRoles={['admin', 'doctor', 'receptionist']}>
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="container mx-auto max-w-5xl px-4 py-8 pt-28">
@@ -155,7 +155,7 @@ export default function ManageAppointmentsPage() {
                   </div>
                   {apt.notes ? <p className="mt-2 text-sm text-gray-600">Owner notes: {apt.notes}</p> : null}
                   {apt.staffResponseReason ? (
-                    <p className="mt-2 text-sm text-amber-800">Staff reason: {apt.staffResponseReason}</p>
+                    <p className="mt-2 text-sm text-amber-800">Clinic note: {apt.staffResponseReason}</p>
                   ) : null}
                   {apt.proposedAppointmentDate ? (
                     <p className="mt-1 text-sm text-purple-800">

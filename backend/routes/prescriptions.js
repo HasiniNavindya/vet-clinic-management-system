@@ -52,7 +52,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/', authenticateToken, requireRole('admin', 'doctor', 'staff'), async (req, res) => {
+router.post('/', authenticateToken, requireRole('admin', 'doctor', 'receptionist'), async (req, res) => {
   const {
     pet_id,
     doctor_id,
@@ -136,7 +136,7 @@ router.post('/', authenticateToken, requireRole('admin', 'doctor', 'staff'), asy
   }
 });
 
-router.patch('/:id', authenticateToken, requireRole('admin', 'doctor', 'staff'), async (req, res) => {
+router.patch('/:id', authenticateToken, requireRole('admin', 'doctor', 'receptionist'), async (req, res) => {
   const { status, diagnosis_summary, general_instructions } = req.body;
 
   try {

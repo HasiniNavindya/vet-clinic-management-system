@@ -58,7 +58,7 @@ router.post('/read-all', authenticateToken, async (req, res) => {
 router.post(
   '/process-reminders',
   authenticateToken,
-  requireRole('admin', 'doctor', 'staff'),
+  requireRole('admin', 'doctor', 'receptionist'),
   async (req, res) => {
     try {
       const appointmentReminders = await processAppointmentReminders();

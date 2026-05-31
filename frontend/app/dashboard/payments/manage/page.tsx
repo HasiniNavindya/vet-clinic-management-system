@@ -31,7 +31,7 @@ export default function StaffPaymentsManagePage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const canManage = hasRole('admin', 'doctor', 'staff');
+  const canManage = hasRole('admin', 'doctor', 'receptionist');
 
   useEffect(() => {
     if (!token || !canManage) return;
@@ -78,7 +78,7 @@ export default function StaffPaymentsManagePage() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'doctor', 'staff']}>
+    <ProtectedRoute allowedRoles={['admin', 'doctor', 'receptionist']}>
       <div className="min-h-screen bg-gray-50">
         <Header />
         <main className="mx-auto max-w-4xl px-4 py-32">

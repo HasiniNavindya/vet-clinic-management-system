@@ -95,7 +95,7 @@ export default function AdminDashboardPage() {
                 label="Stripe revenue (paid txs)"
                 value={formatUsdFromCents(overview.revenueCents)}
               />
-              <StatCard label="Staff accounts" value={overview.totalStaff} />
+              <StatCard label="Receptionists" value={overview.totalReceptionists} />
               <StatCard
                 label="Shop (paid orders)"
                 value={overview.shopOrdersPaid}
@@ -110,6 +110,10 @@ export default function AdminDashboardPage() {
               <StatCard
                 label="Pending vet applications"
                 value={overview.doctorApplicationsPending}
+              />
+              <StatCard
+                label="Pending receptionist applications"
+                value={overview.receptionistApplicationsPending ?? 0}
               />
               <StatCard
                 label="Pending marketplace ads"
@@ -196,12 +200,12 @@ export default function AdminDashboardPage() {
             href="/dashboard/admin/staff"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >
-            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Staff</h3>
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Receptionists</h3>
             <p className="mt-2 text-sm text-gray-600">
-              Operational staff listings and stable links into user administration for roles and suspension.
+              Front-desk accounts, application approvals, and links into user administration.
             </p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
-              Staff hub →
+              Receptionist hub →
             </span>
           </Link>
 
@@ -238,7 +242,7 @@ export default function AdminDashboardPage() {
           >
             <h3 className="text-gray-900 group-hover:text-[#ec6d13]">User management</h3>
             <p className="mt-2 text-sm text-gray-600">
-              All accounts, suspend or reactivate, assign roles — pet owners, vets, and staff.
+              All accounts, suspend or reactivate, assign roles — pet owners, vets, and receptionists.
             </p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
               Open users →
@@ -252,6 +256,19 @@ export default function AdminDashboardPage() {
             <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Doctor applications</h3>
             <p className="mt-2 text-sm text-gray-600">
               Approve veterinarian registrations and onboarding before they receive active login access.
+            </p>
+            <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
+              Review applications →
+            </span>
+          </Link>
+
+          <Link
+            href="/dashboard/admin/receptionist-applications"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Receptionist applications</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Approve receptionist registrations before they receive active login access.
             </p>
             <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
               Review applications →

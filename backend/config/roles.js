@@ -1,6 +1,5 @@
 /**
  * Single source of truth for application roles.
- * Add or change roles here — auth routes and the public /auth/roles API read from this file.
  */
 const ROLES = {
   user: {
@@ -28,13 +27,14 @@ const ROLES = {
     requiresDoctorApplication: true,
     dashboardPath: '/dashboard/doctor',
   },
-  staff: {
-    id: 'staff',
-    label: 'Staff',
-    aliases: ['staff', 'receptionist'],
+  receptionist: {
+    id: 'receptionist',
+    label: 'Receptionist',
+    aliases: ['receptionist', 'staff', 'reception'],
     selfRegisterable: true,
     requiresPetInfo: false,
-    dashboardPath: '/dashboard/calendar',
+    requiresReceptionistApplication: true,
+    dashboardPath: '/dashboard/receptionist',
   },
 };
 
@@ -63,6 +63,7 @@ function getPublicRoles() {
     selfRegisterable: role.selfRegisterable,
     requiresPetInfo: role.requiresPetInfo,
     requiresDoctorApplication: Boolean(role.requiresDoctorApplication),
+    requiresReceptionistApplication: Boolean(role.requiresReceptionistApplication),
     dashboardPath: role.dashboardPath,
   }));
 }
@@ -70,6 +71,11 @@ function getPublicRoles() {
 function requiresDoctorApplication(roleId) {
   const config = getRoleConfig(roleId);
   return Boolean(config?.requiresDoctorApplication);
+}
+
+function requiresReceptionistApplication(roleId) {
+  const config = getRoleConfig(roleId);
+  return Boolean(config?.requiresReceptionistApplication);
 }
 
 function getDashboardPath(roleId) {
@@ -82,13 +88,18 @@ function canSelfRegister(roleId) {
   return Boolean(config?.selfRegisterable);
 }
 
+/** Roles that can manage front-desk operations (appointments, payments, records entry). */
+const CLINIC_OPERATIONS_ROLES = ['admin', 'doctor', 'receptionist'];
+
 module.exports = {
   ROLES,
   ALL_ROLE_IDS,
+  CLINIC_OPERATIONS_ROLES,
   normalizeRole,
   getRoleConfig,
   getPublicRoles,
   getDashboardPath,
   canSelfRegister,
   requiresDoctorApplication,
+  requiresReceptionistApplication,
 };

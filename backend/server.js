@@ -13,10 +13,13 @@ const {
   getDashboardPath,
   canSelfRegister,
   requiresDoctorApplication,
+  requiresReceptionistApplication,
 } = require("./config/roles");
 const { canLogin, loginBlockMessage } = require("./config/accountStatus");
 const { getDoctorProfileByUserId } = require("./services/doctorApplicationService");
 const doctorApplicationsRouter = require("./routes/doctorApplications");
+const { router: receptionistApplicationsRouter, handleReceptionistRegister } = require("./routes/receptionistApplications");
+const receptionistRouter = require("./routes/receptionist");
 const adminUsersRouter = require("./routes/adminUsers");
 const adminInsightsRouter = require("./routes/adminInsights");
 const adminClinicDoctorsRouter = require("./routes/adminClinicDoctors");
@@ -101,8 +104,11 @@ app.get("/auth/doctor-application-meta", (req, res) => {
   res.json(doctorApplicationsRouter.getDoctorApplicationMetaData());
 });
 app.post("/auth/register-doctor", doctorApplicationsRouter.handleDoctorRegister);
+app.post("/auth/register-receptionist", handleReceptionistRegister);
 
 app.use("/api/doctor-applications", doctorApplicationsRouter);
+app.use("/api/receptionist-applications", receptionistApplicationsRouter);
+app.use("/api/receptionist", receptionistRouter);
 app.use("/api/admin", adminUsersRouter);
 app.use("/api/admin", adminInsightsRouter);
 app.use("/api/admin", adminClinicDoctorsRouter);
@@ -176,6 +182,13 @@ app.post("/auth/register", async (req, res) => {
       return res.status(400).json({
         error: 'Veterinarians must apply via the doctor registration form',
         applyUrl: '/register?role=doctor',
+      });
+    }
+
+    if (requiresReceptionistApplication(finalRole)) {
+      return res.status(400).json({
+        error: 'Receptionists must apply via the receptionist registration form',
+        applyUrl: '/register?role=receptionist',
       });
     }
 
@@ -293,12 +306,22 @@ app.post("/auth/login", async (req, res) => {
     const accountStatus = user.account_status || 'active';
 
     if (!canLogin(accountStatus)) {
-      const appRes = await pool.query(
-        'SELECT rejection_reason FROM doctor_applications WHERE user_id = $1',
-        [user.id]
-      );
+      let rejectionReason = null;
+      if (canonicalRole === 'doctor') {
+        const appRes = await pool.query(
+          'SELECT rejection_reason FROM doctor_applications WHERE user_id = $1',
+          [user.id]
+        );
+        rejectionReason = appRes.rows[0]?.rejection_reason;
+      } else if (canonicalRole === 'receptionist') {
+        const appRes = await pool.query(
+          'SELECT rejection_reason FROM receptionist_applications WHERE user_id = $1',
+          [user.id]
+        );
+        rejectionReason = appRes.rows[0]?.rejection_reason;
+      }
       return res.status(403).json({
-        error: loginBlockMessage(accountStatus, appRes.rows[0]?.rejection_reason),
+        error: loginBlockMessage(accountStatus, rejectionReason, canonicalRole),
         accountStatus,
         pendingApproval: accountStatus === 'pending',
       });
@@ -385,7 +408,7 @@ app.get("/auth/me", authenticateToken, async (req, res) => {
 });
 
 // PUT /auth/me - Update profile (pet owner, doctor, staff, admin)
-app.put("/auth/me", authenticateToken, requireRole('user', 'doctor', 'staff', 'admin'), async (req, res) => {
+app.put("/auth/me", authenticateToken, requireRole('user', 'doctor', 'receptionist', 'admin'), async (req, res) => {
   const {
     fullName,
     mobileNumber,
@@ -701,7 +724,7 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/notifications", notificationsRouter);
 
 // GET /api/clinic/pets - Staff list all registered pets (for health record entry)
-app.get("/api/clinic/pets", authenticateToken, requireRole('admin', 'doctor', 'staff'), async (req, res) => {
+app.get("/api/clinic/pets", authenticateToken, requireRole('admin', 'doctor', 'receptionist'), async (req, res) => {
   try {
     const { listPetsForUser } = require('./services/petAccess');
     const pets = await listPetsForUser(req.user.id, req.user.role);

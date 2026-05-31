@@ -156,7 +156,7 @@ export default function AdminNotificationsPage() {
                   <option value="all">All users</option>
                   <option value="pet_owner">Pet owners</option>
                   <option value="doctor">Doctors</option>
-                  <option value="staff">Staff</option>
+                  <option value="receptionist">Receptionist</option>
                   <option value="admin">Admins</option>
                 </select>
               </div>

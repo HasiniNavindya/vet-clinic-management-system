@@ -73,7 +73,7 @@ export default function AdminNewDoctorPage() {
         </Link>
         <h1 className="mt-2 text-gray-900">Add doctor profile</h1>
         <p className="text-sm text-gray-600">
-          Creates a public veterinarian card only. For staff who need login, use{' '}
+          Creates a public veterinarian card only. For receptionists who need login, use{' '}
           <Link href="/dashboard/admin/doctor-applications" className="font-semibold text-[#ec6d13] hover:underline">
             doctor applications
           </Link>{' '}
