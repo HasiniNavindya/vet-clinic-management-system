@@ -679,7 +679,7 @@ function RegisterPageContent() {
                     Notification Preferences
                   </h1>
                   <p className="text-gray-600">
-                    Stay informed about your pet's health. Choose how you'd like to receive important updates.
+                    Stay informed about your pet&apos;s health via in-app alerts and email.
                   </p>
                 </div>
 
@@ -692,7 +692,7 @@ function RegisterPageContent() {
                         Vaccination Reminders
                       </h3>
                       <p className="text-gray-600 text-sm">
-                        Receive alerts when your pet's vaccinations are due.
+                        In-app alerts when your pet&apos;s vaccinations are due.
                       </p>
                     </div>
                     <button
@@ -717,7 +717,7 @@ function RegisterPageContent() {
                         Appointment Updates
                       </h3>
                       <p className="text-gray-600 text-sm">
-                        Get notified about upcoming appointments, changes, or cancellations.
+                        In-app alerts for upcoming appointments, changes, or cancellations.
                       </p>
                     </div>
                     <button

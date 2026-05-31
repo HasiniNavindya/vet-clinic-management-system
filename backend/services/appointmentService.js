@@ -64,6 +64,8 @@ function mapAppointmentRow(row) {
         ? String(row.proposed_appointment_time).slice(0, 5)
         : null,
     staffRespondedAt: row.staff_responded_at,
+    checkedInAt: row.checked_in_at,
+    serviceFeeCents: row.service_fee_cents,
   };
 }
 

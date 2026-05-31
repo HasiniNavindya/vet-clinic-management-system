@@ -73,8 +73,8 @@
 
       <h3 class="feature-title">🔔 Notifications</h3>
       <ul>
+        <li>In-app notifications (dashboard bell)</li>
         <li>Email reminders (SendGrid / Nodemailer)</li>
-        <li>SMS alerts (Twilio)</li>
         <li>Appointment confirmation</li>
         <li>Vaccination due reminders</li>
       </ul>

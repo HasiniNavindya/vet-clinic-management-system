@@ -6,35 +6,10 @@ import Link from 'next/link';
 import { fetchDoctorProfiles, type DoctorProfile } from '@/lib/doctors';
 import SectionHeader from '@/components/home/SectionHeader';
 
-const FALLBACK_VETS: DoctorProfile[] = [
-  {
-    id: 1,
-    name: 'Dr. Emily Chen',
-    specialization: 'Dermatologist',
-    imageUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400&q=80',
-    bio: '10+ years in skin and coat health for dogs and cats.',
-    availableDays: [],
-  },
-  {
-    id: 2,
-    name: 'Dr. Sarah Smith',
-    specialization: 'Surgeon',
-    imageUrl: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400&q=80',
-    bio: 'Soft-tissue and routine surgical care with a focus on recovery.',
-    availableDays: [],
-  },
-  {
-    id: 3,
-    name: 'Dr. Linda Johns',
-    specialization: 'Cardiologist',
-    imageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80',
-    bio: 'Heart health assessments and long-term cardiac monitoring.',
-    availableDays: [],
-  },
-];
+const FALLBACK_VETS: DoctorProfile[] = [];
 
 export default function HomeVeterinarians() {
-  const [doctors, setDoctors] = useState<DoctorProfile[]>(FALLBACK_VETS);
+  const [doctors, setDoctors] = useState<DoctorProfile[]>([]);
 
   useEffect(() => {
     fetchDoctorProfiles().then((res) => {

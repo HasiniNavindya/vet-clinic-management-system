@@ -26,7 +26,6 @@ export default function SettingsPage() {
     vaccinationReminders: true,
     appointmentUpdates: true,
     emailNotifications: true,
-    smsNotifications: false,
   });
 
   const [security, setSecurity] = useState({
@@ -277,12 +276,15 @@ export default function SettingsPage() {
               {selectedTab === 'preferences' && (
                 <div>
                   <h2 className="text-gray-900 mb-6">Notification Preferences</h2>
+                  <p className="mb-6 text-sm text-gray-600">
+                    Updates appear in your notification center. You can also opt in to email.
+                  </p>
                   
                   <div className="space-y-6">
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div>
                         <h3 className="font-semibold text-gray-900">Vaccination Reminders</h3>
-                        <p className="text-sm text-gray-600">Get notified about upcoming vaccinations</p>
+                        <p className="text-sm text-gray-600">In-app alerts when vaccinations are due</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
@@ -298,7 +300,7 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div>
                         <h3 className="font-semibold text-gray-900">Appointment Updates</h3>
-                        <p className="text-sm text-gray-600">Receive updates about your appointments</p>
+                        <p className="text-sm text-gray-600">In-app alerts for booking status changes</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
@@ -314,29 +316,13 @@ export default function SettingsPage() {
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div>
                         <h3 className="font-semibold text-gray-900">Email Notifications</h3>
-                        <p className="text-sm text-gray-600">Receive notifications via email</p>
+                        <p className="text-sm text-gray-600">Also receive reminders and updates by email</p>
                       </div>
                       <label className="relative inline-flex items-center cursor-pointer">
                         <input
                           type="checkbox"
                           checked={preferences.emailNotifications}
                           onChange={(e) => setPreferences({...preferences, emailNotifications: e.target.checked})}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#ec6d13]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ec6d13]"></div>
-                      </label>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">SMS Notifications</h3>
-                        <p className="text-sm text-gray-600">Receive notifications via SMS</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={preferences.smsNotifications}
-                          onChange={(e) => setPreferences({...preferences, smsNotifications: e.target.checked})}
                           className="sr-only peer"
                         />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#ec6d13]/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ec6d13]"></div>

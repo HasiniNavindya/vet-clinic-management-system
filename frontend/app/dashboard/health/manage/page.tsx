@@ -6,13 +6,15 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, authHeaders } from '@/lib/api';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 type Pet = { id: number; pet_name: string };
 type Doctor = { id: number; name: string };
 type Tab = 'medical' | 'vaccination' | 'prescription';
 
 export default function HealthManagePage() {
-  const { token } = useAuth();
+  const searchParams = useSearchParams();
+  const { token, hasRole } = useAuth();
   const [tab, setTab] = useState<Tab>('medical');
   const [pets, setPets] = useState<Pet[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -20,10 +22,16 @@ export default function HealthManagePage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const [timeline, setTimeline] = useState<
+    { visitDate: string; diagnosis?: string; symptoms?: string; treatment?: string }[]
+  >([]);
+  const [serviceFee, setServiceFee] = useState({ appointmentId: '', amount: '' });
   const [medical, setMedical] = useState({
     pet_id: '',
     doctor_id: '',
+    appointment_id: '',
     visit_date: '',
+    symptoms: '',
     diagnosis: '',
     treatment: '',
     consultation_notes: '',
@@ -54,13 +62,40 @@ export default function HealthManagePage() {
 
   useEffect(() => {
     if (!token) return;
+    const petId = searchParams.get('petId');
+    const appointmentId = searchParams.get('appointmentId');
+    if (petId) {
+      setMedical((s) => ({
+        ...s,
+        pet_id: petId,
+        appointment_id: appointmentId || '',
+        visit_date: new Date().toISOString().slice(0, 10),
+      }));
+      fetch(`${API_BASE_URL}/api/medical-records/pet/${petId}/timeline`, {
+        headers: authHeaders(token),
+      })
+        .then((r) => r.json())
+        .then((d) => setTimeline(d.timeline || []));
+    }
+    if (appointmentId) {
+      setServiceFee((s) => ({ ...s, appointmentId }));
+    }
     fetch(`${API_BASE_URL}/api/clinic/pets`, { headers: authHeaders(token) })
       .then((r) => r.json())
       .then((d) => setPets(Array.isArray(d) ? d : []));
     fetch(`${API_BASE_URL}/api/doctors`)
       .then((r) => r.json())
       .then((d) => setDoctors(Array.isArray(d) ? d : []));
-  }, [token]);
+  }, [token, searchParams]);
+
+  useEffect(() => {
+    if (!token || !medical.pet_id) return;
+    fetch(`${API_BASE_URL}/api/medical-records/pet/${medical.pet_id}/timeline`, {
+      headers: authHeaders(token),
+    })
+      .then((r) => r.json())
+      .then((d) => setTimeline(d.timeline || []));
+  }, [token, medical.pet_id]);
 
   const submitMedical = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +110,7 @@ export default function HealthManagePage() {
         ...medical,
         pet_id: Number(medical.pet_id),
         doctor_id: medical.doctor_id ? Number(medical.doctor_id) : null,
+        appointment_id: medical.appointment_id ? Number(medical.appointment_id) : null,
       }),
     });
     const data = await res.json();
@@ -162,10 +198,52 @@ export default function HealthManagePage() {
           {message ? <p className="mb-4 text-green-700">{message}</p> : null}
           {error ? <p className="mb-4 text-red-600">{error}</p> : null}
 
+          {medical.pet_id && timeline.length > 0 ? (
+            <div className="mb-6 max-w-lg rounded-xl border border-gray-100 bg-white p-4">
+              <p className="text-sm font-semibold text-gray-900">Prior medical history</p>
+              <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto text-sm text-gray-600">
+                {timeline.slice(0, 5).map((t, i) => (
+                  <li key={i}>
+                    {t.visitDate}: {t.symptoms || t.diagnosis || 'Visit recorded'}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {hasRole('doctor', 'admin') && serviceFee.appointmentId ? (
+            <form
+              className="mb-6 max-w-lg space-y-3 rounded-xl border border-dashed border-[#ec6d13]/40 bg-orange-50/50 p-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!token) return;
+                const cents = Math.round(parseFloat(serviceFee.amount) * 100);
+                const { setAppointmentServiceFee } = await import('@/lib/appointments');
+                const res = await setAppointmentServiceFee(token, serviceFee.appointmentId, cents);
+                if (!res.ok) setError((res.data as { error?: string }).error || 'Failed');
+                else setMessage('Service fee set — reception can record payment.');
+              }}
+            >
+              <p className="text-sm font-semibold text-gray-900">Post-visit service fee (USD)</p>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={serviceFee.amount}
+                onChange={(e) => setServiceFee((s) => ({ ...s, amount: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+              />
+              <button type="submit" className="text-sm font-semibold text-[#ec6d13]">
+                Save fee for reception billing
+              </button>
+            </form>
+          ) : null}
+
           {tab === 'medical' ? (
             <form onSubmit={submitMedical} className="max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-sm">
               <PetDoctorFields pets={pets} doctors={doctors} petId={medical.pet_id} doctorId={medical.doctor_id} onPet={(v) => setMedical((s) => ({ ...s, pet_id: v }))} onDoctor={(v) => setMedical((s) => ({ ...s, doctor_id: v }))} />
               <Field label="Visit date" type="date" value={medical.visit_date} onChange={(v) => setMedical((s) => ({ ...s, visit_date: v }))} required />
+              <Field label="Symptoms" value={medical.symptoms} onChange={(v) => setMedical((s) => ({ ...s, symptoms: v }))} textarea />
               <Field label="Diagnosis" value={medical.diagnosis} onChange={(v) => setMedical((s) => ({ ...s, diagnosis: v }))} textarea />
               <Field label="Treatment" value={medical.treatment} onChange={(v) => setMedical((s) => ({ ...s, treatment: v }))} textarea />
               <Field label="Consultation notes" value={medical.consultation_notes} onChange={(v) => setMedical((s) => ({ ...s, consultation_notes: v }))} textarea />

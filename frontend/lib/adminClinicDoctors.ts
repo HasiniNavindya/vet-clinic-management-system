@@ -96,6 +96,19 @@ export async function patchClinicDoctor(
   return data as { doctor: AdminClinicDoctor; message?: string };
 }
 
+export async function deleteClinicDoctor(
+  token: string,
+  id: number
+): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/admin/clinic-doctors/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Delete failed');
+  return data as { message: string };
+}
+
 export async function fetchDoctorScheduleSample(
   token: string,
   id: number

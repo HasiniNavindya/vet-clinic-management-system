@@ -773,7 +773,7 @@ app.get("/api/pets/:id", authenticateToken, requireRole('user'), async (req, res
 // PUT /api/pets/:id - Update pet for current user
 app.put("/api/pets/:id", authenticateToken, requireRole('user'), async (req, res) => {
   const { id } = req.params;
-  const { pet_name, species, breed, age_or_dob, gender, vaccination_status } = req.body;
+  const { pet_name, species, breed, age_or_dob, gender, vaccination_status, weight_kg } = req.body;
 
   try {
     if (!pet_name) {
@@ -782,10 +782,21 @@ app.put("/api/pets/:id", authenticateToken, requireRole('user'), async (req, res
 
     const result = await pool.query(
       `UPDATE pets_owned
-       SET pet_name = $1, species = $2, breed = $3, age_or_dob = $4, gender = $5, vaccination_status = $6
-       WHERE id = $7 AND user_id = $8
+       SET pet_name = $1, species = $2, breed = $3, age_or_dob = $4, gender = $5, vaccination_status = $6,
+           weight_kg = $7
+       WHERE id = $8 AND user_id = $9
        RETURNING *`,
-      [pet_name, species || null, breed || null, age_or_dob || null, gender || null, vaccination_status || null, id, req.user.id]
+      [
+        pet_name,
+        species || null,
+        breed || null,
+        age_or_dob || null,
+        gender || null,
+        vaccination_status || null,
+        weight_kg != null && weight_kg !== '' ? Number(weight_kg) : null,
+        id,
+        req.user.id,
+      ]
     );
 
     if (result.rows.length === 0) {
@@ -822,7 +833,7 @@ app.delete("/api/pets/:id", authenticateToken, requireRole('user'), async (req, 
 
 // POST /api/pets - Add new pet for user
 app.post("/api/pets", authenticateToken, requireRole('user'), async (req, res) => {
-  const { pet_name, species, breed, age_or_dob, gender, vaccination_status } = req.body;
+  const { pet_name, species, breed, age_or_dob, gender, vaccination_status, weight_kg } = req.body;
   const userId = req.user.id;
 
   try {
@@ -831,9 +842,18 @@ app.post("/api/pets", authenticateToken, requireRole('user'), async (req, res) =
     }
 
     const result = await pool.query(
-      `INSERT INTO pets_owned (user_id, pet_name, species, breed, age_or_dob, gender, vaccination_status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [userId, pet_name, species || null, breed || null, age_or_dob || null, gender || null, vaccination_status || null]
+      `INSERT INTO pets_owned (user_id, pet_name, species, breed, age_or_dob, gender, vaccination_status, weight_kg)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [
+        userId,
+        pet_name,
+        species || null,
+        breed || null,
+        age_or_dob || null,
+        gender || null,
+        vaccination_status || null,
+        weight_kg != null && weight_kg !== '' ? Number(weight_kg) : null,
+      ]
     );
 
     res.status(201).json(result.rows[0]);

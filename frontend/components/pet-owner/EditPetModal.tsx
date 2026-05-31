@@ -23,6 +23,7 @@ export default function EditPetModal({ isOpen, pet, onClose, onSuccess }: EditPe
     age_or_dob: '',
     gender: '',
     vaccination_status: '',
+    weight_kg: '',
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
 
@@ -35,6 +36,7 @@ export default function EditPetModal({ isOpen, pet, onClose, onSuccess }: EditPe
         age_or_dob: pet.age_or_dob || '',
         gender: pet.gender || '',
         vaccination_status: pet.vaccination_status || '',
+        weight_kg: (pet as { weight_kg?: number }).weight_kg?.toString() || '',
       });
     }
   }, [pet]);
@@ -121,6 +123,17 @@ export default function EditPetModal({ isOpen, pet, onClose, onSuccess }: EditPe
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Gender</label>
                 <input value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })} className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-[#ec6d13]" />
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Weight (kg)</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                value={formData.weight_kg}
+                onChange={(e) => setFormData({ ...formData, weight_kg: e.target.value })}
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-transparent focus:ring-2 focus:ring-[#ec6d13]"
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Vaccination Status</label>

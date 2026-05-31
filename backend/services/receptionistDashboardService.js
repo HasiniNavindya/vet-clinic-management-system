@@ -100,8 +100,54 @@ async function listPetOwners(search) {
   }));
 }
 
+async function getEodSummary() {
+  const today = new Date().toISOString().slice(0, 10);
+  const [appts, checkedIn, completed, pending, orders, payments] = await Promise.all([
+    pool.query(
+      `SELECT COUNT(*)::int AS c FROM appointments WHERE appointment_date = $1`,
+      [today]
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS c FROM appointments
+       WHERE appointment_date = $1 AND checked_in_at IS NOT NULL`,
+      [today]
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS c FROM appointments
+       WHERE appointment_date = $1 AND status = 'completed'`,
+      [today]
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS c FROM appointments
+       WHERE status IN ('pending', 'awaiting_payment', 'reschedule_offered')`
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS c FROM shop_orders
+       WHERE created_at::date = $1::date`,
+      [today]
+    ),
+    pool.query(
+      `SELECT COUNT(*)::int AS c, COALESCE(SUM(amount_cents), 0)::bigint AS total
+       FROM payment_transactions
+       WHERE status = 'succeeded' AND paid_at::date = $1::date`,
+      [today]
+    ),
+  ]);
+  return {
+    date: today,
+    appointmentsToday: appts.rows[0]?.c ?? 0,
+    checkedInToday: checkedIn.rows[0]?.c ?? 0,
+    completedToday: completed.rows[0]?.c ?? 0,
+    pendingRequests: pending.rows[0]?.c ?? 0,
+    ordersPlacedToday: orders.rows[0]?.c ?? 0,
+    paymentsRecordedToday: payments.rows[0]?.c ?? 0,
+    paymentsTotalCents: Number(payments.rows[0]?.total ?? 0),
+  };
+}
+
 module.exports = {
   getOverview,
   listPetsWithOwners,
   listPetOwners,
+  getEodSummary,
 };

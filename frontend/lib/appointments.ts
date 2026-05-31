@@ -38,6 +38,8 @@ export type Appointment = {
   proposedAppointmentDate?: string | null;
   proposedAppointmentTime?: string | null;
   staffRespondedAt?: string | null;
+  checkedInAt?: string | null;
+  serviceFeeCents?: number | null;
 };
 
 export type StatusMeta = {
@@ -114,6 +116,7 @@ export async function staffRespondToAppointment(
     appointment_time?: string;
     doctor_notes?: string;
     confirmation_message?: string;
+    doctor_id?: number;
   }
 ) {
   return apiFetch<Appointment>(`/api/appointments/${id}/respond`, {
@@ -164,6 +167,37 @@ export async function cancelAppointment(
     method: 'POST',
     headers: authHeaders(token),
     body: JSON.stringify({ reason }),
+  });
+}
+
+export async function checkInAppointment(token: string, id: number | string) {
+  return apiFetch<Appointment>(`/api/appointments/${id}/check-in`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+  });
+}
+
+export async function assignAppointmentDoctor(
+  token: string,
+  id: number | string,
+  doctor_id: number
+) {
+  return apiFetch<Appointment>(`/api/appointments/${id}/assign-doctor`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ doctor_id }),
+  });
+}
+
+export async function setAppointmentServiceFee(
+  token: string,
+  id: number | string,
+  service_fee_cents: number
+) {
+  return apiFetch<Appointment>(`/api/appointments/${id}/service-fee`, {
+    method: 'PATCH',
+    headers: authHeaders(token),
+    body: JSON.stringify({ service_fee_cents }),
   });
 }
 

@@ -1,4 +1,5 @@
 const express = require('express');
+const pool = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const {
   listTransactions,
@@ -22,6 +23,44 @@ router.get('/config', authenticateToken, (req, res) => {
     appointmentBookingFeeCents: APPOINTMENT_BOOKING_FEE_CENTS,
     currency: 'usd',
   });
+});
+
+router.get('/my-orders', authenticateToken, requireRole('user'), async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT o.id, o.status, o.total_cents, o.fulfillment_status, o.tracking_note, o.created_at,
+              COALESCE(
+                (SELECT json_agg(json_build_object(
+                  'productName', p.name,
+                  'quantity', i.quantity,
+                  'unitPriceCents', i.unit_price_cents
+                ))
+                FROM shop_order_items i
+                LEFT JOIN products p ON p.id = i.product_id
+                WHERE i.order_id = o.id),
+                '[]'::json
+              ) AS items
+       FROM shop_orders o
+       WHERE o.user_id = $1
+       ORDER BY o.created_at DESC
+       LIMIT 50`,
+      [req.user.id]
+    );
+    res.json({
+      orders: r.rows.map((row) => ({
+        id: row.id,
+        paymentStatus: row.status,
+        totalCents: row.total_cents,
+        fulfillmentStatus: row.fulfillment_status || 'unfulfilled',
+        trackingNote: row.tracking_note,
+        createdAt: row.created_at,
+        items: row.items,
+      })),
+    });
+  } catch (err) {
+    console.error('My orders error:', err);
+    res.status(500).json({ error: 'Failed to load orders' });
+  }
 });
 
 router.get('/transactions', authenticateToken, async (req, res) => {

@@ -6,7 +6,8 @@ import { useAuth } from '@/context/AuthContext';
 
 const NAV = [
   { href: '/dashboard/doctor', label: 'Dashboard' },
-  { href: '/dashboard/appointments/manage', label: 'Appointments' },
+  { href: '/dashboard/doctor/appointments', label: 'My appointments' },
+  { href: '/dashboard/doctor/consultation', label: 'Consultation' },
   { href: '/dashboard/doctor/settings', label: 'Profile settings' },
 ];
 

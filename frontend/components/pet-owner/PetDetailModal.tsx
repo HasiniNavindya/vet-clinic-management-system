@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { API_BASE_URL, authHeaders } from '@/lib/api';
 
 export interface OwnerPet {
   id: number;
@@ -10,6 +12,7 @@ export interface OwnerPet {
   age_or_dob: string;
   gender: string;
   vaccination_status: string;
+  weight_kg?: number | null;
   image_url?: string;
   created_at?: string;
 }
@@ -18,9 +21,31 @@ interface PetDetailModalProps {
   isOpen: boolean;
   pet: OwnerPet | null;
   onClose: () => void;
+  onDeleted?: () => void;
 }
 
-export default function PetDetailModal({ isOpen, pet, onClose }: PetDetailModalProps) {
+export default function PetDetailModal({ isOpen, pet, onClose, onDeleted }: PetDetailModalProps) {
+  const { token } = useAuth();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!pet || !token) return;
+    if (!confirm(`Remove ${pet.pet_name} from your profile?`)) return;
+    setDeleting(true);
+    const res = await fetch(`${API_BASE_URL}/api/pets/${pet.id}`, {
+      method: 'DELETE',
+      headers: authHeaders(token),
+    });
+    setDeleting(false);
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || 'Could not delete pet');
+      return;
+    }
+    onDeleted?.();
+    onClose();
+  };
+
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -76,11 +101,26 @@ export default function PetDetailModal({ isOpen, pet, onClose }: PetDetailModalP
               <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Age / Birth date</p>
               <p className="text-gray-900 font-medium">{pet.age_or_dob || 'Not provided'}</p>
             </div>
+            <div className="rounded-xl bg-gray-50 p-4">
+              <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Weight</p>
+              <p className="text-gray-900 font-medium">
+                {pet.weight_kg != null ? `${pet.weight_kg} kg` : 'Not provided'}
+              </p>
+            </div>
             <div className="rounded-xl bg-gray-50 p-4 sm:col-span-2">
               <p className="text-gray-500 text-xs uppercase font-semibold mb-1">Vaccination status</p>
               <p className="text-gray-900 font-medium">{pet.vaccination_status || 'Not provided'}</p>
             </div>
           </div>
+
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={handleDelete}
+            className="mt-6 w-full rounded-lg border border-red-200 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+          >
+            {deleting ? 'Removing…' : 'Remove pet'}
+          </button>
         </div>
       </div>
     </div>
