@@ -67,13 +67,22 @@ export function getRoleFromList(roles: PublicRole[], roleId?: string | null): Pu
 
 export function getDashboardPath(roles: PublicRole[], roleId?: string | null): string {
   const normalized = normalizeRoleId(roleId);
-  if (!normalized) return '/dashboard';
+  if (!normalized) return '/dashboard/pet-owner';
   const list = roles.length > 0 ? roles : FALLBACK_ROLES;
   return (
     getRoleFromList(list, normalized)?.dashboardPath ??
     getRoleFromList(FALLBACK_ROLES, normalized)?.dashboardPath ??
-    '/dashboard'
+    '/dashboard/pet-owner'
   );
+}
+
+/** Role-aware dashboard URL for nav links and redirects (avoids legacy /dashboard flash). */
+export function resolveUserDashboardPath(
+  user?: { role?: string; dashboardPath?: string } | null
+): string {
+  if (!user) return '/login';
+  if (user.dashboardPath) return user.dashboardPath;
+  return getDashboardPath([], user.role);
 }
 
 export function getRoleLabel(roles: PublicRole[], roleId?: string | null): string {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import DoctorAvatar from '@/components/doctor/DoctorAvatar';
 import PetOwnerShell from '@/components/pet-owner/PetOwnerShell';
 import {
   CLINIC_HOURS_LABEL,
@@ -29,10 +30,6 @@ export default function DoctorProfilePage() {
     });
   }, [params.id]);
 
-  const imageSrc =
-    doctor?.imageUrl ||
-    'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=800&q=80';
-
   return (
     <PetOwnerShell>
       <Link
@@ -52,13 +49,15 @@ export default function DoctorProfilePage() {
         <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,320px)_1fr]">
           <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
             <div className="aspect-[4/5] bg-gray-100">
-              <img src={imageSrc} alt={doctor.name} className="h-full w-full object-cover" />
+              <DoctorAvatar
+                name={doctor.name}
+                imageUrl={doctor.imageUrl}
+                className="h-full w-full"
+                textClassName="text-5xl"
+              />
             </div>
             <div className="p-5">
-              <span className="inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
-                Accepting bookings
-              </span>
-              <h1 className="mt-3 text-gray-900">{doctor.name}</h1>
+              <h1 className="text-gray-900">{doctor.name}</h1>
               <p className="mt-1 text-lg font-semibold text-[#ec6d13]">{doctor.specialization}</p>
             </div>
           </div>

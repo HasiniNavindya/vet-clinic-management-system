@@ -2,6 +2,6 @@
 
 import ManageAppointmentsPanel from '@/components/receptionist/ManageAppointmentsPanel';
 
-export default function ReceptionistTodayAppointmentsPage() {
+export default function ReceptionistCheckInQueuePage() {
   return <ManageAppointmentsPanel />;
 }

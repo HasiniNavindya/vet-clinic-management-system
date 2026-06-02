@@ -1,13 +1,15 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import PetOwnerShell from '@/components/pet-owner/PetOwnerShell';
+import PetAvatar from '@/components/pet-owner/PetAvatar';
+import PetHealthPicker, { type HealthPet } from '@/components/pet-owner/health/PetHealthPicker';
 import VaccinationStatusBadge from '@/components/health/VaccinationStatusBadge';
 import { API_BASE_URL, authHeaders } from '@/lib/api';
-import { fetchMedicalRecords, MedicalRecord } from '@/lib/medicalRecords';
+import { fetchMedicalRecords, formatVisitDate, MedicalRecord } from '@/lib/medicalRecords';
 import {
   fetchVaccinationDashboard,
   fetchVaccinationReminders,
@@ -19,12 +21,11 @@ import {
 } from '@/lib/vaccinations';
 import { fetchPrescriptions, formatIssuedDate, Prescription } from '@/lib/prescriptions';
 
-type Pet = { id: number; pet_name: string };
 type HealthTab = 'medical' | 'vaccinations' | 'prescriptions';
 type VaccinationTab = 'upcoming' | 'overdue' | 'history';
 
 const TABS: { id: HealthTab; label: string }[] = [
-  { id: 'medical', label: 'Medical Records' },
+  { id: 'medical', label: 'Medical records' },
   { id: 'vaccinations', label: 'Vaccinations' },
   { id: 'prescriptions', label: 'Prescriptions' },
 ];
@@ -32,6 +33,27 @@ const TABS: { id: HealthTab; label: string }[] = [
 function parseTab(value: string | null): HealthTab {
   if (value === 'vaccinations' || value === 'prescriptions') return value;
   return 'medical';
+}
+
+function useOwnerPets(token: string | null) {
+  const [pets, setPets] = useState<HealthPet[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    setLoading(true);
+    fetch(`${API_BASE_URL}/api/pets`, { headers: authHeaders(token) })
+      .then((r) => r.json())
+      .then((data) => setPets(Array.isArray(data) ? data : []))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const petById = useMemo(
+    () => Object.fromEntries(pets.map((p) => [p.id, p])) as Record<number, HealthPet>,
+    [pets]
+  );
+
+  return { pets, petById, loading };
 }
 
 export default function PetHealthPage() {
@@ -62,12 +84,14 @@ function PetHealthContent() {
 
   return (
     <PetOwnerShell>
-      <div className="mb-6">
-        <h1 className="text-gray-900">Pet Health</h1>
-        <p className="mt-1 text-gray-600">Medical records, vaccinations, and prescriptions</p>
+      <div className="mb-5">
+        <p className="font-sans text-xl font-semibold text-gray-900">Pet health</p>
+        <p className="mt-0.5 text-sm text-gray-500">
+          Medical records, vaccinations, and prescriptions for your pets
+        </p>
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-2 border-b border-gray-200 pb-1">
+      <div className="mb-6 flex flex-wrap gap-1 border-b border-gray-200">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -101,21 +125,16 @@ function LoadingSpinner() {
 
 function MedicalPanel() {
   const { token } = useAuth();
-  const [pets, setPets] = useState<Pet[]>([]);
+  const { pets, petById, loading: petsLoading } = useOwnerPets(token);
   const [selectedPetId, setSelectedPetId] = useState<number | ''>('');
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!token) return;
-    fetch(`${API_BASE_URL}/api/pets`, { headers: authHeaders(token) })
-      .then((r) => r.json())
-      .then((data) => {
-        const list = Array.isArray(data) ? data : [];
-        setPets(list);
-        if (list.length > 0) setSelectedPetId(list[0].id);
-      });
-  }, [token]);
+    if (pets.length > 0 && selectedPetId === '') {
+      setSelectedPetId(pets[0].id);
+    }
+  }, [pets, selectedPetId]);
 
   useEffect(() => {
     if (!token) return;
@@ -128,12 +147,12 @@ function MedicalPanel() {
 
   return (
     <section>
-      <PetSelect pets={pets} value={selectedPetId} onChange={setSelectedPetId} label="Select pet" />
+      {petsLoading ? <LoadingSpinner /> : <PetHealthPicker pets={pets} value={selectedPetId} onChange={setSelectedPetId} showAll={false} />}
 
       {selectedPetId ? (
         <Link
           href={`/dashboard/pet-owner/medical-records/${selectedPetId}`}
-          className="mb-6 inline-flex text-sm font-semibold text-[#ec6d13] hover:text-[#d65e0f]"
+          className="mb-5 inline-flex text-sm font-semibold text-[#ec6d13] hover:text-[#d65e0f]"
         >
           View full timeline →
         </Link>
@@ -142,39 +161,52 @@ function MedicalPanel() {
       {loading ? (
         <LoadingSpinner />
       ) : records.length === 0 ? (
-        <p className="rounded-xl bg-white p-8 text-center text-gray-600">
-          No medical records yet. Your veterinarian will add visit history after consultations.
-        </p>
+        <EmptyState message="No medical records yet. Your veterinarian will add visit history after consultations." />
       ) : (
         <div className="space-y-4">
-          {records.map((r) => (
-            <div key={r.id} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap justify-between gap-2">
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    {r.petName} · {new Date(r.visitDate).toLocaleDateString()}
-                  </p>
-                  {r.doctorName ? <p className="text-sm text-gray-600">Dr. {r.doctorName}</p> : null}
+          {records.map((r) => {
+            const pet = petById[r.petId];
+            return (
+              <article
+                key={r.id}
+                className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
+              >
+                <div className="flex flex-wrap items-start gap-4 border-b border-gray-50 bg-gray-50/60 p-4 sm:p-5">
+                  <PetAvatar
+                    name={r.petName || pet?.pet_name || 'Pet'}
+                    imageUrl={pet?.image_url}
+                    size="lg"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-sans text-base font-semibold text-gray-900">
+                      {r.petName || pet?.pet_name}
+                    </p>
+                    <p className="mt-0.5 text-sm text-gray-600">{formatVisitDate(r.visitDate)}</p>
+                    {r.doctorName ? (
+                      <p className="mt-1 text-sm text-gray-500">Dr. {r.doctorName}</p>
+                    ) : null}
+                  </div>
+                  <Link
+                    href={`/dashboard/pet-owner/medical-records/${r.petId}`}
+                    className="text-sm font-medium text-[#ec6d13] hover:text-[#d65e0f]"
+                  >
+                    Timeline
+                  </Link>
                 </div>
-                <Link
-                  href={`/dashboard/pet-owner/medical-records/${r.petId}`}
-                  className="text-sm font-medium text-[#ec6d13]"
-                >
-                  Timeline
-                </Link>
-              </div>
-              {r.diagnosis ? (
-                <p className="mt-3 text-sm text-gray-700">
-                  <span className="font-semibold">Diagnosis:</span> {r.diagnosis}
-                </p>
-              ) : null}
-              {r.treatment ? (
-                <p className="mt-2 text-sm text-gray-700">
-                  <span className="font-semibold">Treatment:</span> {r.treatment}
-                </p>
-              ) : null}
-            </div>
-          ))}
+                <dl className="space-y-4 p-4 sm:p-5">
+                  {r.diagnosis ? (
+                    <DetailBlock label="Diagnosis" value={r.diagnosis} />
+                  ) : null}
+                  {r.treatment ? (
+                    <DetailBlock label="Treatment" value={r.treatment} />
+                  ) : null}
+                  {r.consultationNotes ? (
+                    <DetailBlock label="Consultation notes" value={r.consultationNotes} />
+                  ) : null}
+                </dl>
+              </article>
+            );
+          })}
         </div>
       )}
     </section>
@@ -183,6 +215,7 @@ function MedicalPanel() {
 
 function VaccinationsPanel() {
   const { token } = useAuth();
+  const { pets, petById } = useOwnerPets(token);
   const [vaxTab, setVaxTab] = useState<VaccinationTab>('upcoming');
   const [dashboard, setDashboard] = useState<VaccinationDashboard | null>(null);
   const [reminders, setReminders] = useState<VaccinationReminders | null>(null);
@@ -218,29 +251,35 @@ function VaccinationsPanel() {
       ) : null}
 
       {reminders && reminders.active.length > 0 ? (
-        <section className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
-          <h3 className="text-gray-900">Vaccination reminders</h3>
-          <p className="mt-1 text-sm text-gray-600">
-            Automated alerts when vaccines are due within {reminders.reminderDaysBefore} days
+        <section className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
+          <p className="font-sans text-base font-semibold text-gray-900">Vaccination reminders</p>
+          <p className="mt-0.5 text-sm text-gray-600">
+            Alerts when vaccines are due within {reminders.reminderDaysBefore} days
           </p>
-          <ul className="mt-4 space-y-2">
-            {reminders.active.map((r) => (
-              <li
-                key={`${r.vaccinationId}-${r.reminderType}`}
-                className="rounded-lg bg-white p-3 text-sm shadow-sm"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium text-gray-900">{r.petName}</span>
-                  <VaccinationStatusBadge status={r.status} />
-                </div>
-                <p className="mt-1 text-gray-700">{r.message}</p>
-              </li>
-            ))}
+          <ul className="mt-4 space-y-3">
+            {reminders.active.map((r) => {
+              const pet = petById[r.petId];
+              return (
+                <li key={`${r.vaccinationId}-${r.reminderType}`} className="rounded-xl bg-white p-3 shadow-sm">
+                  <div className="flex gap-3">
+                    <PetAvatar name={r.petName} imageUrl={pet?.image_url} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-gray-900">{r.petName}</span>
+                        <VaccinationStatusBadge status={r.status} />
+                      </div>
+                      <p className="mt-1 text-sm font-medium text-gray-800">{r.vaccineName}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-gray-600">{r.message}</p>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </section>
       ) : null}
 
-      <div className="mb-6 flex flex-wrap gap-2">
+      <div className="mb-5 flex flex-wrap gap-2">
         {(['upcoming', 'overdue', 'history'] as VaccinationTab[]).map((t) => (
           <button
             key={t}
@@ -258,28 +297,34 @@ function VaccinationsPanel() {
       {loading ? (
         <LoadingSpinner />
       ) : list.length === 0 ? (
-        <p className="rounded-xl bg-white p-8 text-center text-gray-600">
-          No vaccinations in this category.
-        </p>
+        <EmptyState message="No vaccinations in this category." />
       ) : (
         <div className="space-y-3">
-          {list.map((v) => (
-            <div
-              key={v.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
-            >
-              <div>
-                <p className="font-semibold text-gray-900">
-                  {v.petName} — {v.vaccineName}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Due {formatDueDate(v.dueDate)}
-                  {v.administeredDate ? ` · Given ${formatDueDate(v.administeredDate)}` : ''}
-                </p>
+          {list.map((v) => {
+            const pet = petById[v.petId];
+            return (
+              <div
+                key={v.id}
+                className="flex flex-wrap items-center gap-4 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+              >
+                <PetAvatar name={v.petName || pet?.pet_name || 'Pet'} imageUrl={pet?.image_url} size="md" />
+                <div className="min-w-0 flex-1">
+                  <p className="font-sans text-sm font-semibold text-gray-900">
+                    {v.petName} — {v.vaccineName}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Due {formatDueDate(v.dueDate)}
+                    {v.administeredDate ? ` · Given ${formatDueDate(v.administeredDate)}` : ''}
+                  </p>
+                  {v.notes ? <p className="mt-2 text-sm leading-relaxed text-gray-700">{v.notes}</p> : null}
+                  {v.doctorName ? (
+                    <p className="mt-1 text-xs text-gray-500">Recorded by Dr. {v.doctorName}</p>
+                  ) : null}
+                </div>
+                <VaccinationStatusBadge status={v.status} />
               </div>
-              <VaccinationStatusBadge status={v.status} />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
@@ -288,17 +333,10 @@ function VaccinationsPanel() {
 
 function PrescriptionsPanel() {
   const { token } = useAuth();
-  const [pets, setPets] = useState<Pet[]>([]);
+  const { pets, petById } = useOwnerPets(token);
   const [petId, setPetId] = useState<number | ''>('');
   const [list, setList] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!token) return;
-    fetch(`${API_BASE_URL}/api/pets`, { headers: authHeaders(token) })
-      .then((r) => r.json())
-      .then((data) => setPets(Array.isArray(data) ? data : []));
-  }, [token]);
 
   useEffect(() => {
     if (!token) return;
@@ -311,72 +349,70 @@ function PrescriptionsPanel() {
 
   return (
     <section>
-      <PetSelect pets={pets} value={petId} onChange={setPetId} label="Filter by pet" />
+      <PetHealthPicker pets={pets} value={petId} onChange={setPetId} />
 
       {loading ? (
         <LoadingSpinner />
       ) : list.length === 0 ? (
-        <p className="rounded-xl bg-white p-8 text-center text-gray-600">
-          No prescriptions on file yet.
-        </p>
+        <EmptyState message="No prescriptions on file yet." />
       ) : (
         <div className="space-y-3">
-          {list.map((rx) => (
-            <Link
-              key={rx.id}
-              href={`/dashboard/pet-owner/prescriptions/${rx.id}`}
-              className="block rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition hover:shadow-md"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-gray-900">{rx.prescriptionNumber}</p>
-                  <p className="text-sm text-gray-600">
-                    {rx.petName} · {formatIssuedDate(rx.issuedDate)}
-                    {rx.doctorName ? ` · Dr. ${rx.doctorName}` : ''}
-                  </p>
-                  {rx.diagnosisSummary ? (
-                    <p className="mt-2 line-clamp-2 text-sm text-gray-700">{rx.diagnosisSummary}</p>
-                  ) : null}
+          {list.map((rx) => {
+            const pet = petById[rx.petId];
+            return (
+              <Link
+                key={rx.id}
+                href={`/dashboard/pet-owner/prescriptions/${rx.id}`}
+                className="block rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:border-orange-100 hover:shadow-md"
+              >
+                <div className="flex flex-wrap items-start gap-4 p-4 sm:p-5">
+                  <PetAvatar name={rx.petName || pet?.pet_name || 'Pet'} imageUrl={pet?.image_url} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="font-sans text-sm font-semibold text-gray-900">{rx.prescriptionNumber}</p>
+                      <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold capitalize text-green-800">
+                        {rx.status}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-gray-600">
+                      {rx.petName || pet?.pet_name} · {formatIssuedDate(rx.issuedDate)}
+                      {rx.doctorName ? ` · Dr. ${rx.doctorName}` : ''}
+                    </p>
+                    {rx.diagnosisSummary ? (
+                      <p className="mt-2 text-sm leading-relaxed text-gray-700">
+                        <span className="font-medium text-gray-900">Summary: </span>
+                        {rx.diagnosisSummary}
+                      </p>
+                    ) : null}
+                    {rx.generalInstructions ? (
+                      <p className="mt-2 line-clamp-2 text-sm text-gray-600">{rx.generalInstructions}</p>
+                    ) : null}
+                  </div>
+                  <span className="text-sm font-medium text-[#ec6d13]">View details →</span>
                 </div>
-                <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold capitalize text-green-800">
-                  {rx.status}
-                </span>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </section>
   );
 }
 
-function PetSelect({
-  pets,
-  value,
-  onChange,
-  label,
-}: {
-  pets: Pet[];
-  value: number | '';
-  onChange: (v: number | '') => void;
-  label: string;
-}) {
+function DetailBlock({ label, value }: { label: string; value: string }) {
   return (
-    <div className="mb-6 max-w-xs">
-      <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : '')}
-        className="w-full rounded-lg border border-gray-300 px-3 py-2.5"
-      >
-        <option value="">All pets</option>
-        {pets.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.pet_name}
-          </option>
-        ))}
-      </select>
+    <div>
+      <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</dt>
+      <dd className="mt-1.5 text-sm leading-relaxed text-gray-800">{value}</dd>
     </div>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <p className="rounded-xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-600 shadow-sm">
+      {message}
+    </p>
   );
 }
 
@@ -397,8 +433,8 @@ function StatCard({
         : 'ring-gray-100 bg-white';
   return (
     <div className={`rounded-xl p-4 shadow-sm ring-1 ${ring}`}>
-      <p className="text-xs font-medium uppercase text-gray-500">{label}</p>
-      <p className="mt-1 text-gray-900">{value}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="mt-1 font-sans text-lg font-semibold text-gray-900">{value}</p>
     </div>
   );
 }

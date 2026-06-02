@@ -10,7 +10,14 @@ import PetDetailModal, { type OwnerPet } from '@/components/pet-owner/PetDetailM
 import EditPetModal from '@/components/pet-owner/EditPetModal';
 import QuickLinkCard from '@/components/pet-owner/dashboard/QuickLinkCard';
 import PetProfilesStrip from '@/components/pet-owner/dashboard/PetProfilesStrip';
+import AppointmentStatusBadge from '@/components/appointments/AppointmentStatusBadge';
 import { API_BASE_URL, authHeaders, isAuthFailure } from '@/lib/api';
+import {
+  AppointmentStatus,
+  formatAppointmentDate,
+  formatTime,
+  normalizeAppointmentStatus,
+} from '@/lib/appointments';
 import { fetchUnreadCount } from '@/lib/notifications';
 
 type DashboardData = {
@@ -32,16 +39,9 @@ type DashboardData = {
     doctor_name: string;
     specialization: string;
     pet_name?: string;
+    status: 'approved' | 'awaiting_payment' | string;
   }>;
 };
-
-function formatApptDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-}
 
 export default function PetOwnerDashboard() {
   const router = useRouter();
@@ -53,6 +53,10 @@ export default function PetOwnerDashboard() {
   const [selectedPet, setSelectedPet] = useState<OwnerPet | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [selectedDateKey, setSelectedDateKey] = useState(
+    () => new Date().toISOString().slice(0, 10)
+  );
 
   const fetchDashboard = async () => {
     if (!token) return;
@@ -88,6 +92,18 @@ export default function PetOwnerDashboard() {
   const welcomeName = user?.fullName || data?.user.fullName || 'Pet Owner';
   const pets = useMemo(() => data?.pets || [], [data]);
   const upcoming = data?.upcomingAppointments || [];
+  const confirmedAppointments = useMemo(
+    () => upcoming.filter((appt) => normalizeAppointmentStatus(appt.status) === 'approved'),
+    [upcoming]
+  );
+  const awaitingPaymentAppointments = useMemo(
+    () => upcoming.filter((appt) => normalizeAppointmentStatus(appt.status) === 'awaiting_payment'),
+    [upcoming]
+  );
+  const selectedDayAppointments = useMemo(
+    () => upcoming.filter((appt) => String(appt.appointment_date || '').slice(0, 10) === selectedDateKey),
+    [upcoming, selectedDateKey]
+  );
   const userAvatar =
     (user as { avatar_url?: string })?.avatar_url ||
     (user as { avatar?: string })?.avatar ||
@@ -105,50 +121,54 @@ export default function PetOwnerDashboard() {
 
   return (
     <PetOwnerShell avatarUrl={userAvatar}>
-      <section className="mb-8 flex flex-col gap-8 border-b border-gray-100 pb-8 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
-        <div className="min-w-0 flex-1 text-left">
-          <p className="text-sm text-gray-500">
+      <section className="mb-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:p-6">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1 text-left">
+            <p className="text-sm text-gray-500">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-          </p>
-          <h1 className="mt-1 tracking-tight text-gray-900">
-            Welcome back, {welcomeName.split(' ')[0]}!
-          </h1>
-          <p className="mt-2 max-w-lg text-gray-600">
-            Manage pets, appointments, and health records — all in one place.
-          </p>
-          <Link
-            href="/dashboard/pet-owner/appointments/book"
-            className="mt-4 inline-flex items-center justify-center rounded-lg bg-[#ec6d13] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#d65e0f]"
-          >
-            Book appointment
-          </Link>
-        </div>
+            </p>
+            <p className="mt-1 font-sans text-[2rem] font-semibold tracking-tight text-gray-900 md:text-[2.15rem]">
+              Welcome back, {welcomeName.split(' ')[0]}!
+            </p>
+            <p className="mt-2 max-w-lg text-sm leading-6 text-gray-600">
+              Manage pets, appointments, and health records from one clean dashboard.
+            </p>
+          </div>
 
-        <PetProfilesStrip
-          className="w-full shrink-0 lg:w-auto"
-          pets={pets}
-          onView={(pet) => {
-            setSelectedPet(pet);
-            setDetailOpen(true);
-          }}
-          onEdit={(pet) => {
-            setSelectedPet(pet);
-            setEditOpen(true);
-          }}
-          onAdd={() => setIsAddPetOpen(true)}
-        />
+          <PetProfilesStrip
+            className="w-full shrink-0 lg:w-auto"
+            pets={pets}
+            onView={(pet) => {
+              setSelectedPet(pet);
+              setDetailOpen(true);
+            }}
+            onEdit={(pet) => {
+              setSelectedPet(pet);
+              setEditOpen(true);
+            }}
+            onAdd={() => setIsAddPetOpen(true)}
+          />
+        </div>
       </section>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="My pets" value={pets.length} />
         <StatCard label="Upcoming visits" value={upcoming.length} />
         <StatCard label="Clinic visits" value={data?.stats.visits ?? 0} />
-        <StatCard label="VetCoins" value={data?.stats.vetcoins ?? 0} accent />
+        <StatCard
+          label="VetCoins"
+          value={data?.stats.vetcoins ?? 0}
+          accent
+          infoText="Earn 10 VetCoins for each appointment you confirm with payment. Use coins for marketplace discounts."
+        />
       </div>
 
       <section className="mb-6">
-        <h2 className="mb-3 text-base font-bold text-gray-900">Quick access</h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="font-sans text-[1.95rem] font-semibold tracking-tight text-gray-900">Quick access</p>
+          <p className="text-[11px] text-gray-500">Frequently used actions</p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           <QuickLinkCard
             href="/dashboard/pet-owner/appointments"
             title="My Appointments"
@@ -174,6 +194,12 @@ export default function PetOwnerDashboard() {
             icon={<StethoscopeIcon />}
           />
           <QuickLinkCard
+            href="/dashboard/pet-owner/marketplace"
+            title="Marketplace"
+            description="Cart, orders, payments & your ads"
+            icon={<BagIcon />}
+          />
+          <QuickLinkCard
             href="/dashboard/pet-owner/notifications"
             title="Notifications"
             description="Reminders and clinic updates"
@@ -181,7 +207,7 @@ export default function PetOwnerDashboard() {
             badge={unreadCount}
           />
           <QuickLinkCard
-            href="/dashboard/settings"
+            href="/dashboard/pet-owner/settings"
             title="Settings"
             description="Profile and account preferences"
             icon={<SettingsIcon />}
@@ -189,29 +215,10 @@ export default function PetOwnerDashboard() {
         </div>
       </section>
 
-      <section className="mb-6 rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
-        <h2 className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">Pet health</h2>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { label: 'Medical records', href: '/dashboard/pet-owner/health?tab=medical' },
-            { label: 'Vaccinations', href: '/dashboard/pet-owner/health?tab=vaccinations' },
-            { label: 'Prescriptions', href: '/dashboard/pet-owner/health?tab=prescriptions' },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-[#ec6d13]/10 hover:text-[#a94d07]"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </div>
-      </section>
-
       <section>
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <div className="mb-5 flex items-center justify-between">
-            <h3 className="text-gray-900">Upcoming appointments</h3>
+        <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="font-sans text-base font-semibold text-gray-900">Upcoming appointments</p>
             <Link
               href="/dashboard/pet-owner/appointments"
               className="text-sm font-semibold text-[#ec6d13] hover:text-[#d65e0f]"
@@ -219,6 +226,22 @@ export default function PetOwnerDashboard() {
               View all →
             </Link>
           </div>
+
+          <div className="mb-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3">
+              <p className="text-xs font-medium text-emerald-700">Confirmed appointments</p>
+              <p className="mt-1 font-sans text-2xl font-semibold text-emerald-900">
+                {confirmedAppointments.length}
+              </p>
+            </div>
+            <div className="rounded-xl border border-amber-100 bg-amber-50/70 px-4 py-3">
+              <p className="text-xs font-medium text-amber-700">Awaiting payment</p>
+              <p className="mt-1 font-sans text-2xl font-semibold text-amber-900">
+                {awaitingPaymentAppointments.length}
+              </p>
+            </div>
+          </div>
+
           {upcoming.length === 0 ? (
             <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
               <p className="font-medium text-gray-700">No upcoming appointments</p>
@@ -231,28 +254,48 @@ export default function PetOwnerDashboard() {
               </Link>
             </div>
           ) : (
-            <ul className="space-y-3">
-              {upcoming.slice(0, 5).map((appt) => (
-                <li key={appt.id}>
-                  <Link
-                    href={`/dashboard/pet-owner/appointments/${appt.id}`}
-                    className="flex items-center justify-between gap-4 rounded-xl border border-gray-100 p-4 transition hover:border-[#ec6d13]/30 hover:bg-orange-50/50"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-semibold text-gray-900">{appt.doctor_name}</p>
-                      <p className="truncate text-sm text-gray-500">
-                        {appt.specialization}
-                        {appt.pet_name ? ` · ${appt.pet_name}` : ''}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right text-sm">
-                      <p className="font-medium text-gray-800">{formatApptDate(appt.appointment_date)}</p>
-                      <p className="text-gray-500">{appt.appointment_time}</p>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr]">
+              <div className="rounded-xl border border-gray-100 p-4">
+                <p className="mb-3 text-sm font-semibold text-gray-900">Upcoming list</p>
+                <ul className="space-y-2.5">
+                  {upcoming.map((appt) => (
+                    <li key={appt.id}>
+                      <Link
+                        href={`/dashboard/pet-owner/appointments/${appt.id}`}
+                        className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2.5 transition hover:border-[#ec6d13]/30 hover:bg-orange-50/40"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-gray-900">{appt.doctor_name}</p>
+                          <p className="truncate text-xs text-gray-500">
+                            {appt.specialization}
+                            {appt.pet_name ? ` · ${appt.pet_name}` : ''}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className="text-xs font-medium text-gray-700">
+                            {formatAppointmentDate(appt.appointment_date)}
+                          </p>
+                          <p className="text-xs text-gray-500">{formatTime(appt.appointment_time)}</p>
+                          <AppointmentStatusBadge
+                            status={appt.status as AppointmentStatus}
+                            className="mt-1"
+                          />
+                        </div>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <InlineAppointmentCalendar
+                appointments={upcoming}
+                monthDate={calendarMonth}
+                selectedDateKey={selectedDateKey}
+                onChangeMonth={setCalendarMonth}
+                onSelectDate={setSelectedDateKey}
+                selectedDayAppointments={selectedDayAppointments}
+              />
+            </div>
           )}
         </div>
       </section>
@@ -288,21 +331,45 @@ function StatCard({
   label,
   value,
   accent,
+  infoText,
 }: {
   label: string;
   value: number;
   accent?: boolean;
+  infoText?: string;
 }) {
+  const [showInfo, setShowInfo] = useState(false);
+
   return (
     <div
-      className={`rounded-xl border px-3 py-2.5 shadow-sm ${
+      className={`rounded-xl border px-4 py-3 shadow-sm ${
         accent
-          ? 'border-[#ec6d13]/20 bg-gradient-to-br from-orange-50 to-white'
+          ? 'border-[#ec6d13]/20 bg-linear-to-br from-orange-50 to-white'
           : 'border-gray-100 bg-white'
       }`}
     >
-      <p className="text-gray-900">{value}</p>
-      <p className="mt-0.5 text-xs text-gray-500">{label}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="font-sans text-xl font-bold text-gray-900">{value}</p>
+          <p className="mt-0.5 text-xs font-medium text-gray-500">{label}</p>
+        </div>
+        {infoText ? (
+          <button
+            type="button"
+            onClick={() => setShowInfo((prev) => !prev)}
+            className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#ec6d13]/40 bg-white text-[11px] font-bold text-[#ec6d13] hover:bg-orange-50"
+            aria-label={`About ${label}`}
+            title={`About ${label}`}
+          >
+            ?
+          </button>
+        ) : null}
+      </div>
+      {infoText && showInfo ? (
+        <p className="mt-2 rounded-md bg-orange-50 px-2 py-1.5 text-[11px] leading-4 text-[#a94d07]">
+          {infoText}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -339,6 +406,19 @@ function StethoscopeIcon() {
   );
 }
 
+function BagIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+      />
+    </svg>
+  );
+}
+
 function BellIcon() {
   return (
     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -353,5 +433,117 @@ function SettingsIcon() {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
+  );
+}
+
+function InlineAppointmentCalendar({
+  appointments,
+  monthDate,
+  selectedDateKey,
+  onChangeMonth,
+  onSelectDate,
+  selectedDayAppointments,
+}: {
+  appointments: DashboardData['upcomingAppointments'];
+  monthDate: Date;
+  selectedDateKey: string;
+  onChangeMonth: (date: Date) => void;
+  onSelectDate: (dateKey: string) => void;
+  selectedDayAppointments: DashboardData['upcomingAppointments'];
+}) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthName = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const dayKeys = new Set(
+    appointments.map((appt) => String(appt.appointment_date || '').slice(0, 10))
+  );
+
+  return (
+    <div className="rounded-xl border border-gray-100 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-sm font-semibold text-gray-900">{monthName}</p>
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => onChangeMonth(new Date(year, month - 1, 1))}
+            className="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={() => onChangeMonth(new Date(year, month + 1, 1))}
+            className="rounded px-2 py-1 text-xs text-gray-600 hover:bg-gray-100"
+          >
+            ›
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-gray-500">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+          <div key={day}>{day}</div>
+        ))}
+      </div>
+      <div className="mt-1 grid grid-cols-7 gap-1">
+        {Array.from({ length: firstDay }).map((_, idx) => (
+          <div key={`empty-${idx}`} />
+        ))}
+        {Array.from({ length: daysInMonth }).map((_, idx) => {
+          const day = idx + 1;
+          const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const hasAppointment = dayKeys.has(dateKey);
+          const isSelected = selectedDateKey === dateKey;
+          return (
+            <button
+              key={dateKey}
+              type="button"
+              onClick={() => onSelectDate(dateKey)}
+              className={`relative rounded py-1.5 text-xs transition ${
+                isSelected ? 'bg-[#ec6d13] text-white' : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {day}
+              {hasAppointment ? (
+                <span
+                  className={`absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full ${
+                    isSelected ? 'bg-white' : 'bg-[#ec6d13]'
+                  }`}
+                />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 border-t border-gray-100 pt-3">
+        <p className="text-xs font-semibold text-gray-700">
+          {new Date(`${selectedDateKey}T00:00:00`).toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'short',
+            day: 'numeric',
+          })}
+        </p>
+        {selectedDayAppointments.length === 0 ? (
+          <p className="mt-1 text-xs text-gray-500">No appointments on this day.</p>
+        ) : (
+          <ul className="mt-2 space-y-1.5">
+            {selectedDayAppointments.map((appt) => (
+              <li key={appt.id} className="rounded bg-gray-50 px-2 py-1.5 text-xs">
+                <div className="font-medium text-gray-800">
+                  {formatTime(appt.appointment_time)} · {appt.pet_name || 'Pet'}
+                </div>
+                <div className="text-gray-500">
+                  <AppointmentStatusBadge status={appt.status as AppointmentStatus} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
   );
 }

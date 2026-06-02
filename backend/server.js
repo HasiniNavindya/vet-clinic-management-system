@@ -17,6 +17,7 @@ const {
 } = require("./config/roles");
 const { canLogin, loginBlockMessage } = require("./config/accountStatus");
 const { getDoctorProfileByUserId } = require("./services/doctorApplicationService");
+const { getVetCoinBalance } = require("./services/vetcoinsService");
 const doctorApplicationsRouter = require("./routes/doctorApplications");
 const { router: receptionistApplicationsRouter, handleReceptionistRegister } = require("./routes/receptionistApplications");
 const receptionistRouter = require("./routes/receptionist");
@@ -81,9 +82,11 @@ app.use(express.json({ limit: '10mb' }));
 const uploadsDir = path.join(__dirname, 'uploads');
 const petsUploadsDir = path.join(uploadsDir, 'pets');
 const doctorLicensesDir = path.join(uploadsDir, 'doctor-licenses');
+const doctorProfilesDir = path.join(uploadsDir, 'doctor-profiles');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(petsUploadsDir)) fs.mkdirSync(petsUploadsDir, { recursive: true });
 if (!fs.existsSync(doctorLicensesDir)) fs.mkdirSync(doctorLicensesDir, { recursive: true });
+if (!fs.existsSync(doctorProfilesDir)) fs.mkdirSync(doctorProfilesDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
 app.get("/", (req, res) => {
@@ -591,9 +594,9 @@ app.get("/api/user/dashboard", authenticateToken, requireRole('user'), async (re
       [userId]
     );
 
-    // Get appointments count
-    const appointmentsCountResult = await pool.query(
-      "SELECT COUNT(*) FROM appointments WHERE user_id = $1",
+    // Count clinic visits only after consultation is completed
+    const completedVisitsResult = await pool.query(
+      "SELECT COUNT(*) FROM appointments WHERE user_id = $1 AND status = 'completed'",
       [userId]
     );
 
@@ -606,18 +609,20 @@ app.get("/api/user/dashboard", authenticateToken, requireRole('user'), async (re
        LEFT JOIN pets_owned p ON a.pet_id = p.id
        WHERE a.user_id = $1
          AND a.appointment_date >= CURRENT_DATE
-         AND a.status IN ('pending', 'approved')
+         AND a.status IN ('approved', 'awaiting_payment')
        ORDER BY a.appointment_date ASC, a.appointment_time ASC
        LIMIT 5`,
       [userId]
     );
 
+    const vetcoins = await getVetCoinBalance(userId);
+
     // Calculate user stats
     const stats = {
-      visits: parseInt(appointmentsCountResult.rows[0].count) || 0,
+      visits: parseInt(completedVisitsResult.rows[0].count) || 0,
       yearsOfService: 0,
       favouriteDoctors: 0,
-      vetcoins: parseInt(appointmentsCountResult.rows[0].count) * 10 || 0
+      vetcoins,
     };
 
     // Calculate years of service
@@ -1066,7 +1071,6 @@ app.get("/products", async (req, res) => {
               created_at AS "createdAt"
        FROM products
        WHERE COALESCE(is_active, true) = true
-         AND COALESCE(stock_quantity, 0) > 0
        ORDER BY id DESC`
     );
     res.json(result.rows);

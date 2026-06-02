@@ -11,8 +11,8 @@ type Props = {
 
 function navClass(active: boolean) {
   return active
-    ? 'flex w-full items-center gap-3 rounded-lg bg-[#ec6d13] px-4 py-3 font-semibold text-white'
-    : 'flex w-full items-center gap-3 rounded-lg px-4 py-3 font-medium text-gray-600 hover:bg-gray-50';
+    ? 'flex w-full items-center gap-3 rounded-lg bg-[#ec6d13] px-4 py-2.5 text-sm font-semibold text-white'
+    : 'flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50';
 }
 
 export default function PetOwnerSidebar({ welcomeName, email, avatarUrl }: Props) {
@@ -25,10 +25,17 @@ export default function PetOwnerSidebar({ welcomeName, email, avatarUrl }: Props
     pathname.startsWith('/dashboard/pet-owner/medical-records') ||
     pathname.startsWith('/dashboard/pet-owner/vaccinations') ||
     pathname.startsWith('/dashboard/pet-owner/prescriptions');
-  const isSettings = pathname === '/dashboard/settings';
+  const isMarketplace =
+    pathname.startsWith('/dashboard/pet-owner/marketplace') ||
+    pathname.startsWith('/dashboard/pet-owner/orders') ||
+    pathname.startsWith('/dashboard/pet-owner/listings') ||
+    (pathname.startsWith('/dashboard/pet-owner/payments') &&
+      !pathname.includes('/appointments'));
+  const isSettings =
+    pathname === '/dashboard/pet-owner/settings' || pathname === '/dashboard/settings';
 
   return (
-    <aside className="fixed left-0 top-28 z-20 flex h-[calc(100vh-112px)] w-64 flex-col overflow-y-auto border-r border-gray-200 bg-white p-6">
+    <aside className="fixed left-0 top-20 z-20 flex h-[calc(100vh-80px)] w-64 flex-col overflow-y-auto border-r border-gray-200 bg-white p-5">
       <div className="mb-6 border-b border-gray-200 pb-6">
         <div className="flex flex-col items-center text-center">
           {avatarUrl ? (
@@ -38,10 +45,10 @@ export default function PetOwnerSidebar({ welcomeName, email, avatarUrl }: Props
           ) : (
             <AvatarInitial name={welcomeName} />
           )}
-          <h3 className="text-sm font-bold text-gray-900">{welcomeName}</h3>
+          <h3 className="font-sans text-base font-semibold text-gray-900">{welcomeName}</h3>
           {email ? <p className="mt-1 text-xs text-gray-500">{email}</p> : null}
           <Link
-            href="/dashboard/settings"
+            href="/dashboard/pet-owner/settings"
             className="mt-3 text-xs font-semibold text-[#ec6d13] hover:text-[#d65e0f]"
           >
             Edit Profile →
@@ -65,31 +72,12 @@ export default function PetOwnerSidebar({ welcomeName, email, avatarUrl }: Props
           Pet Health
         </Link>
 
-        <Link
-          href="/marketplace"
-          className={navClass(pathname.startsWith('/marketplace'))}
-        >
-          <ShopIcon />
-          Shop & Marketplace
+        <Link href="/dashboard/pet-owner/marketplace" className={navClass(isMarketplace)}>
+          <MarketplaceIcon />
+          Marketplace
         </Link>
 
-        <Link
-          href="/dashboard/pet-owner/orders"
-          className={navClass(pathname.startsWith('/dashboard/pet-owner/orders'))}
-        >
-          <OrdersIcon />
-          My Orders
-        </Link>
-
-        <Link
-          href="/dashboard/pet-owner/listings"
-          className={navClass(pathname.startsWith('/dashboard/pet-owner/listings'))}
-        >
-          <ListingsIcon />
-          My Listings
-        </Link>
-
-        <Link href="/dashboard/settings" className={navClass(isSettings)}>
+        <Link href="/dashboard/pet-owner/settings" className={navClass(isSettings)}>
           <SettingsIcon />
           Settings
         </Link>
@@ -143,26 +131,15 @@ function HealthIcon() {
   );
 }
 
-function ShopIcon() {
+function MarketplaceIcon() {
   return (
     <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-    </svg>
-  );
-}
-
-function OrdersIcon() {
-  return (
-    <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-    </svg>
-  );
-}
-
-function ListingsIcon() {
-  return (
-    <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+      />
     </svg>
   );
 }

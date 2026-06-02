@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import DoctorShell from '@/components/doctor/DoctorShell';
 import { fetchDoctorDashboard } from '@/lib/doctorApplications';
 import { statusLabel } from '@/lib/appointments';
+import { resolveUserDashboardPath } from '@/lib/roles';
 
 interface DashboardData {
   profile: { specialization: string; availableDays: string[] };
@@ -34,7 +35,7 @@ export default function DoctorDashboardPage() {
       return;
     }
     if (!isLoading && user && !hasRole('doctor')) {
-      router.replace(user.dashboardPath || '/dashboard');
+      router.replace(resolveUserDashboardPath(user));
     }
   }, [isLoading, isAuthenticated, user, hasRole, router]);
 

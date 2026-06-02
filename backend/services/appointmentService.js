@@ -15,6 +15,7 @@ const APPOINTMENT_SELECT = `
          d.phone AS doctor_phone,
          p.pet_name,
          p.species AS pet_species,
+         p.image_url AS pet_image,
          u.full_name AS owner_name,
          u.email AS owner_email,
          u.mobile_number AS owner_phone
@@ -52,6 +53,7 @@ function mapAppointmentRow(row) {
     doctorPhone: row.doctor_phone,
     petName: row.pet_name,
     petSpecies: row.pet_species,
+    petImage: row.pet_image,
     ownerName: row.owner_name,
     ownerEmail: row.owner_email,
     ownerPhone: row.owner_phone,

@@ -22,8 +22,8 @@ export default function LoginPage() {
     setError('');
     
     try {
-      await login(formData.email, formData.password);
-      router.push('/dashboard');
+      const redirectPath = await login(formData.email, formData.password, 'user');
+      router.replace(redirectPath);
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
       setIsLoading(false);

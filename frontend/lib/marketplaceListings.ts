@@ -24,6 +24,17 @@ export interface PetListing {
   createdAt?: string;
 }
 
+export function resolveListingImageUrl(image?: string | null): string | null {
+  if (!image) return null;
+  if (image.startsWith('http')) return image;
+  if (image.startsWith('/')) return `${API_BASE_URL}${image}`;
+  return image;
+}
+
+export function listingStatusLabel(status: string): string {
+  return status.replace(/_/g, ' ');
+}
+
 export async function createPetListing(
   token: string,
   body: {
