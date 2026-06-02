@@ -224,6 +224,19 @@ export default function AdminDashboardPage() {
           </Link>
 
           <Link
+            href="/dashboard/admin/blog"
+            className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+          >
+            <h3 className="text-gray-900 group-hover:text-[#ec6d13]">Blog</h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Write and publish pet care articles for the public blog — featured posts, categories, and drafts.
+            </p>
+            <span className="mt-4 inline-block text-sm font-semibold text-[#ec6d13]">
+              Manage blog →
+            </span>
+          </Link>
+
+          <Link
             href="/dashboard/admin/marketplace"
             className="group rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
           >

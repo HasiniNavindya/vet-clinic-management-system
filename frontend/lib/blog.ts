@@ -13,6 +13,7 @@ export type BlogPost = {
   publishedAt: string;
   category: BlogCategory;
   readTime: string;
+  isFeatured?: boolean;
 };
 
 export type BlogPostDisplay = BlogPost & {
@@ -44,9 +45,12 @@ export function toDisplayPost(post: BlogPost): BlogPostDisplay {
   };
 }
 
-export async function fetchBlogPosts(limit?: number) {
-  const query = limit ? `?limit=${limit}` : '';
-  return apiFetch<{ posts: BlogPost[] }>(`/api/public/blog-posts${query}`);
+export async function fetchBlogPosts(limit?: number, category?: BlogCategory) {
+  const params = new URLSearchParams();
+  if (limit) params.set('limit', String(limit));
+  if (category && category !== 'all') params.set('category', category);
+  const qs = params.toString();
+  return apiFetch<{ posts: BlogPost[] }>(`/api/public/blog-posts${qs ? `?${qs}` : ''}`);
 }
 
 export async function fetchBlogPostBySlug(slug: string) {
