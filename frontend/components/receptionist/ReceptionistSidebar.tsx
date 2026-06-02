@@ -12,13 +12,7 @@ const GROUPS: NavGroup[] = [
   {
     id: 'appts',
     label: 'Appointments',
-    items: [
-      { href: '/dashboard/receptionist/appointments', label: 'All Appointments' },
-      { href: '/dashboard/receptionist/appointments/today', label: "Today's Appointments" },
-      { href: '/dashboard/receptionist/appointments/calendar', label: 'Appointment Calendar' },
-      { href: '/dashboard/receptionist/appointments/manage', label: 'Approve & Respond' },
-      { href: '/dashboard/receptionist/queue', label: 'Check-in Queue' },
-    ],
+    items: [{ href: '/dashboard/receptionist/appointments', label: 'Appointments' }],
   },
   {
     id: 'pets',
@@ -82,14 +76,18 @@ type Props = {
 export default function ReceptionistSidebar({ welcomeName, email }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState<Record<string, boolean>>({
-    appts: true,
     pets: false,
     orders: false,
     notif: false,
   });
 
-  const isActive = (href: string) =>
-    pathname === href || (href !== '/dashboard/receptionist' && pathname.startsWith(href));
+  const isActive = (href: string) => {
+    if (href === '/dashboard/receptionist') return pathname === href;
+    if (href === '/dashboard/receptionist/appointments') {
+      return pathname === href || pathname.startsWith(`${href}/`);
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
 
   return (
     <aside className="fixed left-0 top-28 z-20 flex h-[calc(100vh-112px)] w-64 flex-col overflow-y-auto border-r border-gray-200 bg-white p-5">
@@ -104,7 +102,7 @@ export default function ReceptionistSidebar({ welcomeName, email }: Props) {
 
       <nav className="flex-1 space-y-1">
         {GROUPS.map((group) => {
-          const single = group.items.length === 1 && group.id === 'dash';
+          const single = group.items.length === 1;
           if (single) {
             const item = group.items[0];
             return (

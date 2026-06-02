@@ -207,7 +207,7 @@ export default function ReceptionistDashboard() {
 
       <div className="mt-8 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
         {[
-          { label: 'Check-in queue', href: '/dashboard/receptionist/appointments' },
+          { label: 'Check-in queue', href: '/dashboard/receptionist/appointments/queue' },
           { label: 'Pet owners', href: '/dashboard/receptionist/owners' },
           { label: 'Shop orders', href: '/dashboard/receptionist/orders' },
           { label: 'Doctor schedules', href: '/dashboard/receptionist/doctors' },

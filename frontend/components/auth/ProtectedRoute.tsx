@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { userHasRole } from '@/lib/roles';
+import { resolveUserDashboardPath, userHasRole } from '@/lib/roles';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -29,7 +29,7 @@ export default function ProtectedRoute({
     }
 
     if (allowedRoles.length > 0 && !userHasRole(user?.role, allowedRoles)) {
-      router.replace(user?.dashboardPath || '/dashboard');
+      router.replace(resolveUserDashboardPath(user));
     }
   }, [isAuthenticated, isLoading, user, allowedRoles, loginPath, router]);
 

@@ -2,7 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { API_BASE_URL } from '@/lib/api';
-import { getDashboardPath, normalizeRoleId, type PublicRole } from '@/lib/roles';
+import {
+  getDashboardPath,
+  normalizeRoleId,
+  resolveUserDashboardPath,
+  type PublicRole,
+} from '@/lib/roles';
 
 export interface User {
   id: number;
@@ -48,8 +53,14 @@ export interface RegisterData {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function resolveRedirectPath(user: User, roles?: PublicRole[]): string {
-  if (user.dashboardPath) return user.dashboardPath;
-  return getDashboardPath(roles || [], user.role);
+  return resolveUserDashboardPath(user) || getDashboardPath(roles || [], user.role);
+}
+
+function withDashboardPath(user: User): User {
+  return {
+    ...user,
+    dashboardPath: user.dashboardPath || getDashboardPath([], user.role),
+  };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -80,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const data = await response.json();
-        const sessionUser: User = {
+        const sessionUser = withDashboardPath({
           id: data.id,
           email: data.email,
           fullName: data.fullName,
@@ -90,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: data.role,
           roleLabel: data.roleLabel,
           dashboardPath: data.dashboardPath,
-        };
+        });
         localStorage.setItem('user', JSON.stringify(sessionUser));
         setToken(storedToken);
         setUser(sessionUser);
@@ -98,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
           setToken(storedToken);
-          setUser(JSON.parse(storedUser));
+          setUser(withDashboardPath(JSON.parse(storedUser) as User));
         }
       } finally {
         setIsLoading(false);
@@ -133,10 +144,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(data.error || 'Login failed');
     }
 
-    const sessionUser: User = {
+    const sessionUser = withDashboardPath({
       ...data.user,
       role: data.user.role || canonicalRole,
-    };
+    });
 
     persistSession(data.token, sessionUser);
     return resolveRedirectPath(sessionUser);
@@ -160,10 +171,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(data.error || 'Registration failed');
     }
 
-    const sessionUser: User = {
+    const sessionUser = withDashboardPath({
       ...data.user,
       role: data.user.role || canonicalRole,
-    };
+    });
 
     persistSession(data.token, sessionUser);
     return resolveRedirectPath(sessionUser);

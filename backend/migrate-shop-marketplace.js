@@ -13,6 +13,14 @@ async function migrate() {
       ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
     `);
 
+    // Legacy rows got stock_quantity 0 when the column was added — restore sellable stock
+    await client.query(`
+      UPDATE products
+      SET stock_quantity = 50
+      WHERE COALESCE(stock_quantity, 0) = 0
+        AND COALESCE(is_active, true) = true
+    `);
+
     await client.query(`
       ALTER TABLE pets
       ADD COLUMN IF NOT EXISTS owner_user_id INTEGER REFERENCES auth_users(id) ON DELETE SET NULL;

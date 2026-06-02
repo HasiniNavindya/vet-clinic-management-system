@@ -36,20 +36,18 @@ export default function ReceptionistCalendarPanel() {
 
   const apptsOnDay = (d: number) => {
     const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    return appointments.filter((a) => a.appointmentDate?.slice(0, 10) === key);
+    return appointments.filter((a) => String(a.appointmentDate || '').slice(0, 10) === key);
   };
 
   const selectedKey = selectedDate
     ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`
     : '';
-  const selectedAppts = appointments.filter((a) => a.appointmentDate?.slice(0, 10) === selectedKey);
+  const selectedAppts = appointments.filter(
+    (a) => String(a.appointmentDate || '').slice(0, 10) === selectedKey
+  );
 
   return (
-    <div>
-      <h1 className="text-gray-900">Appointment calendar</h1>
-      <p className="mt-1 text-sm text-gray-600">Clinic-wide schedule for all veterinarians</p>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+    <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <button
@@ -143,6 +141,5 @@ export default function ReceptionistCalendarPanel() {
           )}
         </div>
       </div>
-    </div>
   );
 }

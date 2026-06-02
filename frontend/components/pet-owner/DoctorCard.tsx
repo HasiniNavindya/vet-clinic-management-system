@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import DoctorAvatar from '@/components/doctor/DoctorAvatar';
 import { CLINIC_HOURS_LABEL, DoctorProfile, formatAvailableDays } from '@/lib/doctors';
 
 type Props = {
@@ -8,22 +9,15 @@ type Props = {
 };
 
 export default function DoctorCard({ doctor }: Props) {
-  const imageSrc =
-    doctor.imageUrl ||
-    'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80';
-
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md">
-      <div className="relative aspect-[4/3] bg-gray-100">
-        <img src={imageSrc} alt={doctor.name} className="h-full w-full object-cover" />
-        <span className="absolute right-3 top-3 rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-semibold text-white">
-          Accepting bookings
-        </span>
+      <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+        <DoctorAvatar name={doctor.name} imageUrl={doctor.imageUrl} className="h-full w-full" textClassName="text-4xl" />
       </div>
 
       <div className="flex flex-1 flex-col p-5">
-        <h2 className="text-gray-900">{doctor.name}</h2>
-        <p className="mt-0.5 font-semibold text-[#ec6d13]">{doctor.specialization}</p>
+        <p className="font-sans text-lg font-semibold text-gray-900">{doctor.name}</p>
+        <p className="mt-0.5 text-sm font-semibold text-[#ec6d13]">{doctor.specialization}</p>
 
         {doctor.bio ? (
           <p className="mt-3 line-clamp-3 text-sm text-gray-600">{doctor.bio}</p>
@@ -38,16 +32,6 @@ export default function DoctorCard({ doctor }: Props) {
             <span className="font-medium text-gray-800">Hours:</span>
             <span>{CLINIC_HOURS_LABEL}</span>
           </li>
-          {doctor.email ? (
-            <li className="truncate">
-              <span className="font-medium text-gray-800">Email:</span> {doctor.email}
-            </li>
-          ) : null}
-          {doctor.phone ? (
-            <li>
-              <span className="font-medium text-gray-800">Phone:</span> {doctor.phone}
-            </li>
-          ) : null}
         </ul>
 
         <div className="mt-auto flex flex-col gap-2 pt-5 sm:flex-row">

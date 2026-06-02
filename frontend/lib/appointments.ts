@@ -30,6 +30,7 @@ export type Appointment = {
   doctorImage?: string;
   petName?: string;
   petSpecies?: string;
+  petImage?: string | null;
   ownerName?: string;
   ownerEmail?: string;
   ownerPhone?: string;
@@ -228,28 +229,46 @@ export async function fetchDoctorAvailability(
   );
 }
 
-export function formatAppointmentDate(dateStr: string): string {
-  const d = new Date(`${dateStr}T12:00:00`);
+export function formatAppointmentDate(dateStr: string | null | undefined): string {
+  if (dateStr == null || dateStr === '') return 'Date pending';
+  const raw = String(dateStr).trim();
+  const dateOnly = /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : raw;
+  const d = new Date(`${dateOnly}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return 'Date pending';
   return d.toLocaleDateString('en-US', {
     weekday: 'short',
-    month: 'long',
+    month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
 }
 
-export function formatTime(timeStr: string): string {
-  const [h, m] = timeStr.split(':').map(Number);
+export function formatTime(timeStr: string | null | undefined): string {
+  if (timeStr == null || timeStr === '') return '—';
+  const normalized = String(timeStr).trim().slice(0, 8);
+  const match = normalized.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return normalized;
+  const h = Number(match[1]);
+  const m = Number(match[2]);
+  if (Number.isNaN(h) || Number.isNaN(m)) return normalized;
   const period = h >= 12 ? 'PM' : 'AM';
   const hour12 = h % 12 || 12;
   return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
-export function doctorImageUrl(imagePath?: string | null): string | null {
+export function doctorImageUrl(imagePath?: string | null, cacheBust?: string | number): string | null {
   if (!imagePath) return null;
-  if (imagePath.startsWith('http')) return imagePath;
-  if (imagePath.startsWith('/')) return `${API_BASE_URL}${imagePath}`;
-  return imagePath;
+  let url: string;
+  if (imagePath.startsWith('http')) {
+    url = imagePath;
+  } else if (imagePath.startsWith('/')) {
+    url = `${API_BASE_URL}${imagePath}`;
+  } else {
+    url = imagePath;
+  }
+  if (cacheBust == null) return url;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}v=${cacheBust}`;
 }
 
 export const OWNER_CANCELLABLE: AppointmentStatus[] = [
@@ -271,4 +290,64 @@ export function statusLabel(status: AppointmentStatus): string {
     cancelled: 'Cancelled',
   };
   return labels[status] || status;
+}
+
+export function normalizeAppointmentStatus(status: string | undefined): string {
+  return String(status || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+}
+
+export type PetAppointmentGroup = {
+  petId: number | null;
+  petName: string;
+  petSpecies?: string | null;
+  petImage?: string | null;
+  appointments: Appointment[];
+};
+
+export function resolvePetImageUrl(imagePath?: string | null): string | null {
+  if (!imagePath) return null;
+  if (imagePath.startsWith('http')) return imagePath;
+  if (imagePath.startsWith('/')) return `${API_BASE_URL}${imagePath}`;
+  return imagePath;
+}
+
+export function groupAppointmentsByPet(appointments: Appointment[]): PetAppointmentGroup[] {
+  const map = new Map<string, PetAppointmentGroup>();
+
+  for (const apt of appointments) {
+    const petId = apt.petId ?? null;
+    const key = petId != null ? `pet-${petId}` : 'unassigned';
+    const petName =
+      petId != null
+        ? apt.petName?.trim() || `Pet #${petId}`
+        : 'All pets';
+
+    if (!map.has(key)) {
+      map.set(key, {
+        petId,
+        petName,
+        petSpecies: apt.petSpecies,
+        petImage: apt.petImage,
+        appointments: [],
+      });
+    }
+    const group = map.get(key)!;
+    if (!group.petSpecies && apt.petSpecies) group.petSpecies = apt.petSpecies;
+    if (!group.petImage && apt.petImage) group.petImage = apt.petImage;
+    group.appointments.push(apt);
+  }
+
+  return Array.from(map.values())
+    .sort((a, b) => a.petName.localeCompare(b.petName))
+    .map((group) => ({
+      ...group,
+      appointments: [...group.appointments].sort((a, b) => {
+        const aKey = `${String(a.appointmentDate).slice(0, 10)}T${a.appointmentTime}`;
+        const bKey = `${String(b.appointmentDate).slice(0, 10)}T${b.appointmentTime}`;
+        return aKey.localeCompare(bKey);
+      }),
+    }));
 }

@@ -18,10 +18,12 @@ export interface DoctorRegisterPayload {
   education?: string;
   yearsOfExperience?: number;
   bio?: string;
-  availableDays: string[];
+  availableDays?: string[];
   /** Base64 file contents (data URL or raw base64) */
   licenseDocumentBase64: string;
   licenseDocumentFilename: string;
+  profileImageBase64?: string;
+  profileImageFilename?: string;
 }
 
 export interface DoctorApplication {

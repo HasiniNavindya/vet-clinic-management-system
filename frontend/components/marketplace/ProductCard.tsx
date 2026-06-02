@@ -66,7 +66,9 @@ export default function ProductCard({ id, name, description, price, image, categ
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs text-gray-500">
-            {stockQuantity != null && stockQuantity <= 5 ? (
+            {stockQuantity != null && stockQuantity <= 0 ? (
+              <span className="font-semibold text-red-600">Out of stock</span>
+            ) : stockQuantity != null && stockQuantity <= 5 ? (
               <span className="font-semibold text-amber-700">Low stock: {stockQuantity}</span>
             ) : stockQuantity != null ? (
               `In stock: ${stockQuantity}`

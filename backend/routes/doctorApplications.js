@@ -12,6 +12,7 @@ const {
   approveApplication,
   rejectApplication,
   getDoctorProfileByUserId,
+  ensureDoctorProfileForUser,
 } = require('../services/doctorApplicationService');
 
 const router = express.Router();
@@ -30,6 +31,7 @@ const SPECIALIZATIONS = [
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 const ALLOWED_LICENSE_EXT = new Set(['.pdf', '.jpg', '.jpeg', '.png']);
+const ALLOWED_PROFILE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 
 function getDoctorApplicationMetaData() {
   return { specializations: SPECIALIZATIONS, weekDays: WEEKDAYS };
@@ -59,6 +61,27 @@ function saveLicenseDocument(base64, originalFilename, userIdForName) {
   return `/uploads/doctor-licenses/${safeName}`;
 }
 
+function saveProfileImage(base64, originalFilename, userIdForName) {
+  if (!base64 || typeof base64 !== 'string') return null;
+  const trimmed = base64.includes(',') ? base64.split(',').pop() : base64;
+  const extFromName = originalFilename ? path.extname(originalFilename).toLowerCase() : '';
+  const ext = ALLOWED_PROFILE_EXT.has(extFromName) ? extFromName : '.jpg';
+  const uploadsRoot = path.join(__dirname, '..', 'uploads');
+  const dir = path.join(uploadsRoot, 'doctor-profiles');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const safeName = `profile_${userIdForName}_${Date.now()}${ext}`;
+  const filePath = path.join(dir, safeName);
+  const buffer = Buffer.from(trimmed, 'base64');
+  if (buffer.length > 5 * 1024 * 1024) {
+    throw new Error('Profile photo must be 5MB or smaller');
+  }
+  if (buffer.length < 32) {
+    throw new Error('Invalid profile photo file');
+  }
+  fs.writeFileSync(filePath, buffer);
+  return `/uploads/doctor-profiles/${safeName}`;
+}
+
 async function handleDoctorRegister(req, res) {
   const {
     email,
@@ -76,6 +99,8 @@ async function handleDoctorRegister(req, res) {
     availableDays,
     licenseDocumentBase64,
     licenseDocumentFilename,
+    profileImageBase64,
+    profileImageFilename,
   } = req.body;
 
   try {
@@ -92,9 +117,8 @@ async function handleDoctorRegister(req, res) {
         error: 'A license or professional credential document upload is required (PDF or image)',
       });
     }
-    if (!Array.isArray(availableDays) || availableDays.length === 0) {
-      return res.status(400).json({ error: 'Select at least one available day' });
-    }
+    const days =
+      Array.isArray(availableDays) && availableDays.length > 0 ? availableDays.map(String) : [];
 
     const existing = await pool.query('SELECT id FROM auth_users WHERE email = $1', [email]);
     if (existing.rows.length > 0) {
@@ -135,6 +159,20 @@ async function handleDoctorRegister(req, res) {
         return res.status(400).json({ error: fileErr.message || 'Invalid license document' });
       }
 
+      let profileImageUrl = null;
+      if (profileImageBase64 && String(profileImageBase64).trim()) {
+        try {
+          profileImageUrl = saveProfileImage(
+            profileImageBase64,
+            profileImageFilename,
+            user.id
+          );
+        } catch (fileErr) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: fileErr.message || 'Invalid profile photo' });
+        }
+      }
+
       await client.query(
         `INSERT INTO user_preferences (user_id, vaccination_reminders, appointment_updates)
          VALUES ($1, false, true)`,
@@ -144,8 +182,8 @@ async function handleDoctorRegister(req, res) {
       const appRes = await client.query(
         `INSERT INTO doctor_applications (
            user_id, specialization, license_number, qualifications, education,
-           years_of_experience, bio, available_days, license_document_url, status
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+           years_of_experience, bio, available_days, license_document_url, profile_image_url, status
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
          RETURNING id`,
         [
           user.id,
@@ -155,8 +193,9 @@ async function handleDoctorRegister(req, res) {
           education || null,
           yearsOfExperience ? Number(yearsOfExperience) : null,
           bio || null,
-          availableDays,
+          days,
           licenseDocumentUrl,
+          profileImageUrl,
         ]
       );
 
@@ -255,8 +294,47 @@ router.patch('/admin/:id/reject', authenticateToken, requireRole('admin'), async
   }
 });
 
+router.post('/doctor/profile-photo', authenticateToken, requireRole('doctor'), async (req, res) => {
+  const { profileImageBase64, profileImageFilename } = req.body;
+  try {
+    const statusRes = await pool.query(
+      'SELECT account_status FROM auth_users WHERE id = $1',
+      [req.user.id]
+    );
+    if (statusRes.rows[0]?.account_status !== ACCOUNT_STATUS.ACTIVE) {
+      return res.status(403).json({ error: 'Account not active' });
+    }
+
+    if (!profileImageBase64 || !String(profileImageBase64).trim()) {
+      return res.status(400).json({ error: 'No profile photo provided' });
+    }
+
+    const profile = await getDoctorProfileByUserId(req.user.id);
+    if (!profile) return res.status(404).json({ error: 'Doctor profile not found' });
+
+    const imageUrl = saveProfileImage(
+      profileImageBase64,
+      profileImageFilename,
+      req.user.id
+    );
+
+    await pool.query('UPDATE doctors SET image_url = $1 WHERE id = $2', [imageUrl, profile.id]);
+    await pool.query(
+      `UPDATE doctor_applications SET profile_image_url = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE user_id = $2`,
+      [imageUrl, req.user.id]
+    );
+
+    res.json({ message: 'Profile photo saved', imageUrl });
+  } catch (err) {
+    console.error('Doctor profile photo error:', err.message);
+    const msg = err.message || 'Failed to upload photo';
+    res.status(msg.includes('5MB') || msg.includes('Invalid') ? 400 : 500).json({ error: msg });
+  }
+});
+
 router.put('/doctor/profile', authenticateToken, requireRole('doctor'), async (req, res) => {
-  const { bio, availableDays, mobileNumber } = req.body;
+  const { bio, availableDays, mobileNumber, profileImageBase64, profileImageFilename } = req.body;
   try {
     const statusRes = await pool.query(
       'SELECT account_status FROM auth_users WHERE id = $1',
@@ -291,13 +369,34 @@ router.put('/doctor/profile', authenticateToken, requireRole('doctor'), async (r
       updates.push(`phone = $${i++}`);
       values.push(mobileNumber || null);
     }
+    let savedImageUrl = null;
+    if (profileImageBase64 && String(profileImageBase64).trim()) {
+      try {
+        savedImageUrl = saveProfileImage(
+          profileImageBase64,
+          profileImageFilename,
+          req.user.id
+        );
+        updates.push(`image_url = $${i++}`);
+        values.push(savedImageUrl);
+      } catch (fileErr) {
+        return res.status(400).json({ error: fileErr.message || 'Invalid profile photo' });
+      }
+    }
     if (updates.length > 0) {
       values.push(profile.id);
       await pool.query(`UPDATE doctors SET ${updates.join(', ')} WHERE id = $${i}`, values);
     }
+    if (savedImageUrl) {
+      await pool.query(
+        `UPDATE doctor_applications SET profile_image_url = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = $2`,
+        [savedImageUrl, req.user.id]
+      );
+    }
 
     const updated = await getDoctorProfileByUserId(req.user.id);
-    res.json({ message: 'Profile updated', profile: updated });
+    res.json({ message: 'Profile updated', profile: updated, imageUrl: savedImageUrl || updated?.imageUrl });
   } catch (err) {
     console.error('Doctor profile update error:', err.message);
     res.status(500).json({ error: 'Failed to update profile' });

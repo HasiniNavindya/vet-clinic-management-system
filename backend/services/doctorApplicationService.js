@@ -4,7 +4,7 @@ const { ACCOUNT_STATUS } = require('../config/accountStatus');
 const APPLICATION_SELECT = `
   da.id, da.user_id, da.specialization, da.license_number, da.qualifications,
   da.education, da.years_of_experience, da.bio, da.available_days,
-  da.license_document_url,
+  da.license_document_url, da.profile_image_url,
   da.status, da.admin_notes, da.rejection_reason, da.reviewed_by, da.reviewed_at,
   da.created_at, da.updated_at,
   u.email, u.full_name, u.mobile_number, u.address, u.account_status
@@ -23,6 +23,7 @@ function mapApplication(row) {
     bio: row.bio,
     availableDays: row.available_days || [],
     licenseDocumentUrl: row.license_document_url,
+    profileImageUrl: row.profile_image_url,
     status: row.status,
     adminNotes: row.admin_notes,
     rejectionReason: row.rejection_reason,
@@ -78,23 +79,61 @@ async function listApplications(status) {
 
 async function getDoctorProfileByUserId(userId) {
   const result = await pool.query(
-    `SELECT id, name, specialization, email, phone, image_url, bio, available_days, user_id
-     FROM doctors WHERE user_id = $1`,
+    `SELECT d.id, d.name, d.specialization, d.email, d.phone, d.bio, d.available_days, d.user_id,
+            COALESCE(d.image_url, da.profile_image_url) AS image_url
+     FROM doctors d
+     LEFT JOIN doctor_applications da ON da.user_id = d.user_id
+     WHERE d.user_id = $1
+     ORDER BY da.updated_at DESC NULLS LAST
+     LIMIT 1`,
     [userId]
   );
   const row = result.rows[0];
   if (!row) return null;
+  return mapDoctorProfileRow(row);
+}
+
+function mapDoctorProfileRow(row) {
   return {
     id: row.id,
     name: row.name,
     specialization: row.specialization,
     email: row.email,
     phone: row.phone,
-    imageUrl: row.image_url,
+    imageUrl: row.image_url || null,
     bio: row.bio,
     availableDays: row.available_days || [],
     userId: row.user_id,
   };
+}
+
+/** Links an orphan clinic-doctors row (same email) to the logged-in vet account. */
+async function ensureDoctorProfileForUser(userId) {
+  const existing = await getDoctorProfileByUserId(userId);
+  if (existing) return existing;
+
+  const userRes = await pool.query(
+    'SELECT email FROM auth_users WHERE id = $1',
+    [userId]
+  );
+  const email = userRes.rows[0]?.email;
+  if (!email) return null;
+
+  const docRes = await pool.query(
+    `SELECT id FROM doctors
+     WHERE user_id = $1 OR (user_id IS NULL AND LOWER(email) = LOWER($2))
+     ORDER BY user_id NULLS LAST, id ASC
+     LIMIT 1`,
+    [userId, email]
+  );
+  if (docRes.rows.length === 0) return null;
+
+  await pool.query(
+    `UPDATE doctors SET user_id = $1
+     WHERE id = $2 AND (user_id IS NULL OR user_id = $1)`,
+    [userId, docRes.rows[0].id]
+  );
+  return getDoctorProfileByUserId(userId);
 }
 
 async function approveApplication(applicationId, adminUserId, adminNotes) {
@@ -130,22 +169,23 @@ async function approveApplication(applicationId, adminUserId, adminNotes) {
       await client.query(
         `UPDATE doctors SET
            user_id = $1, name = $2, specialization = $3, phone = $4,
-           bio = $5, available_days = $6
-         WHERE id = $7`,
+           bio = $5, available_days = $6, image_url = COALESCE($7, image_url)
+         WHERE id = $8`,
         [
           app.user_id,
           app.full_name,
           app.specialization,
           app.mobile_number,
           app.bio,
-          app.available_days,
+          app.available_days || [],
+          app.profile_image_url || null,
           doctorId,
         ]
       );
     } else {
       const ins = await client.query(
-        `INSERT INTO doctors (user_id, name, specialization, email, phone, bio, available_days)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO doctors (user_id, name, specialization, email, phone, bio, available_days, image_url)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id`,
         [
           app.user_id,
@@ -154,7 +194,8 @@ async function approveApplication(applicationId, adminUserId, adminNotes) {
           app.email,
           app.mobile_number || null,
           app.bio,
-          app.available_days,
+          app.available_days || [],
+          app.profile_image_url || null,
         ]
       );
       doctorId = ins.rows[0].id;

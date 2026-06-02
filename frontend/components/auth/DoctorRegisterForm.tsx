@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { fileToRawBase64 } from '@/lib/api';
 import {
   DoctorRegisterPayload,
   fetchDoctorApplicationMeta,
@@ -17,12 +18,12 @@ function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(new Error('Could not read document file'));
+    r.onerror = () => reject(new Error('Could not read file'));
     r.readAsDataURL(file);
   });
 }
 
-const STEPS = ['Account', 'Personal', 'Credentials', 'Availability', 'Review'];
+const STEPS = ['Account', 'Personal', 'Credentials', 'Review'];
 
 export default function DoctorRegisterForm({
   onSubmit,
@@ -31,8 +32,9 @@ export default function DoctorRegisterForm({
 }: DoctorRegisterFormProps) {
   const [step, setStep] = useState(0);
   const [licenseFile, setLicenseFile] = useState<File | null>(null);
+  const [profileFile, setProfileFile] = useState<File | null>(null);
   const [localError, setLocalError] = useState('');
-  const [meta, setMeta] = useState<{ specializations: string[]; weekDays: string[] } | null>(null);
+  const [meta, setMeta] = useState<{ specializations: string[] } | null>(null);
   const [form, setForm] = useState({
     email: '',
     password: '',
@@ -47,12 +49,11 @@ export default function DoctorRegisterForm({
     education: '',
     yearsOfExperience: '',
     bio: '',
-    availableDays: [] as string[],
   });
 
   useEffect(() => {
     fetchDoctorApplicationMeta()
-      .then(setMeta)
+      .then((m) => setMeta({ specializations: m.specializations }))
       .catch(() =>
         setMeta({
           specializations: [
@@ -64,21 +65,11 @@ export default function DoctorRegisterForm({
             'Allergist',
             'Therapist',
           ],
-          weekDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
         })
       );
   }, []);
 
   const update = (patch: Partial<typeof form>) => setForm((p) => ({ ...p, ...patch }));
-
-  const toggleDay = (day: string) => {
-    setForm((p) => ({
-      ...p,
-      availableDays: p.availableDays.includes(day)
-        ? p.availableDays.filter((d) => d !== day)
-        : [...p.availableDays, day],
-    }));
-  };
 
   const canNext = () => {
     if (step === 0) {
@@ -97,7 +88,6 @@ export default function DoctorRegisterForm({
         !!licenseFile
       );
     }
-    if (step === 3) return form.availableDays.length > 0;
     return true;
   };
 
@@ -109,6 +99,12 @@ export default function DoctorRegisterForm({
     }
     try {
       const licenseDocumentBase64 = await readFileAsDataUrl(licenseFile);
+      let profileImageBase64: string | undefined;
+      let profileImageFilename: string | undefined;
+      if (profileFile) {
+        profileImageBase64 = await fileToRawBase64(profileFile);
+        profileImageFilename = profileFile.name;
+      }
       await onSubmit({
         email: form.email,
         password: form.password,
@@ -124,32 +120,35 @@ export default function DoctorRegisterForm({
           ? Number(form.yearsOfExperience)
           : undefined,
         bio: form.bio || undefined,
-        availableDays: form.availableDays,
+        availableDays: [],
         licenseDocumentBase64,
         licenseDocumentFilename: licenseFile.name,
+        profileImageBase64,
+        profileImageFilename,
       });
     } catch (e) {
-      setLocalError(e instanceof Error ? e.message : 'Could not read document');
+      setLocalError(e instanceof Error ? e.message : 'Could not read uploaded files');
     }
   };
 
   return (
     <div className="space-y-6">
-      {error && (
+      {error ? (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
         </div>
-      )}
-      {localError && (
+      ) : null}
+      {localError ? (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {localError}
         </div>
-      )}
+      ) : null}
 
       <div className="text-center">
-        <h1 className="text-gray-900">Veterinarian application</h1>
+        <p className="font-sans text-xl font-semibold text-gray-900">Veterinarian application</p>
         <p className="mt-2 text-sm text-gray-600">
-          Submit your credentials for admin verification. You can log in after approval.
+          Submit your credentials for admin verification. After approval, set your availability in your
+          doctor profile.
         </p>
       </div>
 
@@ -192,9 +191,9 @@ export default function DoctorRegisterForm({
               onChange={(e) => update({ confirmPassword: e.target.value })}
               className={inputClass}
             />
-            {form.confirmPassword && form.password !== form.confirmPassword && (
+            {form.confirmPassword && form.password !== form.confirmPassword ? (
               <p className="mt-1 text-xs text-red-600">Passwords do not match</p>
-            )}
+            ) : null}
           </Field>
         </div>
       )}
@@ -236,6 +235,17 @@ export default function DoctorRegisterForm({
 
       {step === 2 && (
         <div className="space-y-4">
+          <Field label="Profile photo">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className={fileInputClass}
+              onChange={(e) => setProfileFile(e.target.files?.[0] || null)}
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              JPG, PNG, or WebP. Shown to pet owners on the veterinarians page.
+            </p>
+          </Field>
           <Field label="Specialization" required>
             <select
               value={form.specialization}
@@ -262,16 +272,10 @@ export default function DoctorRegisterForm({
             <input
               type="file"
               accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/*"
-              required
-              className="block w-full text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-[#ec6d13] file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-[#d65e0f]"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                setLicenseFile(f || null);
-              }}
+              className={fileInputClass}
+              onChange={(e) => setLicenseFile(e.target.files?.[0] || null)}
             />
-            <p className="mt-1 text-xs text-gray-500">
-              PDF or image (JPG, PNG), max 8MB. Required for admin verification.
-            </p>
+            <p className="mt-1 text-xs text-gray-500">PDF or image, max 8MB. For admin verification only.</p>
           </Field>
           <Field label="Qualifications & certifications" required>
             <textarea
@@ -311,28 +315,6 @@ export default function DoctorRegisterForm({
       )}
 
       {step === 3 && (
-        <div>
-          <p className="mb-3 text-sm font-semibold text-gray-900">Available consultation days</p>
-          <div className="flex flex-wrap gap-2">
-            {(meta?.weekDays || []).map((day) => (
-              <button
-                key={day}
-                type="button"
-                onClick={() => toggleDay(day)}
-                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                  form.availableDays.includes(day)
-                    ? 'border-[#ec6d13] bg-orange-50 text-[#ec6d13]'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                }`}
-              >
-                {day}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {step === 4 && (
         <div className="space-y-3 rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
           <p>
             <span className="font-semibold text-gray-900">Name:</span> {form.fullName}
@@ -341,29 +323,22 @@ export default function DoctorRegisterForm({
             <span className="font-semibold text-gray-900">Email:</span> {form.email}
           </p>
           <p>
-            <span className="font-semibold text-gray-900">Specialization:</span>{' '}
-            {form.specialization}
+            <span className="font-semibold text-gray-900">Specialization:</span> {form.specialization}
           </p>
           <p>
-            <span className="font-semibold text-gray-900">License / proof file:</span>{' '}
-            {licenseFile?.name || '—'}
+            <span className="font-semibold text-gray-900">Profile photo:</span> {profileFile?.name || '—'}
           </p>
           <p>
-            <span className="font-semibold text-gray-900">License:</span> {form.licenseNumber}
-          </p>
-          <p>
-            <span className="font-semibold text-gray-900">Days:</span>{' '}
-            {form.availableDays.join(', ')}
+            <span className="font-semibold text-gray-900">License file:</span> {licenseFile?.name || '—'}
           </p>
           <p className="text-xs text-gray-500">
-            By submitting, you confirm that the information provided is accurate. An administrator
-            will review your application before your account is activated.
+            Availability (days and times) can be configured in your doctor profile after admin approval.
           </p>
         </div>
       )}
 
       <div className="flex gap-3">
-        {step > 0 && (
+        {step > 0 ? (
           <button
             type="button"
             onClick={() => setStep((s) => s - 1)}
@@ -371,7 +346,7 @@ export default function DoctorRegisterForm({
           >
             Back
           </button>
-        )}
+        ) : null}
         {step < STEPS.length - 1 ? (
           <button
             type="button"
@@ -425,3 +400,6 @@ function Field({
 
 const inputClass =
   'block w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#ec6d13]';
+
+const fileInputClass =
+  'block w-full text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-[#ec6d13] file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-[#d65e0f]';
