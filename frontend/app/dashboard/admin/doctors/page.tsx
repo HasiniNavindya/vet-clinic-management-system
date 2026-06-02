@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Header from '@/components/layout/Header';
-import { fetchClinicDoctors, type AdminClinicDoctor } from '@/lib/adminClinicDoctors';
+import { fetchClinicDoctors, deleteClinicDoctor, type AdminClinicDoctor } from '@/lib/adminClinicDoctors';
 
 function statusBadge(status: string) {
   switch (status) {
@@ -28,6 +28,7 @@ export default function AdminDoctorsPage() {
   const [doctors, setDoctors] = useState<AdminClinicDoctor[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -51,6 +52,27 @@ export default function AdminDoctorsPage() {
   useEffect(() => {
     if (isAuthenticated && hasRole('admin') && token) load();
   }, [isAuthenticated, hasRole, token, load]);
+
+  const handleDelete = async (d: AdminClinicDoctor) => {
+    if (!token) return;
+    if (
+      !confirm(
+        `Delete "${d.name}"?${d.appointmentsCount > 0 ? ` This profile has ${d.appointmentsCount} appointment(s) and cannot be removed until they are cleared.` : ' This cannot be undone.'}`
+      )
+    ) {
+      return;
+    }
+    setDeletingId(d.id);
+    try {
+      const result = await deleteClinicDoctor(token, d.id);
+      await load();
+      alert(result.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Delete failed');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (isLoading || !isAuthenticated || !hasRole('admin')) {
     return (
@@ -110,6 +132,13 @@ export default function AdminDoctorsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
+                {doctors.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
+                      No doctor profiles yet. Add one or approve a doctor application.
+                    </td>
+                  </tr>
+                ) : null}
                 {doctors.map((d) => (
                   <tr key={d.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium text-gray-900">{d.name}</td>
@@ -137,12 +166,22 @@ export default function AdminDoctorsPage() {
                     </td>
                     <td className="px-4 py-3 tabular-nums text-gray-700">{d.appointmentsCount}</td>
                     <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/dashboard/admin/doctors/${d.id}`}
-                        className="font-semibold text-[#ec6d13] hover:underline"
-                      >
-                        Details
-                      </Link>
+                      <div className="flex flex-wrap items-center justify-end gap-3">
+                        <Link
+                          href={`/dashboard/admin/doctors/${d.id}`}
+                          className="font-semibold text-[#ec6d13] hover:underline"
+                        >
+                          Details
+                        </Link>
+                        <button
+                          type="button"
+                          disabled={deletingId === d.id}
+                          onClick={() => handleDelete(d)}
+                          className="font-semibold text-red-600 hover:text-red-800 disabled:opacity-50"
+                        >
+                          {deletingId === d.id ? 'Deleting…' : 'Delete'}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

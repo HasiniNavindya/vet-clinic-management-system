@@ -17,6 +17,7 @@ const {
   createAppointmentRequest,
   APPOINTMENT_SELECT,
 } = require('../services/appointmentService');
+const { getDoctorProfileByUserId } = require('../services/doctorApplicationService');
 
 const router = express.Router();
 
@@ -34,6 +35,11 @@ router.get('/', authenticateToken, async (req, res) => {
     if (role === 'user') {
       params.push(req.user.id);
       sql += ` AND a.user_id = $${params.length}`;
+    } else if (role === 'doctor') {
+      const profile = await getDoctorProfileByUserId(req.user.id);
+      if (!profile) return res.json([]);
+      params.push(profile.id);
+      sql += ` AND a.doctor_id = $${params.length}`;
     }
 
     if (statusFilter) {
@@ -61,6 +67,12 @@ router.get('/:id', authenticateToken, async (req, res) => {
     const role = req.user.role;
     if (role === 'user' && appointment.userId !== req.user.id) {
       return res.status(403).json({ error: 'Not authorized to view this appointment' });
+    }
+    if (role === 'doctor') {
+      const profile = await getDoctorProfileByUserId(req.user.id);
+      if (!profile || appointment.doctorId !== profile.id) {
+        return res.status(403).json({ error: 'Not authorized to view this appointment' });
+      }
     }
 
     res.json(appointment);
@@ -246,10 +258,17 @@ router.post('/:id/cancel', authenticateToken, requireRole('user'), async (req, r
   }
 });
 
-/** Staff: approve (→ awaiting payment), reject, or reschedule with reason */
-router.patch('/:id/respond', authenticateToken, requireRole('admin', 'doctor', 'receptionist'), async (req, res) => {
-  const { action, reason, appointment_date, appointment_time, doctor_notes, confirmation_message } =
-    req.body;
+/** Reception/admin: approve (→ awaiting payment), reject, or reschedule with reason */
+router.patch('/:id/respond', authenticateToken, requireRole('admin', 'receptionist'), async (req, res) => {
+  const {
+    action,
+    reason,
+    appointment_date,
+    appointment_time,
+    doctor_notes,
+    confirmation_message,
+    doctor_id,
+  } = req.body;
 
   try {
     const existing = await fetchAppointmentById(req.params.id);
@@ -262,9 +281,13 @@ router.patch('/:id/respond', authenticateToken, requireRole('admin', 'doctor', '
         return res.status(400).json({ error: 'Only pending requests can be approved' });
       }
 
+      const assignDoctorId =
+        doctor_id != null && Number.isFinite(Number(doctor_id)) ? Number(doctor_id) : null;
+
       await pool.query(
         `UPDATE appointments
          SET status = 'awaiting_payment',
+             doctor_id = COALESCE($5, doctor_id),
              staff_response_reason = $1,
              doctor_notes = COALESCE($2, doctor_notes),
              confirmation_message = $3,
@@ -279,6 +302,7 @@ router.patch('/:id/respond', authenticateToken, requireRole('admin', 'doctor', '
           confirmation_message ||
             'Your appointment was approved. Please complete online payment to confirm your booking.',
           req.params.id,
+          assignDoctorId,
         ]
       );
     } else if (act === 'reject') {
@@ -372,6 +396,70 @@ router.patch('/:id/respond', authenticateToken, requireRole('admin', 'doctor', '
   }
 });
 
+router.patch('/:id/check-in', authenticateToken, requireRole('admin', 'receptionist'), async (req, res) => {
+  try {
+    const existing = await fetchAppointmentById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Appointment not found' });
+    if (existing.status !== 'approved') {
+      return res.status(400).json({ error: 'Only confirmed (paid) appointments can be checked in' });
+    }
+    await pool.query(
+      `UPDATE appointments SET checked_in_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [req.params.id]
+    );
+    res.json(await fetchAppointmentById(req.params.id));
+  } catch (err) {
+    console.error('Check-in error:', err);
+    res.status(500).json({ error: 'Failed to check in patient' });
+  }
+});
+
+router.patch('/:id/assign-doctor', authenticateToken, requireRole('admin', 'receptionist'), async (req, res) => {
+  const doctorId = Number(req.body?.doctor_id);
+  if (!Number.isFinite(doctorId)) {
+    return res.status(400).json({ error: 'doctor_id is required' });
+  }
+  try {
+    const doc = await pool.query('SELECT id FROM doctors WHERE id = $1', [doctorId]);
+    if (!doc.rows.length) return res.status(400).json({ error: 'Doctor not found' });
+    const existing = await fetchAppointmentById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Appointment not found' });
+    await pool.query(
+      `UPDATE appointments SET doctor_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [doctorId, req.params.id]
+    );
+    res.json(await fetchAppointmentById(req.params.id));
+  } catch (err) {
+    console.error('Assign doctor error:', err);
+    res.status(500).json({ error: 'Failed to assign veterinarian' });
+  }
+});
+
+router.patch('/:id/service-fee', authenticateToken, requireRole('admin', 'doctor'), async (req, res) => {
+  const feeCents = Math.round(Number(req.body?.service_fee_cents));
+  if (!Number.isFinite(feeCents) || feeCents < 0) {
+    return res.status(400).json({ error: 'Valid service_fee_cents is required' });
+  }
+  try {
+    const existing = await fetchAppointmentById(req.params.id);
+    if (!existing) return res.status(404).json({ error: 'Appointment not found' });
+    if (req.user.role === 'doctor') {
+      const profile = await getDoctorProfileByUserId(req.user.id);
+      if (!profile || existing.doctorId !== profile.id) {
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+    }
+    await pool.query(
+      `UPDATE appointments SET service_fee_cents = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [feeCents, req.params.id]
+    );
+    res.json(await fetchAppointmentById(req.params.id));
+  } catch (err) {
+    console.error('Service fee error:', err);
+    res.status(500).json({ error: 'Failed to set service fee' });
+  }
+});
+
 router.patch('/:id/status', authenticateToken, requireRole('admin', 'doctor', 'receptionist'), async (req, res) => {
   const { status, doctor_notes, confirmation_message } = req.body;
 
@@ -384,6 +472,18 @@ router.patch('/:id/status', authenticateToken, requireRole('admin', 'doctor', 'r
     const existing = await fetchAppointmentById(req.params.id);
     if (!existing) {
       return res.status(404).json({ error: 'Appointment not found' });
+    }
+
+    if (req.user.role === 'doctor') {
+      const profile = await getDoctorProfileByUserId(req.user.id);
+      if (!profile || existing.doctorId !== profile.id) {
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+      if (nextStatus !== 'completed') {
+        return res.status(403).json({
+          error: 'Doctors may only mark their assigned appointments as completed',
+        });
+      }
     }
 
     let message = confirmation_message;

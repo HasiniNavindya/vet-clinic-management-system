@@ -74,6 +74,7 @@ router.post('/', authenticateToken, requireRole('admin', 'doctor', 'receptionist
     appointment_id,
     visit_date,
     diagnosis,
+    symptoms,
     treatment,
     consultation_notes,
   } = req.body;
@@ -89,8 +90,8 @@ router.post('/', authenticateToken, requireRole('admin', 'doctor', 'receptionist
     const insert = await pool.query(
       `INSERT INTO pet_medical_records (
          pet_id, doctor_id, appointment_id, visit_date,
-         diagnosis, treatment, consultation_notes, created_by
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         diagnosis, symptoms, treatment, consultation_notes, created_by
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING id`,
       [
         pet_id,
@@ -98,6 +99,7 @@ router.post('/', authenticateToken, requireRole('admin', 'doctor', 'receptionist
         appointment_id || null,
         visit_date,
         diagnosis || null,
+        symptoms || null,
         treatment || null,
         consultation_notes || null,
         req.user.id,
@@ -116,6 +118,7 @@ router.patch('/:id', authenticateToken, requireRole('admin', 'doctor', 'receptio
   const {
     visit_date,
     diagnosis,
+    symptoms,
     treatment,
     consultation_notes,
     doctor_id,
@@ -129,12 +132,13 @@ router.patch('/:id', authenticateToken, requireRole('admin', 'doctor', 'receptio
       `UPDATE pet_medical_records
        SET visit_date = COALESCE($1, visit_date),
            diagnosis = COALESCE($2, diagnosis),
-           treatment = COALESCE($3, treatment),
-           consultation_notes = COALESCE($4, consultation_notes),
-           doctor_id = COALESCE($5, doctor_id),
+           symptoms = COALESCE($3, symptoms),
+           treatment = COALESCE($4, treatment),
+           consultation_notes = COALESCE($5, consultation_notes),
+           doctor_id = COALESCE($6, doctor_id),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6`,
-      [visit_date, diagnosis, treatment, consultation_notes, doctor_id, req.params.id]
+       WHERE id = $7`,
+      [visit_date, diagnosis, symptoms, treatment, consultation_notes, doctor_id, req.params.id]
     );
 
     const updated = await fetchMedicalRecordById(req.params.id);

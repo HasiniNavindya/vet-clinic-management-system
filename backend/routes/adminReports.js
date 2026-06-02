@@ -193,6 +193,43 @@ router.get('/reports/export.csv', async (req, res) => {
         ['id', 'visit_date', 'pet', 'doctor', 'diagnosis', 'treatment', 'created_at']
       );
       filename = `treatments-${y}-${m}.csv`;
+    } else if (report === 'vaccinations') {
+      const r = await pool.query(
+        `SELECT v.id, v.vaccine_name, v.due_date, v.administered_date, v.status,
+                p.pet_name, u.full_name AS owner_name, u.email AS owner_email, d.name AS doctor
+         FROM vaccinations v
+         JOIN pets_owned p ON p.id = v.pet_id
+         JOIN auth_users u ON u.id = p.user_id
+         LEFT JOIN doctors d ON d.id = v.doctor_id
+         WHERE v.due_date >= $1::date AND v.due_date < $2::date
+         ORDER BY v.due_date ASC`,
+        [monthStart, monthEndExclusive]
+      );
+      csv = toCsv(
+        r.rows.map((row) => ({
+          id: row.id,
+          vaccine: row.vaccine_name,
+          due_date: row.due_date,
+          administered: row.administered_date,
+          status: row.status,
+          pet: row.pet_name,
+          owner: row.owner_name,
+          email: row.owner_email,
+          doctor: row.doctor,
+        })),
+        [
+          'id',
+          'vaccine',
+          'due_date',
+          'administered',
+          'status',
+          'pet',
+          'owner',
+          'email',
+          'doctor',
+        ]
+      );
+      filename = `vaccinations-${y}-${m}.csv`;
     } else if (report === 'shop') {
       const r = await pool.query(
         `SELECT o.id, o.status, o.total_cents, o.fulfillment_status, u.full_name, u.email, o.created_at
@@ -218,7 +255,7 @@ router.get('/reports/export.csv', async (req, res) => {
     } else {
       return res.status(400).json({
         error: 'Invalid report type',
-        allowed: ['payments', 'revenue', 'appointments', 'treatments', 'shop'],
+        allowed: ['payments', 'revenue', 'appointments', 'treatments', 'vaccinations', 'shop'],
       });
     }
 

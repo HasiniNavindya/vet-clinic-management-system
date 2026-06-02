@@ -20,6 +20,7 @@ function mapMedicalRecord(row) {
     appointmentId: row.appointment_id,
     visitDate: row.visit_date,
     diagnosis: row.diagnosis,
+    symptoms: row.symptoms,
     treatment: row.treatment,
     consultationNotes: row.consultation_notes,
     createdBy: row.created_by,

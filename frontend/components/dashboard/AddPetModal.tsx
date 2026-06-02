@@ -16,7 +16,8 @@ export default function AddPetModal({ isOpen, onClose, onSuccess, token }: AddPe
     breed: '',
     age_or_dob: '',
     gender: '',
-    vaccination_status: ''
+    vaccination_status: '',
+    weight_kg: '',
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,7 +56,8 @@ export default function AddPetModal({ isOpen, onClose, onSuccess, token }: AddPe
           breed: '',
           age_or_dob: '',
           gender: '',
-          vaccination_status: ''
+          vaccination_status: '',
+          weight_kg: '',
         });
         setImageFile(null);
       } else {
@@ -154,6 +156,19 @@ export default function AddPetModal({ isOpen, onClose, onSuccess, token }: AddPe
               onChange={(e) => setFormData({ ...formData, age_or_dob: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ec6d13] focus:border-transparent"
               placeholder="e.g. 2 years"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Weight (kg)</label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              value={formData.weight_kg}
+              onChange={(e) => setFormData({ ...formData, weight_kg: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#ec6d13] focus:border-transparent"
+              placeholder="e.g. 12.5"
             />
           </div>
 

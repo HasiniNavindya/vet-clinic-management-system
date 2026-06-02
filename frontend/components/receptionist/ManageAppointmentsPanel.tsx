@@ -6,10 +6,14 @@ import StaffRespondModal from '@/components/appointments/StaffRespondModal';
 import {
   Appointment,
   AppointmentStatus,
+  assignAppointmentDoctor,
+  checkInAppointment,
   fetchAppointments,
+  fetchDoctors,
   formatAppointmentDate,
   formatTime,
   staffRespondToAppointment,
+  updateAppointmentStatus,
 } from '@/lib/appointments';
 import { useAuth } from '@/context/AuthContext';
 
@@ -17,15 +21,19 @@ type Props = {
   title?: string;
   defaultFilter?: AppointmentStatus | 'all';
   todayOnly?: boolean;
+  showCheckIn?: boolean;
 };
 
 export default function ManageAppointmentsPanel({
   title = 'Appointment requests',
   defaultFilter = 'pending',
   todayOnly = false,
+  showCheckIn = false,
 }: Props) {
   const { token } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [doctors, setDoctors] = useState<{ id: number; name: string }[]>([]);
+  const [assignDoctor, setAssignDoctor] = useState<Record<number, string>>({});
   const [filter, setFilter] = useState<AppointmentStatus | 'all'>(defaultFilter);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,6 +44,12 @@ export default function ManageAppointmentsPanel({
     action: 'reject' | 'reschedule';
   } | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    fetchDoctors().then((res) => {
+      if (res.ok) setDoctors(res.data.map((d) => ({ id: d.id, name: d.name })));
+    });
+  }, []);
 
   const load = async () => {
     if (!token) return;
@@ -62,15 +76,36 @@ export default function ManageAppointmentsPanel({
     load();
   }, [token, filter, todayOnly]);
 
-  const approve = async (id: number) => {
+  const approve = async (id: number, currentDoctorId: number) => {
     if (!token) return;
     setBusy(true);
+    const doctorId = assignDoctor[id] ? Number(assignDoctor[id]) : currentDoctorId;
     const res = await staffRespondToAppointment(token, id, {
       action: 'approve',
       doctor_notes: notes[id] || undefined,
+      doctor_id: doctorId,
     });
     setBusy(false);
     if (!res.ok) alert((res.data as { error?: string }).error || 'Update failed');
+    else load();
+  };
+
+  const reassignDoctor = async (id: number) => {
+    const doctorId = Number(assignDoctor[id]);
+    if (!token || !doctorId) return alert('Select a veterinarian');
+    setBusy(true);
+    const res = await assignAppointmentDoctor(token, id, doctorId);
+    setBusy(false);
+    if (!res.ok) alert((res.data as { error?: string }).error || 'Failed');
+    else load();
+  };
+
+  const checkIn = async (id: number) => {
+    if (!token) return;
+    setBusy(true);
+    const res = await checkInAppointment(token, id);
+    setBusy(false);
+    if (!res.ok) alert((res.data as { error?: string }).error || 'Check-in failed');
     else load();
   };
 
@@ -98,7 +133,6 @@ export default function ManageAppointmentsPanel({
 
   const complete = async (id: number) => {
     if (!token) return;
-    const { updateAppointmentStatus } = await import('@/lib/appointments');
     const res = await updateAppointmentStatus(token, id, { status: 'completed' });
     if (!res.ok) alert((res.data as { error?: string }).error || 'Update failed');
     else load();
@@ -106,13 +140,11 @@ export default function ManageAppointmentsPanel({
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-gray-900">{title}</h1>
-          <p className="text-sm text-gray-600">
-            Approve, decline, reschedule, or mark visits complete
-          </p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-gray-900">{title}</h1>
+        <p className="text-sm text-gray-600">
+          Confirm availability, assign veterinarians, check in patients, update status
+        </p>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -153,11 +185,40 @@ export default function ManageAppointmentsPanel({
                     {formatTime(apt.appointmentTime)}
                   </p>
                   <AppointmentStatusBadge status={apt.status} className="mt-2" />
+                  {apt.checkedInAt ? (
+                    <p className="mt-1 text-xs font-semibold text-green-700">Checked in</p>
+                  ) : null}
                   {apt.staffResponseReason ? (
                     <p className="mt-2 text-sm text-amber-800">Note: {apt.staffResponseReason}</p>
                   ) : null}
                 </div>
               </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <label className="text-xs font-medium text-gray-600">Veterinarian</label>
+                <select
+                  value={assignDoctor[apt.id] || String(apt.doctorId)}
+                  onChange={(e) => setAssignDoctor((m) => ({ ...m, [apt.id]: e.target.value }))}
+                  className="rounded-lg border border-gray-300 px-2 py-1 text-sm"
+                >
+                  {doctors.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                {apt.status !== 'pending' ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => reassignDoctor(apt.id)}
+                    className="text-xs font-semibold text-[#ec6d13]"
+                  >
+                    Reassign
+                  </button>
+                ) : null}
+              </div>
+
               <textarea
                 placeholder="Internal notes (optional)"
                 value={notes[apt.id] || ''}
@@ -171,7 +232,7 @@ export default function ManageAppointmentsPanel({
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => approve(apt.id)}
+                      onClick={() => approve(apt.id, apt.doctorId)}
                       className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
                     >
                       Approve
@@ -198,6 +259,16 @@ export default function ManageAppointmentsPanel({
                     </button>
                   </>
                 )}
+                {(showCheckIn || apt.status === 'approved') && apt.status === 'approved' && !apt.checkedInAt ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => checkIn(apt.id)}
+                    className="rounded-lg bg-[#ec6d13] px-3 py-1.5 text-sm font-semibold text-white"
+                  >
+                    Check in patient
+                  </button>
+                ) : null}
                 {apt.status === 'approved' && (
                   <button
                     type="button"

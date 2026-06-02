@@ -185,6 +185,34 @@ function linkedUserReminder(row) {
   return `Doctor profile updated. Login access for ${label} is controlled under User management.`;
 }
 
+router.delete('/clinic-doctors/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+
+  try {
+    const existing = await pool.query(
+      `SELECT d.id, d.name,
+              (SELECT COUNT(*)::int FROM appointments a WHERE a.doctor_id = d.id) AS appointments_count
+       FROM doctors d WHERE d.id = $1`,
+      [id]
+    );
+    if (existing.rows.length === 0) return res.status(404).json({ error: 'Doctor not found' });
+
+    const row = existing.rows[0];
+    if (Number(row.appointments_count) > 0) {
+      return res.status(400).json({
+        error: `Cannot delete — this profile has ${row.appointments_count} appointment(s). Reassign or cancel them first.`,
+      });
+    }
+
+    await pool.query('DELETE FROM doctors WHERE id = $1', [id]);
+    res.json({ message: `Doctor profile "${row.name}" removed.` });
+  } catch (err) {
+    console.error('Admin delete clinic-doctor:', err.message);
+    res.status(500).json({ error: 'Failed to delete doctor profile' });
+  }
+});
+
 /**
  * Appointment counts toward schedule visibility (doctor profile only).
  */

@@ -17,6 +17,7 @@ const GROUPS: NavGroup[] = [
       { href: '/dashboard/receptionist/appointments/today', label: "Today's Appointments" },
       { href: '/dashboard/receptionist/appointments/calendar', label: 'Appointment Calendar' },
       { href: '/dashboard/receptionist/appointments/manage', label: 'Approve & Respond' },
+      { href: '/dashboard/receptionist/queue', label: 'Check-in Queue' },
     ],
   },
   {
@@ -51,6 +52,11 @@ const GROUPS: NavGroup[] = [
     id: 'pay',
     label: 'Payments',
     items: [{ href: '/dashboard/receptionist/payments', label: 'Record Offline Payment' }],
+  },
+  {
+    id: 'eod',
+    label: 'End of Day',
+    items: [{ href: '/dashboard/receptionist/eod', label: 'Daily Summary' }],
   },
   {
     id: 'profile',

@@ -154,6 +154,26 @@ export async function fetchReceptionistNotificationHistory(token: string, type?:
   return data.notifications;
 }
 
+export type EodSummary = {
+  date: string;
+  appointmentsToday: number;
+  checkedInToday: number;
+  completedToday: number;
+  pendingRequests: number;
+  ordersPlacedToday: number;
+  paymentsRecordedToday: number;
+  paymentsTotalCents: number;
+};
+
+export async function fetchReceptionistEodSummary(token: string) {
+  const res = await fetch(`${API_BASE_URL}/api/receptionist/eod-summary`, {
+    headers: authHeaders(token),
+  });
+  const data = await parseJson<{ summary: EodSummary; error?: string }>(res);
+  if (!res.ok) throw new Error(data.error || 'Failed');
+  return data.summary;
+}
+
 export async function fetchVaccinationsDue(token: string, withinDays = 30) {
   const res = await fetch(
     `${API_BASE_URL}/api/receptionist/vaccinations-due?withinDays=${withinDays}`,

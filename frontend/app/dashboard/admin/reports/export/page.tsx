@@ -12,6 +12,7 @@ const REPORT_TYPES = [
   { id: 'payments' as const, label: 'Payments / revenue', desc: 'All payment transactions in the month' },
   { id: 'appointments' as const, label: 'Appointments', desc: 'Bookings created in the month' },
   { id: 'treatments' as const, label: 'Treatments', desc: 'Medical records by visit date' },
+  { id: 'vaccinations' as const, label: 'Vaccinations', desc: 'Vaccines due in the selected month' },
   { id: 'shop' as const, label: 'Shop sales', desc: 'Shop orders placed in the month' },
 ];
 

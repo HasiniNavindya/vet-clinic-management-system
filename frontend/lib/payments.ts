@@ -47,6 +47,22 @@ export function formatMoney(cents: number, currency = 'usd') {
   }).format(cents / 100);
 }
 
+export type MyShopOrder = {
+  id: number;
+  paymentStatus: string;
+  totalCents: number;
+  fulfillmentStatus: string;
+  trackingNote?: string;
+  createdAt: string;
+  items: { productName?: string; quantity: number; unitPriceCents: number }[];
+};
+
+export function fetchMyShopOrders(token: string) {
+  return apiFetch<{ orders: MyShopOrder[] }>('/api/payments/my-orders', {
+    headers: authHeaders(token),
+  });
+}
+
 export function fetchPaymentConfig(token: string) {
   return apiFetch<PaymentConfig>('/api/payments/config', {
     headers: authHeaders(token),

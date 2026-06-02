@@ -6,6 +6,7 @@ const {
   getOverview,
   listPetsWithOwners,
   listPetOwners,
+  getEodSummary,
 } = require('../services/receptionistDashboardService');
 const {
   listNotificationsAdmin,
@@ -18,6 +19,15 @@ const router = express.Router();
 const STAFF = ['receptionist', 'admin', 'doctor'];
 
 router.use(authenticateToken, requireRole('receptionist', 'admin'));
+
+router.get('/eod-summary', async (_req, res) => {
+  try {
+    res.json({ summary: await getEodSummary() });
+  } catch (err) {
+    console.error('Receptionist EOD:', err.message);
+    res.status(500).json({ error: 'Failed to load end-of-day summary' });
+  }
+});
 
 router.get('/overview', async (_req, res) => {
   try {

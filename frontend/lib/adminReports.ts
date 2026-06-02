@@ -47,7 +47,7 @@ export async function fetchReportsDashboard(
 
 export async function downloadReportCsv(
   token: string,
-  report: 'payments' | 'revenue' | 'appointments' | 'treatments' | 'shop',
+  report: 'payments' | 'revenue' | 'appointments' | 'treatments' | 'vaccinations' | 'shop',
   year: number,
   month: number
 ): Promise<void> {
