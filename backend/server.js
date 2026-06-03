@@ -42,7 +42,7 @@ const vaccinationsRouter = require("./routes/vaccinations");
 const prescriptionsRouter = require("./routes/prescriptions");
 const paymentsRouter = require("./routes/payments");
 const notificationsRouter = require("./routes/notifications");
-const { getAvailableSlots, getDoctorMonthAvailability } = require("./services/appointmentService");
+const { getAvailableSlots, getDaySchedule, getDoctorMonthAvailability } = require("./services/appointmentService");
 const { handleStripeCheckoutCompleted } = require("./services/paymentService");
 const { constructWebhookEvent } = require("./services/stripeService");
 
@@ -711,11 +711,13 @@ app.get("/api/doctors/:id/availability", authenticateToken, async (req, res) => 
     if (!date) {
       return res.status(400).json({ error: 'Query parameter date is required (YYYY-MM-DD)' });
     }
-    const { available, error } = await getAvailableSlots(Number(id), date);
+    const doctorId = Number(id);
+    const { available, error } = await getAvailableSlots(doctorId, date);
     if (error) {
       return res.status(400).json({ error });
     }
-    res.json({ date, doctorId: Number(id), slots: available });
+    const { schedule } = await getDaySchedule(doctorId, date);
+    res.json({ date, doctorId, slots: available, schedule });
   } catch (error) {
     console.error('Availability error:', error);
     res.status(500).json({ error: 'Failed to load availability' });

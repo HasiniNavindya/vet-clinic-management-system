@@ -41,6 +41,11 @@ export type Appointment = {
   staffRespondedAt?: string | null;
   checkedInAt?: string | null;
   serviceFeeCents?: number | null;
+  hasMedicalRecord?: boolean;
+  consultationFeeCents?: number | null;
+  vaccinationFeeCents?: number | null;
+  medicineFeeCents?: number | null;
+  billingStatus?: 'none' | 'pending' | 'ready' | 'paid' | string;
 };
 
 export type StatusMeta = {
@@ -218,15 +223,26 @@ export async function fetchDoctors() {
   return apiFetch<Doctor[]>('/api/doctors');
 }
 
+export type DaySlotStatus = 'available' | 'booked';
+
+export type DayScheduleSlot = {
+  time: string;
+  status: DaySlotStatus;
+};
+
 export async function fetchDoctorAvailability(
   token: string,
   doctorId: number,
   date: string
 ) {
-  return apiFetch<{ date: string; doctorId: number; slots: string[] }>(
-    `/api/doctors/${doctorId}/availability?date=${date}`,
-    { headers: authHeaders(token) }
-  );
+  return apiFetch<{
+    date: string;
+    doctorId: number;
+    slots: string[];
+    schedule?: DayScheduleSlot[];
+  }>(`/api/doctors/${doctorId}/availability?date=${date}`, {
+    headers: authHeaders(token),
+  });
 }
 
 export function formatAppointmentDate(dateStr: string | null | undefined): string {
@@ -278,6 +294,22 @@ export const OWNER_CANCELLABLE: AppointmentStatus[] = [
   'reschedule_offered',
 ];
 export const OWNER_RESCHEDULABLE: AppointmentStatus[] = ['pending', 'approved'];
+
+/** Confirmed visits on the doctor schedule (excludes pending / awaiting payment). */
+export const DOCTOR_VISIBLE_STATUSES: AppointmentStatus[] = ['approved', 'completed'];
+
+export function isDoctorVisibleAppointment(status: string | undefined): boolean {
+  const s = normalizeAppointmentStatus(status);
+  return s === 'approved' || s === 'completed';
+}
+
+export function canDoctorAddConsultation(
+  status: string | undefined,
+  hasMedicalRecord?: boolean
+): boolean {
+  if (hasMedicalRecord) return false;
+  return normalizeAppointmentStatus(status) === 'approved';
+}
 
 export function statusLabel(status: AppointmentStatus): string {
   const labels: Record<AppointmentStatus, string> = {

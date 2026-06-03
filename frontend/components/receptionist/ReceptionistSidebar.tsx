@@ -45,7 +45,10 @@ const GROUPS: NavGroup[] = [
   {
     id: 'pay',
     label: 'Payments',
-    items: [{ href: '/dashboard/receptionist/payments', label: 'Record Offline Payment' }],
+    items: [
+      { href: '/dashboard/receptionist/billing', label: 'Consultation billing' },
+      { href: '/dashboard/receptionist/payments', label: 'Record offline payment' },
+    ],
   },
   {
     id: 'eod',

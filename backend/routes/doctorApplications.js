@@ -427,21 +427,43 @@ router.get('/doctor/dashboard', authenticateToken, requireRole('doctor'), async 
 
     const apptRes = await pool.query(
       `SELECT a.id, a.appointment_date, a.appointment_time, a.status, a.notes,
-              p.pet_name, u.full_name AS owner_name
+              a.pet_id, p.pet_name, u.full_name AS owner_name,
+              EXISTS (
+                SELECT 1 FROM pet_medical_records r WHERE r.appointment_id = a.id
+              ) AS has_medical_record
        FROM appointments a
        LEFT JOIN pets_owned p ON a.pet_id = p.id
        LEFT JOIN auth_users u ON a.user_id = u.id
        WHERE a.doctor_id = $1
+         AND a.status = 'approved'
          AND a.appointment_date >= CURRENT_DATE
-         AND a.status NOT IN ('cancelled', 'rejected')
+         AND NOT EXISTS (
+           SELECT 1 FROM pet_medical_records r WHERE r.appointment_id = a.id
+         )
        ORDER BY a.appointment_date ASC, a.appointment_time ASC
        LIMIT 20`,
       [profile.id]
     );
 
-    const pendingRes = await pool.query(
-      `SELECT COUNT(*)::int AS count FROM appointments
-       WHERE doctor_id = $1 AND status = 'pending'`,
+    const needingRecordsRes = await pool.query(
+      `SELECT COUNT(*)::int AS count FROM appointments a
+       WHERE a.doctor_id = $1
+         AND a.status = 'approved'
+         AND a.appointment_date >= CURRENT_DATE
+         AND NOT EXISTS (
+           SELECT 1 FROM pet_medical_records r WHERE r.appointment_id = a.id
+         )`,
+      [profile.id]
+    );
+
+    const todayRes = await pool.query(
+      `SELECT COUNT(*)::int AS count FROM appointments a
+       WHERE a.doctor_id = $1
+         AND a.status = 'approved'
+         AND a.appointment_date = CURRENT_DATE
+         AND NOT EXISTS (
+           SELECT 1 FROM pet_medical_records r WHERE r.appointment_id = a.id
+         )`,
       [profile.id]
     );
 
@@ -457,15 +479,18 @@ router.get('/doctor/dashboard', authenticateToken, requireRole('doctor'), async 
       },
       upcomingAppointments: apptRes.rows.map((r) => ({
         id: r.id,
+        petId: r.pet_id,
         appointmentDate: r.appointment_date,
         appointmentTime: r.appointment_time,
         status: r.status,
         notes: r.notes,
         petName: r.pet_name,
         ownerName: r.owner_name,
+        hasMedicalRecord: Boolean(r.has_medical_record),
       })),
       stats: {
-        pendingRequests: pendingRes.rows[0]?.count || 0,
+        confirmedUpcoming: needingRecordsRes.rows[0]?.count ?? 0,
+        todayCount: todayRes.rows[0]?.count ?? 0,
         upcomingCount: apptRes.rows.length,
       },
     });

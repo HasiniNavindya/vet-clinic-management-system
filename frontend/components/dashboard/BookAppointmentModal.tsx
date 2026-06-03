@@ -1,7 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Doctor, fetchDoctorAvailability, fetchDoctors } from '@/lib/appointments';
+import {
+  DayScheduleSlot,
+  Doctor,
+  fetchDoctorAvailability,
+  fetchDoctors,
+  formatTime,
+} from '@/lib/appointments';
 import { createAppointmentCheckout } from '@/lib/payments';
 
 interface Pet {
@@ -28,7 +34,7 @@ export default function BookAppointmentModal({
   selectedDoctorId,
 }: BookAppointmentModalProps) {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [slots, setSlots] = useState<string[]>([]);
+  const [schedule, setSchedule] = useState<DayScheduleSlot[]>([]);
   const [formData, setFormData] = useState({
     doctor_id: '',
     pet_id: '',
@@ -52,12 +58,19 @@ export default function BookAppointmentModal({
 
   useEffect(() => {
     if (!isOpen || !token || !formData.doctor_id || !formData.appointment_date) {
-      setSlots([]);
+      setSchedule([]);
       return;
     }
     fetchDoctorAvailability(token, Number(formData.doctor_id), formData.appointment_date).then((res) => {
-      if (res.ok) setSlots(res.data.slots);
-      else setSlots([]);
+      if (res.ok) {
+        const daySchedule =
+          res.data.schedule?.length
+            ? res.data.schedule
+            : res.data.slots.map((time) => ({ time, status: 'available' as const }));
+        setSchedule(daySchedule);
+      } else {
+        setSchedule([]);
+      }
     });
   }, [isOpen, token, formData.doctor_id, formData.appointment_date]);
 
@@ -112,7 +125,7 @@ export default function BookAppointmentModal({
           }
         />
         <TimeSelect
-          slots={slots}
+          schedule={schedule}
           doctorId={formData.doctor_id}
           date={formData.appointment_date}
           value={formData.appointment_time}
@@ -268,18 +281,19 @@ function DateField({
 }
 
 function TimeSelect({
-  slots,
+  schedule,
   doctorId,
   date,
   value,
   onChange,
 }: {
-  slots: string[];
+  schedule: DayScheduleSlot[];
   doctorId: string;
   date: string;
   value: string;
   onChange: (v: string) => void;
 }) {
+  const available = schedule.filter((s) => s.status === 'available');
   return (
     <div>
       <label className="mb-2 block text-sm font-semibold text-gray-700">
@@ -287,7 +301,7 @@ function TimeSelect({
       </label>
       {!doctorId || !date ? (
         <p className="text-sm text-gray-500">Select doctor and date first</p>
-      ) : slots.length === 0 ? (
+      ) : schedule.length === 0 ? (
         <p className="text-sm text-amber-700">No slots available</p>
       ) : (
         <select
@@ -297,13 +311,17 @@ function TimeSelect({
           className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-transparent focus:ring-2 focus:ring-[#ec6d13]"
         >
           <option value="">Select time</option>
-          {slots.map((slot) => (
-            <option key={slot} value={slot}>
-              {slot}
+          {schedule.map((slot) => (
+            <option key={slot.time} value={slot.time} disabled={slot.status === 'booked'}>
+              {formatTime(slot.time)}
+              {slot.status === 'booked' ? ' (Booked)' : ''}
             </option>
           ))}
         </select>
       )}
+      {schedule.length > 0 && available.length === 0 ? (
+        <p className="mt-1 text-xs text-amber-700">All times on this day are booked.</p>
+      ) : null}
     </div>
   );
 }

@@ -9,6 +9,12 @@ const {
   getEodSummary,
 } = require('../services/receptionistDashboardService');
 const {
+  APPOINTMENT_SELECT,
+  mapAppointmentRow,
+  fetchAppointmentById,
+} = require('../services/appointmentService');
+const { recordOfflinePayment } = require('../services/paymentService');
+const {
   listNotificationsAdmin,
   broadcastAnnouncement,
   runAllReminderJobs,
@@ -213,6 +219,96 @@ router.post('/notifications/run-reminders', async (_req, res) => {
   } catch (err) {
     console.error('Receptionist reminders:', err.message);
     res.status(500).json({ error: 'Failed to run reminders' });
+  }
+});
+
+/** Visits finished by doctor — waiting for reception to add charges. */
+router.get('/billing-queue', async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `${APPOINTMENT_SELECT}
+       WHERE a.status = 'completed'
+         AND COALESCE(a.billing_status, 'none') IN ('pending', 'ready')
+       ORDER BY a.updated_at DESC
+       LIMIT 50`
+    );
+    res.json(result.rows.map(mapAppointmentRow));
+  } catch (err) {
+    console.error('Billing queue error:', err.message);
+    res.status(500).json({ error: 'Failed to load billing queue' });
+  }
+});
+
+router.patch('/appointments/:id/billing', async (req, res) => {
+  const appointmentId = Number(req.params.id);
+  const {
+    consultation_fee_cents,
+    vaccination_fee_cents,
+    medicine_fee_cents,
+    record_payment,
+    payment_method,
+    payment_notes,
+  } = req.body;
+
+  try {
+    const existing = await fetchAppointmentById(appointmentId);
+    if (!existing) return res.status(404).json({ error: 'Appointment not found' });
+    if (existing.status !== 'completed') {
+      return res.status(400).json({ error: 'Billing applies only to completed consultations' });
+    }
+
+    const consultCents = Math.max(0, Math.round(Number(consultation_fee_cents) || 0));
+    const vaccCents = Math.max(0, Math.round(Number(vaccination_fee_cents) || 0));
+    const medCents = Math.max(0, Math.round(Number(medicine_fee_cents) || 0));
+    const totalCents = consultCents + vaccCents + medCents;
+
+    if (totalCents <= 0) {
+      return res.status(400).json({ error: 'Enter at least one charge amount' });
+    }
+
+    await pool.query(
+      `UPDATE appointments
+       SET consultation_fee_cents = $1,
+           vaccination_fee_cents = $2,
+           medicine_fee_cents = $3,
+           service_fee_cents = $4,
+           billing_status = $5,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $6`,
+      [
+        consultCents,
+        vaccCents,
+        medCents,
+        totalCents,
+        record_payment ? 'paid' : 'ready',
+        appointmentId,
+      ]
+    );
+
+    if (record_payment && existing.userId) {
+      const parts = [];
+      if (consultCents) parts.push(`Consultation $${(consultCents / 100).toFixed(2)}`);
+      if (vaccCents) parts.push(`Vaccination $${(vaccCents / 100).toFixed(2)}`);
+      if (medCents) parts.push(`Medicine $${(medCents / 100).toFixed(2)}`);
+      const payResult = await recordOfflinePayment(req.user.id, {
+        user_id: existing.userId,
+        amount_cents: totalCents,
+        type: 'consultation',
+        description: `Visit charges — ${existing.petName || 'Pet'} (${parts.join(', ')})`,
+        reference_type: 'appointment',
+        reference_id: appointmentId,
+        payment_method: payment_method || 'cash',
+        notes: payment_notes || null,
+      });
+      if (!payResult.ok) {
+        return res.status(400).json({ error: payResult.error || 'Payment recording failed' });
+      }
+    }
+
+    res.json(await fetchAppointmentById(appointmentId));
+  } catch (err) {
+    console.error('Billing update error:', err.message);
+    res.status(500).json({ error: err.message || 'Failed to save billing' });
   }
 });
 

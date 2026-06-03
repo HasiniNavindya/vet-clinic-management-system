@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { fetchDoctorAvailability, fetchDoctorMonthCalendar, formatTime } from '@/lib/appointments';
+import {
+  DayScheduleSlot,
+  fetchDoctorAvailability,
+  fetchDoctorMonthCalendar,
+  formatTime,
+} from '@/lib/appointments';
 
 type Props = {
   token: string;
@@ -25,7 +30,7 @@ export default function DoctorBookingCalendar({
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
   const [dates, setDates] = useState<Record<string, { availableCount: number; hasSlots: boolean }>>({});
-  const [slots, setSlots] = useState<string[]>([]);
+  const [schedule, setSchedule] = useState<DayScheduleSlot[]>([]);
   const [loadingMonth, setLoadingMonth] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
@@ -40,16 +45,28 @@ export default function DoctorBookingCalendar({
 
   useEffect(() => {
     if (!doctorId || !selectedDate) {
-      setSlots([]);
+      setSchedule([]);
       return;
     }
     setLoadingSlots(true);
     fetchDoctorAvailability(token, doctorId, selectedDate).then((res) => {
-      if (res.ok) setSlots(res.data.slots);
-      else setSlots([]);
+      if (res.ok) {
+        const daySchedule =
+          res.data.schedule?.length
+            ? res.data.schedule
+            : res.data.slots.map((time) => ({ time, status: 'available' as const }));
+        setSchedule(daySchedule);
+      } else {
+        setSchedule([]);
+      }
       setLoadingSlots(false);
     });
   }, [token, doctorId, selectedDate]);
+
+  const availableSlots = useMemo(
+    () => schedule.filter((s) => s.status === 'available').map((s) => s.time),
+    [schedule]
+  );
 
   const calendarDays = useMemo(() => {
     const [y, m] = month.split('-').map(Number);
@@ -151,7 +168,8 @@ export default function DoctorBookingCalendar({
               })}
             </div>
             <p className="mt-3 text-xs text-gray-500">
-              Green days have open slots. Select a date to see times.
+              Green days have open slots. Past dates cannot be selected. Booked times are marked
+              and cannot be chosen.
             </p>
           </>
         )}
@@ -163,25 +181,42 @@ export default function DoctorBookingCalendar({
           <p className="text-sm text-gray-500">Select a date on the calendar</p>
         ) : loadingSlots ? (
           <p className="text-sm text-gray-500">Loading times…</p>
-        ) : slots.length === 0 ? (
+        ) : schedule.length === 0 ? (
           <p className="text-sm text-amber-700">No slots available for this day</p>
         ) : (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {slots.map((slot) => (
-              <button
-                key={slot}
-                type="button"
-                onClick={() => onSelectTime(slot)}
-                className={`rounded-lg border px-2 py-2 text-sm font-medium ${
-                  selectedTime === slot
-                    ? 'border-[#ec6d13] bg-[#ec6d13] text-white'
-                    : 'border-gray-200 text-gray-700 hover:border-[#ec6d13]/50'
-                }`}
-              >
-                {formatTime(slot)}
-              </button>
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {schedule.map((slot) => {
+                const booked = slot.status === 'booked';
+                return (
+                  <button
+                    key={slot.time}
+                    type="button"
+                    disabled={booked}
+                    onClick={() => onSelectTime(slot.time)}
+                    className={`rounded-lg border px-2 py-2 text-sm font-medium ${
+                      booked
+                        ? 'cursor-not-allowed border-gray-100 bg-gray-50 text-gray-400 line-through'
+                        : selectedTime === slot.time
+                          ? 'border-[#ec6d13] bg-[#ec6d13] text-white'
+                          : 'border-gray-200 text-gray-700 hover:border-[#ec6d13]/50'
+                    }`}
+                    title={booked ? 'Already booked' : 'Available'}
+                  >
+                    {formatTime(slot.time)}
+                    {booked ? (
+                      <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-gray-400 no-underline">
+                        Booked
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+            {availableSlots.length === 0 && schedule.length > 0 ? (
+              <p className="mt-3 text-sm text-amber-700">All times on this day are booked.</p>
+            ) : null}
+          </>
         )}
       </div>
     </div>

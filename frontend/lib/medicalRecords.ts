@@ -7,6 +7,7 @@ export type MedicalRecord = {
   appointmentId?: number | null;
   visitDate: string;
   diagnosis?: string | null;
+  symptoms?: string | null;
   treatment?: string | null;
   consultationNotes?: string | null;
   petName?: string;
@@ -37,6 +38,20 @@ export async function fetchPetTimeline(token: string, petId: number) {
 
 export async function fetchMedicalRecord(token: string, id: number | string) {
   return apiFetch<MedicalRecord>(`/api/medical-records/${id}`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function fetchConsultationByAppointment(
+  token: string,
+  appointmentId: number | string
+) {
+  return apiFetch<{
+    appointmentId: number;
+    appointmentStatus: string;
+    hasRecord: boolean;
+    record: MedicalRecord | null;
+  }>(`/api/medical-records/by-appointment/${appointmentId}`, {
     headers: authHeaders(token),
   });
 }

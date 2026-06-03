@@ -38,6 +38,14 @@ async function fetchMedicalRecordById(id) {
   return result.rows[0] ? mapMedicalRecord(result.rows[0]) : null;
 }
 
+async function fetchMedicalRecordByAppointmentId(appointmentId) {
+  const result = await pool.query(
+    `${RECORD_SELECT} WHERE r.appointment_id = $1 ORDER BY r.created_at DESC LIMIT 1`,
+    [appointmentId]
+  );
+  return result.rows[0] ? mapMedicalRecord(result.rows[0]) : null;
+}
+
 async function listMedicalRecords({ petId, userId, role }) {
   const params = [];
   let sql = `${RECORD_SELECT} WHERE 1=1`;
@@ -61,5 +69,6 @@ async function listMedicalRecords({ petId, userId, role }) {
 module.exports = {
   mapMedicalRecord,
   fetchMedicalRecordById,
+  fetchMedicalRecordByAppointmentId,
   listMedicalRecords,
 };

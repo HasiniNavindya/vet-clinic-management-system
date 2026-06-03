@@ -11,6 +11,7 @@ import {
   acceptRescheduleOffer,
   cancelAppointment,
   fetchAppointment,
+  DayScheduleSlot,
   fetchDoctorAvailability,
   formatAppointmentDate,
   formatTime,
@@ -31,7 +32,7 @@ export default function AppointmentDetailPage() {
   const [error, setError] = useState('');
   const [actionError, setActionError] = useState('');
   const [showReschedule, setShowReschedule] = useState(false);
-  const [slots, setSlots] = useState<string[]>([]);
+  const [schedule, setSchedule] = useState<DayScheduleSlot[]>([]);
   const [rescheduleForm, setRescheduleForm] = useState({ appointment_date: '', appointment_time: '' });
   const [cancelReason, setCancelReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -68,7 +69,15 @@ export default function AppointmentDetailPage() {
   useEffect(() => {
     if (!token || !appointment || !showReschedule || !rescheduleForm.appointment_date) return;
     fetchDoctorAvailability(token, appointment.doctorId, rescheduleForm.appointment_date).then((res) => {
-      if (res.ok) setSlots(res.data.slots);
+      if (res.ok) {
+        const daySchedule =
+          res.data.schedule?.length
+            ? res.data.schedule
+            : res.data.slots.map((time) => ({ time, status: 'available' as const }));
+        setSchedule(daySchedule);
+      } else {
+        setSchedule([]);
+      }
     });
   }, [token, appointment, showReschedule, rescheduleForm.appointment_date]);
 
@@ -220,7 +229,7 @@ export default function AppointmentDetailPage() {
           <RescheduleForm
             form={rescheduleForm}
             setForm={setRescheduleForm}
-            slots={slots}
+            schedule={schedule}
             busy={busy}
             onSubmit={handleReschedule}
             onCancel={() => setShowReschedule(false)}
@@ -315,14 +324,14 @@ function NotesField({ appointment }: { appointment: Appointment }) {
 function RescheduleForm({
   form,
   setForm,
-  slots,
+  schedule,
   busy,
   onSubmit,
   onCancel,
 }: {
   form: { appointment_date: string; appointment_time: string };
   setForm: (f: { appointment_date: string; appointment_time: string }) => void;
-  slots: string[];
+  schedule: DayScheduleSlot[];
   busy: boolean;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
@@ -346,9 +355,10 @@ function RescheduleForm({
         className="w-full rounded-lg border border-gray-300 px-3 py-2"
       >
         <option value="">Select time</option>
-        {slots.map((s) => (
-          <option key={s} value={s}>
-            {s}
+        {schedule.map((s) => (
+          <option key={s.time} value={s.time} disabled={s.status === 'booked'}>
+            {formatTime(s.time)}
+            {s.status === 'booked' ? ' (Booked)' : ''}
           </option>
         ))}
       </select>

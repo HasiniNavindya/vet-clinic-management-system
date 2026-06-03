@@ -4,8 +4,11 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 const { getPetForUser } = require('../services/petAccess');
 const {
   fetchMedicalRecordById,
+  fetchMedicalRecordByAppointmentId,
   listMedicalRecords,
 } = require('../services/medicalRecordService');
+const { fetchAppointmentById } = require('../services/appointmentService');
+const { getDoctorProfileByUserId } = require('../services/doctorApplicationService');
 
 const router = express.Router();
 
@@ -52,6 +55,45 @@ router.get('/pet/:petId/timeline', authenticateToken, async (req, res) => {
   }
 });
 
+router.get('/by-appointment/:appointmentId', authenticateToken, async (req, res) => {
+  try {
+    const appointmentId = Number(req.params.appointmentId);
+    if (!appointmentId) {
+      return res.status(400).json({ error: 'Invalid appointment id' });
+    }
+
+    const appointment = await fetchAppointmentById(appointmentId);
+    if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
+
+    if (req.user.role === 'user') {
+      if (appointment.userId !== req.user.id) {
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+    } else if (appointment.petId) {
+      const access = await getPetForUser(appointment.petId, req.user.id, req.user.role);
+      if (!access.ok) return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    if (req.user.role === 'doctor') {
+      const profile = await getDoctorProfileByUserId(req.user.id);
+      if (!profile || appointment.doctorId !== profile.id) {
+        return res.status(403).json({ error: 'Not authorized' });
+      }
+    }
+
+    const record = await fetchMedicalRecordByAppointmentId(appointmentId);
+    res.json({
+      appointmentId,
+      appointmentStatus: appointment.status,
+      hasRecord: Boolean(record),
+      record,
+    });
+  } catch (err) {
+    console.error('Consultation by appointment error:', err);
+    res.status(500).json({ error: 'Failed to fetch consultation status' });
+  }
+});
+
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const record = await fetchMedicalRecordById(req.params.id);
@@ -87,6 +129,38 @@ router.post('/', authenticateToken, requireRole('admin', 'doctor', 'receptionist
     const access = await getPetForUser(Number(pet_id), req.user.id, req.user.role);
     if (!access.ok) return res.status(404).json({ error: access.error });
 
+    if (appointment_id) {
+      const appointment = await fetchAppointmentById(Number(appointment_id));
+      if (!appointment) {
+        return res.status(404).json({ error: 'Appointment not found' });
+      }
+      if (appointment.petId !== Number(pet_id)) {
+        return res.status(400).json({ error: 'Appointment does not match this pet' });
+      }
+      if (appointment.status === 'completed') {
+        return res.status(400).json({
+          error: 'This visit is already completed. Consultation records cannot be added again.',
+        });
+      }
+      if (appointment.status !== 'approved') {
+        return res.status(400).json({
+          error: 'Consultation records can only be added for confirmed appointments',
+        });
+      }
+      if (req.user.role === 'doctor') {
+        const profile = await getDoctorProfileByUserId(req.user.id);
+        if (!profile || appointment.doctorId !== profile.id) {
+          return res.status(403).json({ error: 'Not authorized for this appointment' });
+        }
+      }
+      const existing = await fetchMedicalRecordByAppointmentId(Number(appointment_id));
+      if (existing) {
+        return res.status(400).json({
+          error: 'Consultation records already exist for this appointment',
+        });
+      }
+    }
+
     const insert = await pool.query(
       `INSERT INTO pet_medical_records (
          pet_id, doctor_id, appointment_id, visit_date,
@@ -106,7 +180,52 @@ router.post('/', authenticateToken, requireRole('admin', 'doctor', 'receptionist
       ]
     );
 
-    const record = await fetchMedicalRecordById(insert.rows[0].id);
+    const recordId = insert.rows[0].id;
+
+    let updatedAppointment = null;
+    if (appointment_id) {
+      await pool.query(
+        `UPDATE appointments
+         SET status = 'completed',
+             billing_status = 'pending',
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND status = 'approved'`,
+        [Number(appointment_id)]
+      );
+      try {
+        updatedAppointment = await fetchAppointmentById(Number(appointment_id));
+        const {
+          notifyReceptionConsultationReady,
+          notifyPetOwnerConsultationRecord,
+        } = require('../services/notificationService');
+        await notifyReceptionConsultationReady(updatedAppointment);
+        if (updatedAppointment.userId) {
+          const recordDraft = await fetchMedicalRecordById(recordId);
+          await notifyPetOwnerConsultationRecord(updatedAppointment.userId, {
+            appointment: updatedAppointment,
+            record: recordDraft,
+            petName: access.pet?.pet_name,
+          });
+        }
+      } catch (notifyErr) {
+        console.error('Consultation notification error:', notifyErr.message);
+      }
+    }
+
+    const record = await fetchMedicalRecordById(recordId);
+
+    if (!appointment_id && access.pet?.user_id) {
+      try {
+        const { notifyPetOwnerConsultationRecord } = require('../services/notificationService');
+        await notifyPetOwnerConsultationRecord(access.pet.user_id, {
+          appointment: null,
+          record,
+          petName: access.pet.pet_name,
+        });
+      } catch (notifyErr) {
+        console.error('Pet owner record notification error:', notifyErr.message);
+      }
+    }
     res.status(201).json(record);
   } catch (err) {
     console.error('Create medical record error:', err);

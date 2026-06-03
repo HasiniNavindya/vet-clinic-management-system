@@ -4,8 +4,12 @@ export type NotificationType =
   | 'appointment_reminder'
   | 'appointment_confirmed'
   | 'appointment_status'
+  | 'doctor_appointment_assigned'
+  | 'consultation_billing_ready'
+  | 'consultation_record_added'
   | 'payment_confirmation'
-  | 'vaccination_alert';
+  | 'vaccination_alert'
+  | 'announcement';
 
 export type AppNotification = {
   id: number;
@@ -53,8 +57,12 @@ export function notificationTypeLabel(type: NotificationType) {
     appointment_reminder: 'Appointment reminder',
     appointment_confirmed: 'Appointment confirmed',
     appointment_status: 'Appointment update',
+    doctor_appointment_assigned: 'Assigned visit',
+    consultation_billing_ready: 'Billing',
+    consultation_record_added: 'Consultation record',
     payment_confirmation: 'Payment',
     vaccination_alert: 'Vaccination',
+    announcement: 'Announcement',
   };
   return labels[type] || type;
 }

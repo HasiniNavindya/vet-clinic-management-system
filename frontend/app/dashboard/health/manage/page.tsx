@@ -3,8 +3,13 @@
 import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import DoctorShell from '@/components/doctor/DoctorShell';
+import DoctorPageHeader from '@/components/doctor/DoctorPageHeader';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, authHeaders } from '@/lib/api';
+import { fetchDoctorDashboard } from '@/lib/doctorApplications';
+import { fetchConsultationByAppointment } from '@/lib/medicalRecords';
+import type { MedicalRecord } from '@/lib/medicalRecords';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
@@ -12,20 +17,51 @@ type Pet = { id: number; pet_name: string };
 type Doctor = { id: number; name: string };
 type Tab = 'medical' | 'vaccination' | 'prescription';
 
+function pageCopy(isDoctor: boolean, isReceptionist: boolean) {
+  if (isDoctor) {
+    return {
+      title: 'Patient clinical records',
+      subtitle: 'Document visit notes, vaccinations, and prescriptions for pets in your care',
+      backHref: '/dashboard/doctor/appointments',
+      backLabel: '← My appointments',
+    };
+  }
+  if (isReceptionist) {
+    return {
+      title: 'Patient health records',
+      subtitle: 'Add medical history, vaccinations, and prescriptions on behalf of the clinic',
+      backHref: '/dashboard/receptionist/appointments/calendar',
+      backLabel: '← Appointments',
+    };
+  }
+  return {
+    title: 'Patient health records',
+    subtitle: 'Add medical history, vaccinations, and prescriptions',
+    backHref: '/dashboard/calendar',
+    backLabel: '← Calendar',
+  };
+}
+
 export default function HealthManagePage() {
   const searchParams = useSearchParams();
-  const { token, hasRole } = useAuth();
+  const { token, hasRole, user } = useAuth();
+  const isDoctor = hasRole('doctor');
+  const isReceptionist = hasRole('receptionist');
+  const copy = pageCopy(isDoctor, isReceptionist);
+
   const [tab, setTab] = useState<Tab>('medical');
   const [pets, setPets] = useState<Pet[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [consultationLocked, setConsultationLocked] = useState(false);
+  const [existingConsultation, setExistingConsultation] = useState<MedicalRecord | null>(null);
+  const [consultationLoading, setConsultationLoading] = useState(false);
 
   const [timeline, setTimeline] = useState<
     { visitDate: string; diagnosis?: string; symptoms?: string; treatment?: string }[]
   >([]);
-  const [serviceFee, setServiceFee] = useState({ appointmentId: '', amount: '' });
   const [medical, setMedical] = useState({
     pet_id: '',
     doctor_id: '',
@@ -71,21 +107,60 @@ export default function HealthManagePage() {
         appointment_id: appointmentId || '',
         visit_date: new Date().toISOString().slice(0, 10),
       }));
+      setVaccination((s) => ({ ...s, pet_id: petId }));
+      setPrescription((s) => ({ ...s, pet_id: petId }));
       fetch(`${API_BASE_URL}/api/medical-records/pet/${petId}/timeline`, {
         headers: authHeaders(token),
       })
         .then((r) => r.json())
         .then((d) => setTimeline(d.timeline || []));
     }
-    if (appointmentId) {
-      setServiceFee((s) => ({ ...s, appointmentId }));
-    }
     fetch(`${API_BASE_URL}/api/clinic/pets`, { headers: authHeaders(token) })
       .then((r) => r.json())
       .then((d) => setPets(Array.isArray(d) ? d : []));
-    fetch(`${API_BASE_URL}/api/doctors`)
-      .then((r) => r.json())
-      .then((d) => setDoctors(Array.isArray(d) ? d : []));
+    if (!isDoctor) {
+      fetch(`${API_BASE_URL}/api/doctors`)
+        .then((r) => r.json())
+        .then((d) => setDoctors(Array.isArray(d) ? d : []));
+    } else {
+      fetchDoctorDashboard(token).then((data) => {
+        const profile = data as { profile?: { id?: number } };
+        const id = profile.profile?.id;
+        if (id) {
+          const idStr = String(id);
+          setMedical((s) => ({ ...s, doctor_id: idStr }));
+          setVaccination((s) => ({ ...s, doctor_id: idStr }));
+          setPrescription((s) => ({ ...s, doctor_id: idStr }));
+        }
+      });
+    }
+  }, [token, searchParams, isDoctor]);
+
+  useEffect(() => {
+    const appointmentId = searchParams.get('appointmentId');
+    if (!token || !appointmentId) {
+      setConsultationLocked(false);
+      setExistingConsultation(null);
+      return;
+    }
+    setConsultationLoading(true);
+    fetchConsultationByAppointment(token, appointmentId).then((res) => {
+      setConsultationLoading(false);
+      if (!res.ok) return;
+      const locked = res.data.hasRecord || res.data.appointmentStatus === 'completed';
+      setConsultationLocked(locked);
+      setExistingConsultation(res.data.record);
+      if (locked && res.data.record) {
+        setMedical((s) => ({
+          ...s,
+          visit_date: res.data.record!.visitDate?.slice(0, 10) || s.visit_date,
+          symptoms: res.data.record!.symptoms || '',
+          diagnosis: res.data.record!.diagnosis || '',
+          treatment: res.data.record!.treatment || '',
+          consultation_notes: res.data.record!.consultationNotes || '',
+        }));
+      }
+    });
   }, [token, searchParams]);
 
   useEffect(() => {
@@ -99,7 +174,7 @@ export default function HealthManagePage() {
 
   const submitMedical = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
+    if (!token || consultationLocked) return;
     setSubmitting(true);
     setError('');
     setMessage('');
@@ -116,7 +191,13 @@ export default function HealthManagePage() {
     const data = await res.json();
     setSubmitting(false);
     if (!res.ok) return setError(data.error || 'Failed');
-    setMessage('Medical record saved.');
+    setMessage(
+      'Consultation saved. Visit marked Finished — reception will add consultation, vaccination, and medicine charges.'
+    );
+    if (medical.appointment_id) {
+      setConsultationLocked(true);
+      setExistingConsultation(data);
+    }
   };
 
   const submitVaccination = async (e: React.FormEvent) => {
@@ -178,114 +259,285 @@ export default function HealthManagePage() {
     setMessage(`Prescription ${data.prescriptionNumber} created.`);
   };
 
-  return (
-    <ProtectedRoute allowedRoles={['admin', 'doctor', 'receptionist']}>
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="container mx-auto max-w-3xl px-4 py-8 pt-28">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h1 className="text-gray-900">Health records (clinic)</h1>
-              <p className="text-gray-600">Add medical history, vaccinations, and prescriptions</p>
-            </div>
-            <Link href="/dashboard/calendar" className="text-sm font-semibold text-[#ec6d13]">
-              ← Calendar
-            </Link>
+  const content = (
+    <div className="mx-auto max-w-3xl">
+      {isDoctor ? (
+        <DoctorPageHeader title={copy.title} subtitle={copy.subtitle} />
+      ) : (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="font-sans text-[1.95rem] font-semibold tracking-tight text-gray-900">
+              {copy.title}
+            </h1>
+            <p className="mt-1 text-sm text-gray-600">{copy.subtitle}</p>
           </div>
+          <Link href={copy.backHref} className="text-sm font-semibold text-[#ec6d13] hover:underline">
+            {copy.backLabel}
+          </Link>
+        </div>
+      )}
 
-          <TabBar tab={tab} setTab={setTab} />
+      {isDoctor ? (
+        <Link
+          href={copy.backHref}
+          className="mb-6 inline-block text-sm font-semibold text-[#ec6d13] hover:underline"
+        >
+          {copy.backLabel}
+        </Link>
+      ) : null}
 
-          {message ? <p className="mb-4 text-green-700">{message}</p> : null}
-          {error ? <p className="mb-4 text-red-600">{error}</p> : null}
+      <TabBar tab={tab} setTab={setTab} />
 
-          {medical.pet_id && timeline.length > 0 ? (
-            <div className="mb-6 max-w-lg rounded-xl border border-gray-100 bg-white p-4">
-              <p className="text-sm font-semibold text-gray-900">Prior medical history</p>
-              <ul className="mt-2 max-h-40 space-y-2 overflow-y-auto text-sm text-gray-600">
-                {timeline.slice(0, 5).map((t, i) => (
-                  <li key={i}>
-                    {t.visitDate}: {t.symptoms || t.diagnosis || 'Visit recorded'}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+      {message ? (
+        <p className="mb-4 rounded-lg bg-green-50 px-4 py-2 text-sm text-green-800">{message}</p>
+      ) : null}
+      {error ? (
+        <p className="mb-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>
+      ) : null}
 
-          {hasRole('doctor', 'admin') && serviceFee.appointmentId ? (
-            <form
-              className="mb-6 max-w-lg space-y-3 rounded-xl border border-dashed border-[#ec6d13]/40 bg-orange-50/50 p-4"
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (!token) return;
-                const cents = Math.round(parseFloat(serviceFee.amount) * 100);
-                const { setAppointmentServiceFee } = await import('@/lib/appointments');
-                const res = await setAppointmentServiceFee(token, serviceFee.appointmentId, cents);
-                if (!res.ok) setError((res.data as { error?: string }).error || 'Failed');
-                else setMessage('Service fee set — reception can record payment.');
-              }}
-            >
-              <p className="text-sm font-semibold text-gray-900">Post-visit service fee (USD)</p>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={serviceFee.amount}
-                onChange={(e) => setServiceFee((s) => ({ ...s, amount: e.target.value }))}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2"
-              />
-              <button type="submit" className="text-sm font-semibold text-[#ec6d13]">
-                Save fee for reception billing
-              </button>
-            </form>
-          ) : null}
+      {medical.pet_id && timeline.length > 0 ? (
+        <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <p className="font-sans text-sm font-semibold text-gray-900">Prior visit history</p>
+          <ul className="mt-3 max-h-40 space-y-2 overflow-y-auto text-sm text-gray-600">
+            {timeline.slice(0, 8).map((t, i) => (
+              <li key={i} className="rounded-lg bg-gray-50 px-3 py-2">
+                <span className="font-medium text-gray-800">{t.visitDate}</span>
+                {' — '}
+                {t.symptoms || t.diagnosis || t.treatment || 'Visit recorded'}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
-          {tab === 'medical' ? (
-            <form onSubmit={submitMedical} className="max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-sm">
-              <PetDoctorFields pets={pets} doctors={doctors} petId={medical.pet_id} doctorId={medical.doctor_id} onPet={(v) => setMedical((s) => ({ ...s, pet_id: v }))} onDoctor={(v) => setMedical((s) => ({ ...s, doctor_id: v }))} />
-              <Field label="Visit date" type="date" value={medical.visit_date} onChange={(v) => setMedical((s) => ({ ...s, visit_date: v }))} required />
-              <Field label="Symptoms" value={medical.symptoms} onChange={(v) => setMedical((s) => ({ ...s, symptoms: v }))} textarea />
-              <Field label="Diagnosis" value={medical.diagnosis} onChange={(v) => setMedical((s) => ({ ...s, diagnosis: v }))} textarea />
-              <Field label="Treatment" value={medical.treatment} onChange={(v) => setMedical((s) => ({ ...s, treatment: v }))} textarea />
-              <Field label="Consultation notes" value={medical.consultation_notes} onChange={(v) => setMedical((s) => ({ ...s, consultation_notes: v }))} textarea />
-              <SubmitButton submitting={submitting} />
-            </form>
-          ) : null}
+      {consultationLoading ? (
+        <p className="mb-4 text-sm text-gray-500">Checking visit status…</p>
+      ) : null}
 
-          {tab === 'vaccination' ? (
-            <form onSubmit={submitVaccination} className="max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-sm">
-              <PetDoctorFields pets={pets} doctors={doctors} petId={vaccination.pet_id} doctorId={vaccination.doctor_id} onPet={(v) => setVaccination((s) => ({ ...s, pet_id: v }))} onDoctor={(v) => setVaccination((s) => ({ ...s, doctor_id: v }))} />
-              <Field label="Vaccine name" value={vaccination.vaccine_name} onChange={(v) => setVaccination((s) => ({ ...s, vaccine_name: v }))} required />
-              <Field label="Due date" type="date" value={vaccination.due_date} onChange={(v) => setVaccination((s) => ({ ...s, due_date: v }))} required />
-              <Field label="Administered date (optional)" type="date" value={vaccination.administered_date} onChange={(v) => setVaccination((s) => ({ ...s, administered_date: v }))} />
-              <Field label="Interval days until next dose" type="number" value={vaccination.interval_days} onChange={(v) => setVaccination((s) => ({ ...s, interval_days: v }))} />
-              <Field label="Notes" value={vaccination.notes} onChange={(v) => setVaccination((s) => ({ ...s, notes: v }))} textarea />
-              <SubmitButton submitting={submitting} />
-            </form>
-          ) : null}
-
-          {tab === 'prescription' ? (
-            <form onSubmit={submitPrescription} className="max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-sm">
-              <PetDoctorFields pets={pets} doctors={doctors} petId={prescription.pet_id} doctorId={prescription.doctor_id} onPet={(v) => setPrescription((s) => ({ ...s, pet_id: v }))} onDoctor={(v) => setPrescription((s) => ({ ...s, doctor_id: v }))} />
-              <Field label="Issued date" type="date" value={prescription.issued_date} onChange={(v) => setPrescription((s) => ({ ...s, issued_date: v }))} />
-              <Field label="Diagnosis summary" value={prescription.diagnosis_summary} onChange={(v) => setPrescription((s) => ({ ...s, diagnosis_summary: v }))} textarea />
-              <Field label="General instructions" value={prescription.general_instructions} onChange={(v) => setPrescription((s) => ({ ...s, general_instructions: v }))} textarea />
-              <hr />
-              <p className="text-sm font-semibold text-gray-700">Medicine</p>
-              <Field label="Medicine name" value={prescription.medicine_name} onChange={(v) => setPrescription((s) => ({ ...s, medicine_name: v }))} required />
-              <Field label="Dosage" value={prescription.dosage} onChange={(v) => setPrescription((s) => ({ ...s, dosage: v }))} />
-              <Field label="Frequency" value={prescription.frequency} onChange={(v) => setPrescription((s) => ({ ...s, frequency: v }))} />
-              <Field label="Duration" value={prescription.duration} onChange={(v) => setPrescription((s) => ({ ...s, duration: v }))} />
-              <Field label="Medicine instructions" value={prescription.medicine_instructions} onChange={(v) => setPrescription((s) => ({ ...s, medicine_instructions: v }))} textarea />
-              <SubmitButton submitting={submitting} />
-            </form>
+      {consultationLocked && tab === 'medical' ? (
+        <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 p-5 text-sm text-blue-900">
+          <p className="font-semibold">Visit finished</p>
+          <p className="mt-1">
+            Consultation records for this appointment were saved. The visit is complete on your
+            side — reception will process payment (consultation, vaccination, medicine).
+          </p>
+          {existingConsultation ? (
+            <ul className="mt-3 space-y-1 text-blue-800">
+              {existingConsultation.diagnosis ? (
+                <li>
+                  <span className="font-medium">Diagnosis:</span> {existingConsultation.diagnosis}
+                </li>
+              ) : null}
+              {existingConsultation.treatment ? (
+                <li>
+                  <span className="font-medium">Treatment:</span> {existingConsultation.treatment}
+                </li>
+              ) : null}
+            </ul>
           ) : null}
         </div>
-      </div>
+      ) : null}
+
+      {tab === 'medical' ? (
+        <RecordForm onSubmit={submitMedical}>
+          <PetDoctorFields
+            pets={pets}
+            doctors={doctors}
+            petId={medical.pet_id}
+            doctorId={medical.doctor_id}
+            onPet={(v) => setMedical((s) => ({ ...s, pet_id: v }))}
+            onDoctor={(v) => setMedical((s) => ({ ...s, doctor_id: v }))}
+            hideDoctorSelect={isDoctor}
+            vetName={isDoctor ? user?.fullName : undefined}
+          />
+          <fieldset disabled={consultationLocked} className={consultationLocked ? 'opacity-60' : ''}>
+            <Field
+              label="Visit date"
+              type="date"
+              value={medical.visit_date}
+              onChange={(v) => setMedical((s) => ({ ...s, visit_date: v }))}
+              required
+            />
+            <Field
+              label="Symptoms"
+              value={medical.symptoms}
+              onChange={(v) => setMedical((s) => ({ ...s, symptoms: v }))}
+              textarea
+            />
+            <Field
+              label="Diagnosis"
+              value={medical.diagnosis}
+              onChange={(v) => setMedical((s) => ({ ...s, diagnosis: v }))}
+              textarea
+            />
+            <Field
+              label="Treatment plan"
+              value={medical.treatment}
+              onChange={(v) => setMedical((s) => ({ ...s, treatment: v }))}
+              textarea
+            />
+            <Field
+              label="Consultation notes"
+              value={medical.consultation_notes}
+              onChange={(v) => setMedical((s) => ({ ...s, consultation_notes: v }))}
+              textarea
+            />
+          </fieldset>
+          {!consultationLocked ? (
+            <SubmitButton submitting={submitting} label="Save medical record" />
+          ) : null}
+        </RecordForm>
+      ) : null}
+
+      {tab === 'vaccination' ? (
+        <RecordForm onSubmit={submitVaccination}>
+          <PetDoctorFields
+            pets={pets}
+            doctors={doctors}
+            petId={vaccination.pet_id}
+            doctorId={vaccination.doctor_id}
+            onPet={(v) => setVaccination((s) => ({ ...s, pet_id: v }))}
+            onDoctor={(v) => setVaccination((s) => ({ ...s, doctor_id: v }))}
+            hideDoctorSelect={isDoctor}
+            vetName={isDoctor ? user?.fullName : undefined}
+          />
+          <Field
+            label="Vaccine name"
+            value={vaccination.vaccine_name}
+            onChange={(v) => setVaccination((s) => ({ ...s, vaccine_name: v }))}
+            required
+          />
+          <Field
+            label="Due date"
+            type="date"
+            value={vaccination.due_date}
+            onChange={(v) => setVaccination((s) => ({ ...s, due_date: v }))}
+            required
+          />
+          <Field
+            label="Administered date (optional)"
+            type="date"
+            value={vaccination.administered_date}
+            onChange={(v) => setVaccination((s) => ({ ...s, administered_date: v }))}
+          />
+          <Field
+            label="Days until next dose"
+            type="number"
+            value={vaccination.interval_days}
+            onChange={(v) => setVaccination((s) => ({ ...s, interval_days: v }))}
+          />
+          <Field
+            label="Notes"
+            value={vaccination.notes}
+            onChange={(v) => setVaccination((s) => ({ ...s, notes: v }))}
+            textarea
+          />
+          <SubmitButton submitting={submitting} label="Save vaccination" />
+        </RecordForm>
+      ) : null}
+
+      {tab === 'prescription' ? (
+        <RecordForm onSubmit={submitPrescription}>
+          <PetDoctorFields
+            pets={pets}
+            doctors={doctors}
+            petId={prescription.pet_id}
+            doctorId={prescription.doctor_id}
+            onPet={(v) => setPrescription((s) => ({ ...s, pet_id: v }))}
+            onDoctor={(v) => setPrescription((s) => ({ ...s, doctor_id: v }))}
+            hideDoctorSelect={isDoctor}
+            vetName={isDoctor ? user?.fullName : undefined}
+          />
+          <Field
+            label="Issued date"
+            type="date"
+            value={prescription.issued_date}
+            onChange={(v) => setPrescription((s) => ({ ...s, issued_date: v }))}
+          />
+          <Field
+            label="Diagnosis summary"
+            value={prescription.diagnosis_summary}
+            onChange={(v) => setPrescription((s) => ({ ...s, diagnosis_summary: v }))}
+            textarea
+          />
+          <Field
+            label="General instructions"
+            value={prescription.general_instructions}
+            onChange={(v) => setPrescription((s) => ({ ...s, general_instructions: v }))}
+            textarea
+          />
+          <hr className="border-gray-100" />
+          <p className="text-sm font-semibold text-gray-800">Medication</p>
+          <Field
+            label="Medicine name"
+            value={prescription.medicine_name}
+            onChange={(v) => setPrescription((s) => ({ ...s, medicine_name: v }))}
+            required
+          />
+          <Field
+            label="Dosage"
+            value={prescription.dosage}
+            onChange={(v) => setPrescription((s) => ({ ...s, dosage: v }))}
+          />
+          <Field
+            label="Frequency"
+            value={prescription.frequency}
+            onChange={(v) => setPrescription((s) => ({ ...s, frequency: v }))}
+          />
+          <Field
+            label="Duration"
+            value={prescription.duration}
+            onChange={(v) => setPrescription((s) => ({ ...s, duration: v }))}
+          />
+          <Field
+            label="Medicine instructions"
+            value={prescription.medicine_instructions}
+            onChange={(v) => setPrescription((s) => ({ ...s, medicine_instructions: v }))}
+            textarea
+          />
+          <SubmitButton submitting={submitting} label="Save prescription" />
+        </RecordForm>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <ProtectedRoute allowedRoles={['admin', 'doctor', 'receptionist']}>
+      {isDoctor ? (
+        <DoctorShell>{content}</DoctorShell>
+      ) : (
+        <div className="min-h-screen bg-gray-50">
+          <Header />
+          <div className="container mx-auto px-4 py-8 pt-28">{content}</div>
+        </div>
+      )}
     </ProtectedRoute>
   );
 }
 
+function RecordForm({
+  children,
+  onSubmit,
+}: {
+  children: React.ReactNode;
+  onSubmit: (e: React.FormEvent) => void;
+}) {
+  return (
+    <form
+      onSubmit={onSubmit}
+      className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm"
+    >
+      {children}
+    </form>
+  );
+}
+
 function TabBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
+  const labels: Record<Tab, string> = {
+    medical: 'Medical',
+    vaccination: 'Vaccination',
+    prescription: 'Prescription',
+  };
   return (
     <div className="mb-6 flex flex-wrap gap-2">
       {(['medical', 'vaccination', 'prescription'] as Tab[]).map((t) => (
@@ -293,11 +545,13 @@ function TabBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
           key={t}
           type="button"
           onClick={() => setTab(t)}
-          className={`rounded-full px-4 py-2 text-sm font-medium capitalize ${
-            tab === t ? 'bg-[#ec6d13] text-white' : 'bg-white ring-1 ring-gray-200'
+          className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition ${
+            tab === t
+              ? 'bg-[#ec6d13] text-white shadow-sm'
+              : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50'
           }`}
         >
-          {t}
+          {labels[t]}
         </button>
       ))}
     </div>
@@ -311,6 +565,8 @@ function PetDoctorFields({
   doctorId,
   onPet,
   onDoctor,
+  hideDoctorSelect,
+  vetName,
 }: {
   pets: Pet[];
   doctors: Doctor[];
@@ -318,20 +574,44 @@ function PetDoctorFields({
   doctorId: string;
   onPet: (v: string) => void;
   onDoctor: (v: string) => void;
+  hideDoctorSelect?: boolean;
+  vetName?: string;
 }) {
   return (
     <>
       <PetSelect pets={pets} petId={petId} onPet={onPet} />
-      <DoctorSelect doctors={doctors} doctorId={doctorId} onDoctor={onDoctor} />
+      {hideDoctorSelect ? (
+        <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Attending veterinarian
+          </p>
+          <p className="mt-1 text-sm font-medium text-gray-900">{vetName || 'You'}</p>
+        </div>
+      ) : (
+        <DoctorSelect doctors={doctors} doctorId={doctorId} onDoctor={onDoctor} />
+      )}
     </>
   );
 }
 
-function PetSelect({ pets, petId, onPet }: { pets: Pet[]; petId: string; onPet: (v: string) => void }) {
+function PetSelect({
+  pets,
+  petId,
+  onPet,
+}: {
+  pets: Pet[];
+  petId: string;
+  onPet: (v: string) => void;
+}) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium">Pet</label>
-      <select required value={petId} onChange={(e) => onPet(e.target.value)} className="w-full rounded-lg border px-3 py-2">
+      <label className="mb-1 block text-sm font-medium text-gray-700">Patient (pet)</label>
+      <select
+        required
+        value={petId}
+        onChange={(e) => onPet(e.target.value)}
+        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-[#ec6d13] focus:outline-none focus:ring-2 focus:ring-[#ec6d13]/20"
+      >
         <option value="">Select pet</option>
         {pets.map((p) => (
           <option key={p.id} value={p.id}>
@@ -343,12 +623,24 @@ function PetSelect({ pets, petId, onPet }: { pets: Pet[]; petId: string; onPet: 
   );
 }
 
-function DoctorSelect({ doctors, doctorId, onDoctor }: { doctors: Doctor[]; doctorId: string; onDoctor: (v: string) => void }) {
+function DoctorSelect({
+  doctors,
+  doctorId,
+  onDoctor,
+}: {
+  doctors: Doctor[];
+  doctorId: string;
+  onDoctor: (v: string) => void;
+}) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium">Doctor</label>
-      <select value={doctorId} onChange={(e) => onDoctor(e.target.value)} className="w-full rounded-lg border px-3 py-2">
-        <option value="">Optional</option>
+      <label className="mb-1 block text-sm font-medium text-gray-700">Veterinarian</label>
+      <select
+        value={doctorId}
+        onChange={(e) => onDoctor(e.target.value)}
+        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-[#ec6d13] focus:outline-none focus:ring-2 focus:ring-[#ec6d13]/20"
+      >
+        <option value="">Select veterinarian (optional)</option>
         {doctors.map((d) => (
           <option key={d.id} value={d.id}>
             {d.name}
@@ -374,22 +666,40 @@ function Field({
   required?: boolean;
   textarea?: boolean;
 }) {
+  const inputClass =
+    'w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-[#ec6d13] focus:outline-none focus:ring-2 focus:ring-[#ec6d13]/20';
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium">{label}</label>
+      <label className="mb-1 block text-sm font-medium text-gray-700">{label}</label>
       {textarea ? (
-        <textarea required={required} value={value} onChange={(e) => onChange(e.target.value)} rows={3} className="w-full rounded-lg border px-3 py-2" />
+        <textarea
+          required={required}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={3}
+          className={inputClass}
+        />
       ) : (
-        <input type={type} required={required} value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-lg border px-3 py-2" />
+        <input
+          type={type}
+          required={required}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={inputClass}
+        />
       )}
     </div>
   );
 }
 
-function SubmitButton({ submitting }: { submitting: boolean }) {
+function SubmitButton({ submitting, label }: { submitting: boolean; label: string }) {
   return (
-    <button type="submit" disabled={submitting} className="rounded-lg bg-[#ec6d13] px-4 py-2.5 font-semibold text-white disabled:opacity-50">
-      {submitting ? 'Saving…' : 'Save'}
+    <button
+      type="submit"
+      disabled={submitting}
+      className="rounded-lg bg-[#ec6d13] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#d65e0f] disabled:opacity-50"
+    >
+      {submitting ? 'Saving…' : label}
     </button>
   );
 }

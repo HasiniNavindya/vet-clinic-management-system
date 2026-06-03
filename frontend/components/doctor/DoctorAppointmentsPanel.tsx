@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import AppointmentStatusBadge from '@/components/appointments/AppointmentStatusBadge';
+import { useEffect, useMemo, useState } from 'react';
+import DoctorPageHeader from '@/components/doctor/DoctorPageHeader';
+import DoctorAppointmentCalendar from '@/components/doctor/DoctorAppointmentCalendar';
+import DoctorVisitCard from '@/components/doctor/DoctorVisitCard';
 import {
   Appointment,
+  canDoctorAddConsultation,
   fetchAppointments,
-  formatAppointmentDate,
-  formatTime,
+  isDoctorVisibleAppointment,
 } from '@/lib/appointments';
 import { useAuth } from '@/context/AuthContext';
 
@@ -15,59 +16,135 @@ export default function DoctorAppointmentsPanel() {
   const { token } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'pending' | 'finished'>('pending');
 
   useEffect(() => {
     if (!token) return;
-    fetchAppointments(token).then((res) => {
-      if (res.ok) setAppointments(res.data);
-      setLoading(false);
-    });
+
+    const load = () => {
+      fetchAppointments(token).then((res) => {
+        if (res.ok) {
+          setAppointments(res.data.filter((a) => isDoctorVisibleAppointment(a.status)));
+        }
+        setLoading(false);
+      });
+    };
+
+    load();
+
+    const refresh = () => {
+      if (document.visibilityState === 'visible') load();
+    };
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+    };
   }, [token]);
 
+  const pending = useMemo(
+    () =>
+      appointments.filter((a) => canDoctorAddConsultation(a.status, a.hasMedicalRecord)),
+    [appointments]
+  );
+
+  const finished = useMemo(
+    () =>
+      appointments.filter(
+        (a) => a.hasMedicalRecord || a.status === 'completed'
+      ),
+    [appointments]
+  );
+
+  const displayed = tab === 'pending' ? pending : finished;
+
   return (
-    <div>
-      <h1 className="text-gray-900">My assigned appointments</h1>
-      <p className="mt-1 text-sm text-gray-600">
-        View-only schedule assigned by reception. Use Consultation to record visit notes.
-      </p>
+    <div className="space-y-8">
+      <DoctorPageHeader
+        title="My appointments"
+        subtitle="Add consultation records per visit — finished visits are sent to reception for billing"
+      />
+
+      <div className="flex flex-wrap gap-2">
+        <TabButton
+          active={tab === 'pending'}
+          onClick={() => setTab('pending')}
+          label={`Needs consultation (${pending.length})`}
+        />
+        <TabButton
+          active={tab === 'finished'}
+          onClick={() => setTab('finished')}
+          label={`Finished (${finished.length})`}
+        />
+      </div>
 
       {loading ? (
-        <div className="mt-8 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ec6d13] border-t-transparent" />
+        <div className="flex justify-center py-16">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />
         </div>
       ) : appointments.length === 0 ? (
-        <p className="mt-6 text-gray-500">No appointments assigned to you.</p>
+        <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-16 text-center shadow-sm">
+          <p className="font-sans font-medium text-gray-700">No confirmed appointments yet</p>
+          <p className="mt-1 font-sans text-sm text-gray-500">
+            When reception confirms a visit and assigns you, it will appear here.
+          </p>
+        </div>
       ) : (
-        <ul className="mt-6 space-y-3">
-          {appointments.map((apt) => (
-            <li key={apt.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-              <p className="font-semibold text-gray-900">
-                {apt.petName || 'Pet'} — {apt.ownerName}
+        <>
+          <section>
+            <h2 className="mb-4 font-sans text-base font-semibold text-gray-900">Calendar</h2>
+            <DoctorAppointmentCalendar appointments={appointments} />
+          </section>
+
+          <section className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm md:p-6">
+            <h2 className="mb-4 font-sans text-lg font-semibold text-gray-900">
+              {tab === 'pending' ? 'Visits needing consultation' : 'Finished visits'}
+              <span className="ml-2 text-sm font-normal text-gray-500">({displayed.length})</span>
+            </h2>
+
+            {displayed.length === 0 ? (
+              <p className="font-sans text-sm text-gray-500">
+                {tab === 'pending'
+                  ? 'No visits waiting for consultation records.'
+                  : 'No finished visits yet.'}
               </p>
-              <p className="text-sm text-gray-600">
-                {formatAppointmentDate(apt.appointmentDate)} at {formatTime(apt.appointmentTime)}
-              </p>
-              <AppointmentStatusBadge status={apt.status} className="mt-2" />
-              {apt.checkedInAt ? (
-                <p className="mt-2 text-xs font-semibold text-green-700">Checked in</p>
-              ) : null}
-              {apt.serviceFeeCents ? (
-                <p className="mt-1 text-xs text-gray-600">
-                  Service fee due: ${(apt.serviceFeeCents / 100).toFixed(2)}
-                </p>
-              ) : null}
-              {apt.status === 'approved' && apt.petId ? (
-                <Link
-                  href={`/dashboard/doctor/consultation?petId=${apt.petId}&appointmentId=${apt.id}`}
-                  className="mt-3 inline-block text-sm font-semibold text-[#ec6d13]"
-                >
-                  Open consultation →
-                </Link>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+            ) : (
+              <ul className="space-y-3">
+                {displayed.map((apt) => (
+                  <li key={apt.id}>
+                    <DoctorVisitCard appointment={apt} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </>
       )}
     </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-4 py-2 font-sans text-sm font-semibold transition ${
+        active
+          ? 'bg-[#ec6d13] text-white shadow-sm'
+          : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50'
+      }`}
+    >
+      {label}
+    </button>
   );
 }

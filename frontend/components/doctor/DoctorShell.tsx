@@ -1,66 +1,52 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import Header from '@/components/layout/Header';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import DoctorSidebar from '@/components/doctor/DoctorSidebar';
 import { useAuth } from '@/context/AuthContext';
+import { fetchDoctorDashboard } from '@/lib/doctorApplications';
 
-const NAV = [
-  { href: '/dashboard/doctor', label: 'Dashboard' },
-  { href: '/dashboard/doctor/appointments', label: 'My appointments' },
-  { href: '/dashboard/doctor/consultation', label: 'Consultation' },
-  { href: '/dashboard/doctor/settings', label: 'Profile settings' },
-];
+type Props = {
+  children: React.ReactNode;
+};
 
-export default function DoctorShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { user, logout } = useAuth();
+export default function DoctorShell({ children }: Props) {
+  const { user, token, hasRole } = useAuth();
+  const [specialization, setSpecialization] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageCacheKey, setImageCacheKey] = useState(0);
 
-  const handleLogout = () => {
-    logout();
-    router.push('/login?role=doctor');
-  };
+  useEffect(() => {
+    if (!token || !hasRole('doctor')) return;
+    fetchDoctorDashboard(token)
+      .then((d) => {
+        const data = d as {
+          profile?: { specialization?: string; imageUrl?: string; image_url?: string };
+        };
+        setSpecialization(data.profile?.specialization || '');
+        setImageUrl(data.profile?.imageUrl || data.profile?.image_url || null);
+        setImageCacheKey(Date.now());
+      })
+      .catch(() => {});
+  }, [token, hasRole]);
+
+  const welcomeName = user?.fullName || 'Doctor';
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#ec6d13]">
-              Veterinarian portal
-            </p>
-            <p className="text-sm font-medium text-gray-900">{user?.fullName}</p>
-          </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-          >
-            Log out
-          </button>
+    <ProtectedRoute allowedRoles={['doctor']} loginPath="/login?role=doctor">
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="flex pt-15">
+          <DoctorSidebar
+            welcomeName={welcomeName}
+            specialization={specialization}
+            imageUrl={imageUrl}
+            imageCacheKey={imageCacheKey}
+          />
+          <main className="ml-64 min-h-[calc(100vh-80px)] flex-1 p-4 md:p-8">{children}</main>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-3">
-          {NAV.map((item) => {
-            const active =
-              pathname === item.href ||
-              (item.href !== '/dashboard/doctor' && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold ${
-                  active
-                    ? 'bg-[#ec6d13] text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

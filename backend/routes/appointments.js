@@ -40,6 +40,7 @@ router.get('/', authenticateToken, async (req, res) => {
       if (!profile) return res.json([]);
       params.push(profile.id);
       sql += ` AND a.doctor_id = $${params.length}`;
+      sql += ` AND a.status IN ('approved', 'completed')`;
     }
 
     if (statusFilter) {
@@ -378,7 +379,10 @@ router.patch('/:id/respond', authenticateToken, requireRole('admin', 'receptioni
 
     const updated = await fetchAppointmentById(req.params.id);
     try {
-      const { notifyAppointmentStatusChange } = require('../services/notificationService');
+      const {
+        notifyAppointmentStatusChange,
+        notifyDoctorAppointmentAssigned,
+      } = require('../services/notificationService');
       const notifyStatus =
         act === 'approve'
           ? 'awaiting_payment'
@@ -386,6 +390,16 @@ router.patch('/:id/respond', authenticateToken, requireRole('admin', 'receptioni
             ? 'rejected'
             : 'reschedule_offered';
       await notifyAppointmentStatusChange(updated.userId, updated, notifyStatus);
+
+      if (act === 'approve') {
+        const assignDoctorId =
+          doctor_id != null && Number.isFinite(Number(doctor_id)) ? Number(doctor_id) : null;
+        if (assignDoctorId && assignDoctorId !== existing.doctorId) {
+          await notifyDoctorAppointmentAssigned(assignDoctorId, updated, {
+            reassigned: Boolean(existing.doctorId),
+          });
+        }
+      }
     } catch (notifyErr) {
       console.error('Respond notification error:', notifyErr.message);
     }
@@ -424,11 +438,23 @@ router.patch('/:id/assign-doctor', authenticateToken, requireRole('admin', 'rece
     if (!doc.rows.length) return res.status(400).json({ error: 'Doctor not found' });
     const existing = await fetchAppointmentById(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Appointment not found' });
+    if (existing.doctorId === doctorId) {
+      return res.json(existing);
+    }
     await pool.query(
       `UPDATE appointments SET doctor_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
       [doctorId, req.params.id]
     );
-    res.json(await fetchAppointmentById(req.params.id));
+    const updated = await fetchAppointmentById(req.params.id);
+    try {
+      const { notifyDoctorAppointmentAssigned } = require('../services/notificationService');
+      await notifyDoctorAppointmentAssigned(doctorId, updated, {
+        reassigned: Boolean(existing.doctorId),
+      });
+    } catch (notifyErr) {
+      console.error('Assign doctor notification error:', notifyErr.message);
+    }
+    res.json(updated);
   } catch (err) {
     console.error('Assign doctor error:', err);
     res.status(500).json({ error: 'Failed to assign veterinarian' });
