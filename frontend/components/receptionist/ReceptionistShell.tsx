@@ -12,12 +12,12 @@ export default function ReceptionistShell({ children }: { children: React.ReactN
     <ProtectedRoute allowedRoles={['receptionist', 'admin']}>
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="flex pt-28">
+        <div className="flex pt-20">
           <ReceptionistSidebar
             welcomeName={user?.fullName || 'Receptionist'}
             email={user?.email}
           />
-          <main className="ml-64 min-h-[calc(100vh-112px)] flex-1 p-6 md:p-8">{children}</main>
+          <main className="ml-64 min-h-[calc(100vh-5rem)] flex-1 p-4 md:p-5">{children}</main>
         </div>
       </div>
     </ProtectedRoute>

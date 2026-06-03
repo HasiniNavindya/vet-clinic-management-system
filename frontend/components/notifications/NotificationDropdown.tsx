@@ -12,11 +12,13 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   notificationTypeLabel,
+  syncMyReminders,
 } from '@/lib/notifications';
+import { normalizeRoleId } from '@/lib/roles';
 
 export default function NotificationDropdown() {
   const router = useRouter();
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, user } = useAuth();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -26,6 +28,9 @@ export default function NotificationDropdown() {
   const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
+    if (normalizeRoleId(user?.role) === 'user') {
+      await syncMyReminders(token).catch(() => null);
+    }
     const [listRes, countRes] = await Promise.all([
       fetchNotifications(token, false),
       fetchUnreadCount(token),
@@ -33,7 +38,7 @@ export default function NotificationDropdown() {
     if (listRes.ok) setItems(listRes.data.slice(0, 8));
     if (countRes.ok) setUnreadCount(countRes.data.count);
     setLoading(false);
-  }, [token]);
+  }, [token, user?.role]);
 
   useEffect(() => {
     if (isAuthenticated && token) load();

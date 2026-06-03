@@ -8,6 +8,7 @@ import PetOwnerShell from '@/components/pet-owner/PetOwnerShell';
 import {
   AppNotification,
   fetchNotifications,
+  syncMyReminders,
   formatNotificationTime,
   markAllNotificationsRead,
   markNotificationRead,
@@ -24,6 +25,7 @@ export default function NotificationCenterPage() {
   const load = async () => {
     if (!token) return;
     setLoading(true);
+    await syncMyReminders(token).catch(() => null);
     const res = await fetchNotifications(token, filter === 'unread');
     if (res.ok) setItems(res.data);
     setLoading(false);
@@ -56,7 +58,7 @@ export default function NotificationCenterPage() {
         <div>
           <h1 className="text-gray-900">Notification Center</h1>
           <p className="mt-1 text-gray-600">
-            Appointment reminders, payment confirmations, and vaccination alerts
+            Consultation updates, visit charges, appointment reminders, vaccination alerts, and payments
           </p>
         </div>
         <button

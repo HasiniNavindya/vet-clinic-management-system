@@ -20,6 +20,7 @@ import {
   resolveListingImageUrl,
   type PetListing,
 } from '@/lib/marketplaceListings';
+import FulfillmentProgress from '@/components/shared/FulfillmentProgress';
 import {
   fetchMyShopOrders,
   fetchTransactions,
@@ -28,12 +29,13 @@ import {
   type MyShopOrder,
   type PaymentTransaction,
 } from '@/lib/payments';
+import { fulfillmentStatusLabel } from '@/lib/shopFulfillment';
 
 type MarketplaceTab = 'cart' | 'orders' | 'payments' | 'listings';
 
 const TABS: { id: MarketplaceTab; label: string }[] = [
   { id: 'cart', label: 'Cart' },
-  { id: 'orders', label: 'Purchase history' },
+  { id: 'orders', label: 'View order progress' },
   { id: 'payments', label: 'Shop payments' },
   { id: 'listings', label: 'My advertisements' },
 ];
@@ -69,7 +71,7 @@ function HubContent() {
         <div>
           <p className="font-sans text-xl font-semibold text-gray-900">Marketplace</p>
           <p className="mt-0.5 text-sm text-gray-500">
-            Shop, track orders, payments, and your pet advertisements
+            Shop, track order fulfillment, payments, and your pet advertisements
           </p>
         </div>
         <Link
@@ -114,6 +116,7 @@ function HubSpinner() {
 }
 
 function CartPanel() {
+  const router = useRouter();
   const [items, setItems] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -148,8 +151,17 @@ function CartPanel() {
   return (
     <section>
       <p className="text-sm text-gray-600">
-        Items you add from the public marketplace shop appear here. Checkout saves your order and
-        payment status under the other tabs.
+        Items you add from the public marketplace shop appear here. After checkout, use{' '}
+        <button
+          type="button"
+          onClick={() =>
+            router.replace('/dashboard/pet-owner/marketplace?tab=orders', { scroll: false })
+          }
+          className="font-semibold text-[#ec6d13] hover:text-[#d65e0f]"
+        >
+          View order progress
+        </button>{' '}
+        to follow fulfillment.
       </p>
 
       {items.length === 0 ? (
@@ -262,13 +274,27 @@ function OrdersPanel() {
   }
 
   return (
-    <ul className="space-y-4">
+    <section>
+      <p className="mb-4 text-sm text-gray-600">
+        Track each shop order from received through delivery. You will get a notification when
+        reception updates your order status.
+      </p>
+      <ul className="space-y-4">
       {orders.map((o) => (
         <li key={o.id} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <p className="font-sans text-base font-semibold text-gray-900">Order #{o.id}</p>
             <FulfillmentBadge status={o.fulfillmentStatus} />
           </div>
+          {o.paymentStatus !== 'pending' && o.paymentStatus !== 'pending_payment' ? (
+            <div className="mt-4">
+              <FulfillmentProgress status={o.fulfillmentStatus} />
+            </div>
+          ) : (
+            <p className="mt-3 text-sm font-medium text-amber-800">
+              Waiting for payment — progress updates after payment is confirmed.
+            </p>
+          )}
           <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
             <div>
               <dt className="text-xs font-semibold uppercase text-gray-500">Total</dt>
@@ -303,7 +329,8 @@ function OrdersPanel() {
           ) : null}
         </li>
       ))}
-    </ul>
+      </ul>
+    </section>
   );
 }
 
@@ -358,7 +385,7 @@ function PaymentsPanel() {
             href="/dashboard/pet-owner/marketplace?tab=orders"
             className="mt-3 inline-block text-sm font-semibold text-[#ec6d13] hover:text-[#d65e0f]"
           >
-            View purchase history →
+            View order progress →
           </Link>
         </li>
       ))}
@@ -517,8 +544,8 @@ function PaymentBadge({ status }: { status: string }) {
 
 function FulfillmentBadge({ status }: { status: string }) {
   return (
-    <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold capitalize text-[#c45f10]">
-      {status.replace(/_/g, ' ')}
+    <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-[#c45f10]">
+      {fulfillmentStatusLabel(status)}
     </span>
   );
 }

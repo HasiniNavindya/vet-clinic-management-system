@@ -3,7 +3,12 @@ const pool = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { ALL_FULFILLMENT } = require('../config/shop');
 const {
+  loadInventoryWithAlerts,
+  receptionNotifyRestock,
+} = require('../services/receptionistShopService');
+const {
   getOverview,
+  getDashboardFeed,
   listPetsWithOwners,
   listPetOwners,
   getEodSummary,
@@ -18,7 +23,11 @@ const {
   listNotificationsAdmin,
   broadcastAnnouncement,
   runAllReminderJobs,
+  notifyPetOwnerVisitChargesReady,
+  notifyPetOwnerShopOrderUpdate,
+  notifyPaymentConfirmation,
 } = require('../services/notificationService');
+const { fetchMedicalRecordByAppointmentId } = require('../services/medicalRecordService');
 const { isEmailConfigured } = require('../config/notifications');
 
 const router = express.Router();
@@ -42,6 +51,17 @@ router.get('/overview', async (_req, res) => {
   } catch (err) {
     console.error('Receptionist overview:', err.message);
     res.status(500).json({ error: 'Failed to load overview' });
+  }
+});
+
+router.get('/dashboard-feed', async (_req, res) => {
+  try {
+    const feed = await getDashboardFeed();
+    const overview = await getOverview();
+    res.json({ overview, feed });
+  } catch (err) {
+    console.error('Receptionist dashboard feed:', err.message);
+    res.status(500).json({ error: 'Failed to load dashboard feed' });
   }
 });
 
@@ -78,7 +98,7 @@ router.get('/vaccinations-due', async (req, res) => {
        JOIN auth_users u ON u.id = p.user_id
        WHERE v.due_date IS NOT NULL
          AND v.due_date <= CURRENT_DATE + ($1::int * INTERVAL '1 day')
-         AND v.status IN ('scheduled', 'overdue')
+         AND COALESCE(v.status, 'scheduled') IN ('scheduled', 'overdue', 'due_today', 'upcoming')
        ORDER BY v.due_date ASC
        LIMIT 50`,
       [withinDays]
@@ -86,7 +106,41 @@ router.get('/vaccinations-due', async (req, res) => {
     res.json({ items: r.rows, withinDays });
   } catch (err) {
     console.error('Receptionist vaccinations-due:', err.message);
-    res.status(500).json({ error: 'Failed to load vaccinations' });
+    res.json({ items: [], withinDays, warning: 'Vaccination list unavailable' });
+  }
+});
+
+router.get('/inventory', async (_req, res) => {
+  try {
+    res.json(await loadInventoryWithAlerts());
+  } catch (err) {
+    console.error('Receptionist inventory:', err.message);
+    res.status(500).json({ error: 'Failed to load inventory' });
+  }
+});
+
+router.post('/inventory/:productId/notify-restock', async (req, res) => {
+  const productId = Number(req.params.productId);
+  if (!Number.isFinite(productId)) {
+    return res.status(400).json({ error: 'Invalid product id' });
+  }
+  try {
+    const staff = await pool.query(
+      'SELECT full_name FROM auth_users WHERE id = $1',
+      [req.user.id]
+    );
+    const result = await receptionNotifyRestock(
+      productId,
+      req.user.id,
+      staff.rows[0]?.full_name || 'Reception'
+    );
+    if (!result.ok) {
+      return res.status(400).json({ error: result.error || 'Failed', ...result });
+    }
+    res.json(result);
+  } catch (err) {
+    console.error('Receptionist notify restock:', err.message);
+    res.status(500).json({ error: 'Failed to notify admin' });
   }
 });
 
@@ -121,6 +175,26 @@ router.get('/orders', async (req, res) => {
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       listParams
     );
+    const orderIds = r.rows.map((row) => row.id);
+    let itemsByOrder = {};
+    if (orderIds.length > 0) {
+      const itemsRes = await pool.query(
+        `SELECT order_id, item_name, quantity, unit_price_cents
+         FROM shop_order_items WHERE order_id = ANY($1::int[])`,
+        [orderIds]
+      );
+      itemsByOrder = itemsRes.rows.reduce((acc, item) => {
+        const oid = item.order_id;
+        if (!acc[oid]) acc[oid] = [];
+        acc[oid].push({
+          name: item.item_name,
+          quantity: item.quantity,
+          unitPriceCents: item.unit_price_cents,
+        });
+        return acc;
+      }, {});
+    }
+
     const orders = r.rows.map((row) => ({
       id: row.id,
       userId: row.user_id,
@@ -131,6 +205,7 @@ router.get('/orders', async (req, res) => {
       fulfillmentStatus: row.fulfillment_status || 'unfulfilled',
       trackingNote: row.tracking_note,
       createdAt: row.created_at,
+      items: itemsByOrder[row.id] || [],
     }));
     res.json({
       orders,
@@ -159,12 +234,28 @@ router.patch('/orders/:id', async (req, res) => {
     return res.status(400).json({ error: 'Invalid fulfillmentStatus', allowed: ALL_FULFILLMENT });
   }
   try {
+    const existing = await pool.query(
+      `SELECT id, user_id, fulfillment_status, tracking_note
+       FROM shop_orders WHERE id = $1`,
+      [id]
+    );
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    const before = existing.rows[0];
+    const nextStatus =
+      fulfillmentStatus !== undefined
+        ? String(fulfillmentStatus).trim().toLowerCase()
+        : before.fulfillment_status;
+    const nextTracking =
+      trackingNote !== undefined ? trackingNote : before.tracking_note;
+
     const updates = [];
     const values = [];
     let pi = 1;
     if (fulfillmentStatus !== undefined) {
       updates.push(`fulfillment_status = $${pi++}`);
-      values.push(String(fulfillmentStatus).trim().toLowerCase());
+      values.push(nextStatus);
     }
     if (trackingNote !== undefined) {
       updates.push(`tracking_note = $${pi++}`);
@@ -176,6 +267,26 @@ router.patch('/orders/:id', async (req, res) => {
       `UPDATE shop_orders SET ${updates.join(', ')} WHERE id = $${pi}`,
       values
     );
+
+    const statusChanged =
+      fulfillmentStatus !== undefined && nextStatus !== before.fulfillment_status;
+    const trackingUpdated =
+      trackingNote !== undefined &&
+      String(trackingNote || '').trim() !== String(before.tracking_note || '').trim() &&
+      String(trackingNote || '').trim().length > 0;
+
+    if (before.user_id && (statusChanged || trackingUpdated)) {
+      try {
+        await notifyPetOwnerShopOrderUpdate(before.user_id, {
+          id: before.id,
+          fulfillment_status: nextStatus,
+          tracking_note: nextTracking,
+        }, { statusChanged, trackingUpdated });
+      } catch (notifyErr) {
+        console.warn('Shop order owner notification:', notifyErr.message);
+      }
+    }
+
     res.json({ message: 'Order updated' });
   } catch (err) {
     console.error('Receptionist patch order:', err.message);
@@ -222,17 +333,26 @@ router.post('/notifications/run-reminders', async (_req, res) => {
   }
 });
 
-/** Visits finished by doctor — waiting for reception to add charges. */
+/** Visits with doctor consultation records — waiting for reception billing. */
 router.get('/billing-queue', async (_req, res) => {
   try {
     const result = await pool.query(
       `${APPOINTMENT_SELECT}
-       WHERE a.status = 'completed'
-         AND COALESCE(a.billing_status, 'none') IN ('pending', 'ready')
-       ORDER BY a.updated_at DESC
+       WHERE EXISTS (
+         SELECT 1 FROM pet_medical_records r WHERE r.appointment_id = a.id
+       )
+       AND COALESCE(a.billing_status, 'none') IN ('pending', 'ready')
+       ORDER BY a.updated_at DESC NULLS LAST
        LIMIT 50`
     );
-    res.json(result.rows.map(mapAppointmentRow));
+    const appointments = result.rows.map(mapAppointmentRow).filter(Boolean);
+    const items = await Promise.all(
+      appointments.map(async (apt) => ({
+        ...apt,
+        medicalRecord: await fetchMedicalRecordByAppointmentId(apt.id),
+      }))
+    );
+    res.json(items);
   } catch (err) {
     console.error('Billing queue error:', err.message);
     res.status(500).json({ error: 'Failed to load billing queue' });
@@ -253,8 +373,11 @@ router.patch('/appointments/:id/billing', async (req, res) => {
   try {
     const existing = await fetchAppointmentById(appointmentId);
     if (!existing) return res.status(404).json({ error: 'Appointment not found' });
-    if (existing.status !== 'completed') {
-      return res.status(400).json({ error: 'Billing applies only to completed consultations' });
+    const consultationRecord = await fetchMedicalRecordByAppointmentId(appointmentId);
+    if (!consultationRecord) {
+      return res.status(400).json({
+        error: 'No consultation record found. The doctor must save medical records before billing.',
+      });
     }
 
     const consultCents = Math.max(0, Math.round(Number(consultation_fee_cents) || 0));
@@ -266,9 +389,12 @@ router.patch('/appointments/:id/billing', async (req, res) => {
       return res.status(400).json({ error: 'Enter at least one charge amount' });
     }
 
+    const nextBillingStatus = record_payment ? 'paid' : 'ready';
+
     await pool.query(
       `UPDATE appointments
-       SET consultation_fee_cents = $1,
+       SET status = 'completed',
+           consultation_fee_cents = $1,
            vaccination_fee_cents = $2,
            medicine_fee_cents = $3,
            service_fee_cents = $4,
@@ -280,10 +406,20 @@ router.patch('/appointments/:id/billing', async (req, res) => {
         vaccCents,
         medCents,
         totalCents,
-        record_payment ? 'paid' : 'ready',
+        nextBillingStatus,
         appointmentId,
       ]
     );
+
+    const updated = await fetchAppointmentById(appointmentId);
+
+    if (!record_payment && existing.userId) {
+      try {
+        await notifyPetOwnerVisitChargesReady(existing.userId, updated, totalCents);
+      } catch (notifyErr) {
+        console.error('Visit charges notification:', notifyErr.message);
+      }
+    }
 
     if (record_payment && existing.userId) {
       const parts = [];
@@ -303,9 +439,23 @@ router.patch('/appointments/:id/billing', async (req, res) => {
       if (!payResult.ok) {
         return res.status(400).json({ error: payResult.error || 'Payment recording failed' });
       }
+      try {
+        const txn = payResult.transaction;
+        if (txn) {
+          await notifyPaymentConfirmation(existing.userId, {
+            ...txn,
+            referenceType: 'appointment',
+            referenceId: appointmentId,
+            description: `Visit charges — ${existing.petName || 'Pet'}`,
+          });
+        }
+      } catch (notifyErr) {
+        console.error('Payment notification:', notifyErr.message);
+      }
     }
 
-    res.json(await fetchAppointmentById(appointmentId));
+    const record = await fetchMedicalRecordByAppointmentId(appointmentId);
+    res.json({ ...updated, medicalRecord: record });
   } catch (err) {
     console.error('Billing update error:', err.message);
     res.status(500).json({ error: err.message || 'Failed to save billing' });

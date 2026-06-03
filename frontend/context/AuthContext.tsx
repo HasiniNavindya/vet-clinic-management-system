@@ -106,11 +106,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(storedToken);
         setUser(sessionUser);
       } catch {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          setToken(storedToken);
-          setUser(withDashboardPath(JSON.parse(storedUser) as User));
-        }
+        // Do not keep a cached session when /auth/me cannot be reached (expired token or API down).
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }

@@ -187,9 +187,13 @@ router.post('/', authenticateToken, requireRole('admin', 'doctor', 'receptionist
       await pool.query(
         `UPDATE appointments
          SET status = 'completed',
-             billing_status = 'pending',
+             billing_status = CASE
+               WHEN COALESCE(billing_status, 'none') IN ('paid', 'ready') THEN billing_status
+               ELSE 'pending'
+             END,
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = $1 AND status = 'approved'`,
+         WHERE id = $1
+           AND status IN ('approved', 'awaiting_payment')`,
         [Number(appointment_id)]
       );
       try {
@@ -199,9 +203,10 @@ router.post('/', authenticateToken, requireRole('admin', 'doctor', 'receptionist
           notifyPetOwnerConsultationRecord,
         } = require('../services/notificationService');
         await notifyReceptionConsultationReady(updatedAppointment);
-        if (updatedAppointment.userId) {
+        const ownerUserId = updatedAppointment?.userId || access.pet?.user_id;
+        if (ownerUserId) {
           const recordDraft = await fetchMedicalRecordById(recordId);
-          await notifyPetOwnerConsultationRecord(updatedAppointment.userId, {
+          await notifyPetOwnerConsultationRecord(ownerUserId, {
             appointment: updatedAppointment,
             record: recordDraft,
             petName: access.pet?.pet_name,
