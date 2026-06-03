@@ -1,9 +1,9 @@
 'use client';
 
 import { Suspense } from 'react';
-import StaffPaymentsPanel from '@/components/receptionist/StaffPaymentsPanel';
+import ReceptionistNotificationsPanel from '@/components/receptionist/ReceptionistNotificationsPanel';
 
-export default function ReceptionistPaymentsPage() {
+export default function ReceptionistNotificationsPage() {
   return (
     <Suspense
       fallback={
@@ -12,7 +12,7 @@ export default function ReceptionistPaymentsPage() {
         </div>
       }
     >
-      <StaffPaymentsPanel />
+      <ReceptionistNotificationsPanel />
     </Suspense>
   );
 }

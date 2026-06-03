@@ -41,6 +41,12 @@ router.get('/', authenticateToken, async (req, res) => {
       params.push(profile.id);
       sql += ` AND a.doctor_id = $${params.length}`;
       sql += ` AND a.status IN ('approved', 'completed')`;
+    } else if (role === 'receptionist' || role === 'admin') {
+      const doctorId = Number(req.query.doctor_id);
+      if (Number.isFinite(doctorId) && doctorId > 0) {
+        params.push(doctorId);
+        sql += ` AND a.doctor_id = $${params.length}`;
+      }
     }
 
     if (statusFilter) {

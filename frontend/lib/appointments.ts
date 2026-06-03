@@ -82,8 +82,15 @@ export async function fetchAppointmentMeta(token: string) {
   });
 }
 
-export async function fetchAppointments(token: string, status?: AppointmentStatus) {
-  const query = status ? `?status=${status}` : '';
+export async function fetchAppointments(
+  token: string,
+  options?: AppointmentStatus | { status?: AppointmentStatus; doctorId?: number }
+) {
+  const opts = typeof options === 'string' ? { status: options } : options ?? {};
+  const q = new URLSearchParams();
+  if (opts.status) q.set('status', opts.status);
+  if (opts.doctorId) q.set('doctor_id', String(opts.doctorId));
+  const query = q.toString() ? `?${q}` : '';
   return apiFetch<Appointment[]>(`/api/appointments${query}`, {
     headers: authHeaders(token),
   });

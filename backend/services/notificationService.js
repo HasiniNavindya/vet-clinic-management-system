@@ -394,6 +394,23 @@ async function processAppointmentReminders() {
   };
 }
 
+async function deleteNotificationById(id) {
+  const result = await pool.query(
+    'DELETE FROM notifications WHERE id = $1 RETURNING id',
+    [id]
+  );
+  return result.rows.length > 0;
+}
+
+/** Delete only if the notification belongs to this user (pet owner, doctor, receptionist inbox). */
+async function deleteNotificationForUser(id, userId) {
+  const result = await pool.query(
+    'DELETE FROM notifications WHERE id = $1 AND user_id = $2 RETURNING id',
+    [id, userId]
+  );
+  return result.rows.length > 0;
+}
+
 async function listNotificationsAdmin({ limit = 80, type } = {}) {
   const params = [];
   let sql = `
@@ -743,6 +760,8 @@ module.exports = {
   processLowStockInventoryAlerts,
   processAppointmentReminders,
   listNotificationsAdmin,
+  deleteNotificationById,
+  deleteNotificationForUser,
   broadcastAnnouncement,
   processAllVaccinationReminders,
   runAllReminderJobs,

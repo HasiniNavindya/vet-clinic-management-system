@@ -76,9 +76,10 @@ export default function InventoryTab() {
   return (
     <div>
       <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
-        Products at <strong>{threshold} units or fewer</strong> need restock. Use{' '}
-        <strong>Notify admin</strong> to alert the shop manager. Admins are also alerted
-        automatically when stock drops after a sale.
+        Stock levels match the public <strong>Marketplace</strong> shop products. Items at{' '}
+        <strong>{threshold} units or fewer</strong> need restock — use <strong>Notify admin</strong>{' '}
+        to alert the shop manager. Admins are also alerted automatically when stock drops after a
+        sale.
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">

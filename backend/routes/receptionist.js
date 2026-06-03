@@ -12,6 +12,7 @@ const {
   listPetsWithOwners,
   listPetOwners,
   getEodSummary,
+  buildEodReportHtml,
 } = require('../services/receptionistDashboardService');
 const {
   APPOINTMENT_SELECT,
@@ -20,7 +21,9 @@ const {
 } = require('../services/appointmentService');
 const { recordOfflinePayment } = require('../services/paymentService');
 const {
+  listNotifications,
   listNotificationsAdmin,
+  deleteNotificationForUser,
   broadcastAnnouncement,
   runAllReminderJobs,
   notifyPetOwnerVisitChargesReady,
@@ -34,6 +37,47 @@ const router = express.Router();
 const STAFF = ['receptionist', 'admin', 'doctor'];
 
 router.use(authenticateToken, requireRole('receptionist', 'admin'));
+
+async function sendEodReportHtml(req, res) {
+  const summary = await getEodSummary();
+  const autoPrint = req.query.print === '1';
+  const html = buildEodReportHtml(summary, { autoPrint });
+  const filename = `eod-summary-${summary.date || 'today'}.html`;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+  res.send(html);
+}
+
+/** Printable end-of-day report (open in browser → Print → Save as PDF). */
+router.get('/eod-summary/report', async (req, res) => {
+  try {
+    await sendEodReportHtml(req, res);
+  } catch (err) {
+    console.error('Receptionist EOD report:', err.message);
+    res.status(500).json({ error: 'Failed to generate report' });
+  }
+});
+
+router.get('/eod-report', async (req, res) => {
+  try {
+    await sendEodReportHtml(req, res);
+  } catch (err) {
+    console.error('Receptionist EOD report (alias):', err.message);
+    res.status(500).json({ error: 'Failed to generate report' });
+  }
+});
+
+router.get('/report', async (req, res) => {
+  if (req.query.print !== '1') {
+    return res.status(400).json({ error: 'Use ?print=1 for end-of-day report' });
+  }
+  try {
+    await sendEodReportHtml(req, res);
+  } catch (err) {
+    console.error('Receptionist report alias:', err.message);
+    res.status(500).json({ error: 'Failed to generate report' });
+  }
+});
 
 router.get('/eod-summary', async (_req, res) => {
   try {
@@ -294,15 +338,45 @@ router.patch('/orders/:id', async (req, res) => {
   }
 });
 
+/** Inbox: notifications received by the logged-in receptionist (or admin on this desk). */
 router.get('/notifications', async (req, res) => {
   try {
-    const type = typeof req.query.type === 'string' ? req.query.type : undefined;
-    const limit = Math.min(200, parseInt(String(req.query.limit), 10) || 80);
-    const notifications = await listNotificationsAdmin({ limit, type });
+    const unreadOnly = req.query.unread === 'true';
+    const limit = Math.min(200, parseInt(String(req.query.limit), 10) || 100);
+    const notifications = await listNotifications(req.user.id, { limit, unreadOnly });
     res.json({ notifications, emailConfigured: isEmailConfigured() });
   } catch (err) {
     console.error('Receptionist notifications:', err.message);
     res.status(500).json({ error: 'Failed to load notifications' });
+  }
+});
+
+/** Optional: admin-only audit of all system notifications (not used by reception inbox). */
+router.get('/notifications/all', async (req, res) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ error: 'Admin only' });
+  }
+  try {
+    const type = typeof req.query.type === 'string' ? req.query.type : undefined;
+    const limit = Math.min(200, parseInt(String(req.query.limit), 10) || 80);
+    const notifications = await listNotificationsAdmin({ limit, type });
+    res.json({ notifications });
+  } catch (err) {
+    console.error('Receptionist notifications all:', err.message);
+    res.status(500).json({ error: 'Failed to load notifications' });
+  }
+});
+
+router.delete('/notifications/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+  try {
+    const deleted = await deleteNotificationForUser(id, req.user.id);
+    if (!deleted) return res.status(404).json({ error: 'Notification not found' });
+    res.json({ message: 'Notification deleted' });
+  } catch (err) {
+    console.error('Receptionist delete notification:', err.message);
+    res.status(500).json({ error: 'Failed to delete notification' });
   }
 });
 

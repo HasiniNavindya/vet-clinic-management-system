@@ -16,10 +16,14 @@ export default function SettingsPage() {
     }
     if (!isLoading && user?.role === 'user') {
       router.replace('/dashboard/pet-owner/settings');
+      return;
+    }
+    if (!isLoading && user?.role === 'receptionist') {
+      router.replace('/dashboard/receptionist/settings');
     }
   }, [isLoading, isAuthenticated, user, router]);
 
-  if (isLoading || user?.role === 'user') {
+  if (isLoading || user?.role === 'user' || user?.role === 'receptionist') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />

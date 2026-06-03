@@ -281,9 +281,13 @@ export async function runReceptionistReminders(token: string) {
   return data;
 }
 
-export async function fetchReceptionistNotificationHistory(token: string, type?: string) {
-  const q = new URLSearchParams({ limit: '100' });
-  if (type) q.set('type', type);
+/** Inbox for the logged-in receptionist — only notifications addressed to them. */
+export async function fetchReceptionistNotificationHistory(
+  token: string,
+  options?: { unreadOnly?: boolean; limit?: number }
+) {
+  const q = new URLSearchParams({ limit: String(options?.limit ?? 100) });
+  if (options?.unreadOnly) q.set('unread', 'true');
   const res = await fetch(`${API_BASE_URL}/api/receptionist/notifications?${q}`, {
     headers: authHeaders(token),
   });
@@ -293,13 +297,24 @@ export async function fetchReceptionistNotificationHistory(token: string, type?:
       type: string;
       title: string;
       message: string;
-      userFullName?: string;
+      linkPath?: string | null;
+      isRead: boolean;
       createdAt: string;
     }[];
     error?: string;
   }>(res);
   if (!res.ok) throw new Error(data.error || 'Failed');
   return data.notifications;
+}
+
+export async function deleteReceptionistNotification(token: string, id: number) {
+  const res = await fetch(`${API_BASE_URL}/api/receptionist/notifications/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  const data = await parseJson<{ message?: string; error?: string }>(res);
+  if (!res.ok) throw new Error(data.error || 'Failed to delete notification');
+  return data;
 }
 
 export type EodSummary = {
@@ -320,6 +335,44 @@ export async function fetchReceptionistEodSummary(token: string) {
   const data = await parseJson<{ summary: EodSummary; error?: string }>(res);
   if (!res.ok) throw new Error(data.error || 'Failed');
   return data.summary;
+}
+
+/** Opens printable EOD report; use browser Print → Save as PDF. */
+export async function downloadReceptionistEodReport(
+  token: string,
+  summary?: EodSummary
+): Promise<void> {
+  const { openEodReportInNewTab } = await import('./receptionistEodReport');
+
+  const paths = [
+    '/api/receptionist/eod-summary/report?print=1',
+    '/api/receptionist/eod-report?print=1',
+    '/api/receptionist/report?print=1',
+  ];
+
+  for (const path of paths) {
+    try {
+      const res = await fetch(`${API_BASE_URL}${path}`, { headers: authHeaders(token) });
+      if (res.ok) {
+        const html = await res.text();
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank', 'noopener,noreferrer');
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        return;
+      }
+    } catch {
+      /* try next path or client fallback */
+    }
+  }
+
+  if (summary) {
+    openEodReportInNewTab(summary);
+    return;
+  }
+
+  const fresh = await fetchReceptionistEodSummary(token);
+  openEodReportInNewTab(fresh);
 }
 
 export async function fetchVaccinationsDue(token: string, withinDays = 30) {

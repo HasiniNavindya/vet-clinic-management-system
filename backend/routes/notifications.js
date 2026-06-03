@@ -5,6 +5,7 @@ const {
   getUnreadCount,
   markAsRead,
   markAllRead,
+  deleteNotificationForUser,
   processAppointmentReminders,
 } = require('../services/notificationService');
 
@@ -67,6 +68,19 @@ router.post('/sync-my-reminders', authenticateToken, async (req, res) => {
   } catch (err) {
     console.error('Sync my reminders error:', err.message);
     res.status(500).json({ error: 'Failed to sync reminders' });
+  }
+});
+
+router.delete('/:id', authenticateToken, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: 'Invalid id' });
+  try {
+    const deleted = await deleteNotificationForUser(id, req.user.id);
+    if (!deleted) return res.status(404).json({ error: 'Notification not found' });
+    res.json({ message: 'Notification deleted' });
+  } catch (err) {
+    console.error('Delete notification error:', err);
+    res.status(500).json({ error: 'Failed to delete notification' });
   }
 });
 

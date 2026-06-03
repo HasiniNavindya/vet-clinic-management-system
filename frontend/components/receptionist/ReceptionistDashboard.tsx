@@ -441,7 +441,7 @@ export default function ReceptionistDashboard() {
               desc: 'Fulfillment',
             },
             {
-              label: 'Doctor schedules',
+              label: 'Veterinarians',
               href: '/dashboard/receptionist/doctors',
               desc: 'Availability',
             },
@@ -452,7 +452,7 @@ export default function ReceptionistDashboard() {
             },
             {
               label: 'Send alert',
-              href: '/dashboard/receptionist/notifications/send',
+              href: '/dashboard/receptionist/notifications',
               desc: 'Broadcast',
             },
           ].map((q) => (

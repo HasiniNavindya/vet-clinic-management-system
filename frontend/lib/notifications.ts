@@ -64,6 +64,13 @@ export function markAllNotificationsRead(token: string) {
   });
 }
 
+export function deleteNotification(token: string, id: number) {
+  return apiFetch<{ message?: string }>(`/api/notifications/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+}
+
 export function notificationTypeLabel(type: NotificationType) {
   const labels: Record<NotificationType, string> = {
     appointment_reminder: 'Appointment reminder',

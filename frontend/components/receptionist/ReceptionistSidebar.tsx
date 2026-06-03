@@ -19,6 +19,11 @@ const GROUPS: NavGroup[] = [
     items: [{ href: '/dashboard/receptionist/appointments', label: 'Appointments' }],
   },
   {
+    id: 'docs',
+    label: 'Veterinarians',
+    items: [{ href: '/dashboard/receptionist/doctors', label: 'Veterinarians' }],
+  },
+  {
     id: 'pets',
     label: 'Pets',
     items: [{ href: '/dashboard/receptionist/pets', label: 'Pets' }],
@@ -29,22 +34,14 @@ const GROUPS: NavGroup[] = [
     items: [{ href: '/dashboard/receptionist/orders', label: 'Shop & orders' }],
   },
   {
-    id: 'notif',
-    label: 'Notifications',
-    items: [
-      { href: '/dashboard/receptionist/notifications/send', label: 'Send Notification' },
-      { href: '/dashboard/receptionist/notifications/history', label: 'Notification History' },
-    ],
-  },
-  {
-    id: 'docs',
-    label: 'Doctors',
-    items: [{ href: '/dashboard/receptionist/doctors', label: 'Doctor Schedule' }],
-  },
-  {
     id: 'pay',
     label: 'Payments',
-    items: [{ href: '/dashboard/receptionist/payments', label: 'Record offline payment' }],
+    items: [{ href: '/dashboard/receptionist/payments', label: 'Payments' }],
+  },
+  {
+    id: 'notif',
+    label: 'Notifications',
+    items: [{ href: '/dashboard/receptionist/notifications', label: 'Notifications' }],
   },
   {
     id: 'eod',
@@ -52,12 +49,9 @@ const GROUPS: NavGroup[] = [
     items: [{ href: '/dashboard/receptionist/eod', label: 'Daily Summary' }],
   },
   {
-    id: 'profile',
-    label: 'Profile',
-    items: [
-      { href: '/dashboard/receptionist/profile', label: 'My Profile' },
-      { href: '/dashboard/settings', label: 'Change Password' },
-    ],
+    id: 'settings',
+    label: 'Settings',
+    items: [{ href: '/dashboard/receptionist/settings', label: 'Settings' }],
   },
 ];
 
@@ -76,7 +70,6 @@ export default function ReceptionistSidebar({ welcomeName, email }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState<Record<string, boolean>>({
     orders: false,
-    notif: false,
   });
 
   const isActive = (href: string) => {
@@ -91,6 +84,22 @@ export default function ReceptionistSidebar({ welcomeName, email }: Props) {
         pathname === href ||
         pathname.startsWith(`${href}/`) ||
         pathname.startsWith('/dashboard/receptionist/owners')
+      );
+    }
+    if (href === '/dashboard/receptionist/notifications') {
+      return pathname === href || pathname.startsWith('/dashboard/receptionist/notifications');
+    }
+    if (href === '/dashboard/receptionist/doctors') {
+      return pathname === href || pathname.startsWith('/dashboard/receptionist/doctors');
+    }
+    if (href === '/dashboard/receptionist/payments') {
+      return pathname === href || pathname.startsWith('/dashboard/receptionist/payments');
+    }
+    if (href === '/dashboard/receptionist/settings') {
+      return (
+        pathname === href ||
+        pathname.startsWith('/dashboard/receptionist/settings') ||
+        pathname.startsWith('/dashboard/receptionist/profile')
       );
     }
     return pathname === href || pathname.startsWith(`${href}/`);
