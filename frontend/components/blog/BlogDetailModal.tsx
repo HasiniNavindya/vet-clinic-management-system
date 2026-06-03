@@ -72,23 +72,15 @@ export default function BlogDetailModal({ isOpen, blog, onClose }: BlogDetailMod
           </p>
 
           {/* Full Content */}
-          <div className="prose prose-lg max-w-none">
-            <p className="text-gray-700 leading-relaxed mb-6">
-              {blog.content || `
-                This is a comprehensive article about ${blog.title.toLowerCase()}. 
-                Our experts have put together detailed insights and practical advice that will help you 
-                understand this topic better. Whether you're a beginner or an experienced pet owner, 
-                you'll find valuable information here.
-                
-                From understanding the basics to implementing advanced techniques, this guide covers everything 
-                you need to know. We've included real-world examples and expert recommendations that you can 
-                apply immediately.
-                
-                Remember, every pet is unique, and what works for one may not work for another. Always consult 
-                with your veterinarian before making significant changes to your pet's care routine.
-              `}
-            </p>
-          </div>
+          {blog.content ? (
+            <div className="prose prose-lg max-w-none">
+              {blog.content.split(/\n\n+/).filter(Boolean).map((para, i) => (
+                <p key={i} className="mb-4 leading-relaxed text-gray-700">
+                  {para}
+                </p>
+              ))}
+            </div>
+          ) : null}
 
 
         </div>

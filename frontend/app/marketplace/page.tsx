@@ -206,37 +206,49 @@ export default function MarketplacePage() {
         setSearchQuery={setSearchQuery}
       />
 
-      {(isAdmin || isPetOwner) && (
+      {isAdmin && activeTab === 'products' && (
         <div className="py-4">
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-6">
-            <div className="flex flex-wrap gap-2 sm:gap-4">
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => setShowAddProductModal(true)}
-                  className="flex-1 sm:flex-none px-4 sm:px-6 py-2 bg-[#ec6d13] text-white rounded-lg font-semibold hover:bg-[#d55a0a] transition-colors text-sm sm:text-base"
-                >
-                  + Add shop product
-                </button>
-              )}
-              {isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => setShowAddPetModal(true)}
-                  className="flex-1 sm:flex-none px-4 sm:px-6 py-2 border border-[#ec6d13] text-[#ec6d13] rounded-lg font-semibold hover:bg-orange-50 transition-colors text-sm sm:text-base"
-                >
-                  + Add pet (instant publish)
-                </button>
-              )}
-              {isPetOwner && !isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => setShowOwnerPetModal(true)}
-                  className="flex-1 sm:flex-none px-4 sm:px-6 py-2 bg-[#ec6d13] text-white rounded-lg font-semibold hover:bg-[#d55a0a] transition-colors text-sm sm:text-base"
-                >
-                  + Post pet advertisement
-                </button>
-              )}
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-6">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAddProductModal(true)}
+                className="px-4 py-2 text-sm font-semibold text-white transition-colors bg-[#ec6d13] rounded-lg hover:bg-[#d55a0a] sm:px-6 sm:text-base"
+              >
+                + Add shop product
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAdmin && activeTab === 'pets' && (
+        <div className="py-4">
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-6">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAddPetModal(true)}
+                className="px-4 py-2 text-sm font-semibold text-[#ec6d13] transition-colors border border-[#ec6d13] rounded-lg hover:bg-orange-50 sm:px-6 sm:text-base"
+              >
+                + Add pet (instant publish)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isPetOwner && !isAdmin && activeTab === 'pets' && (
+        <div className="pb-2 pt-1">
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-6">
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowOwnerPetModal(true)}
+                className="px-5 py-2.5 text-sm font-semibold text-white transition-colors bg-[#ec6d13] rounded-lg hover:bg-[#d55a0a] sm:text-base"
+              >
+                + Post pet advertisement
+              </button>
             </div>
           </div>
         </div>

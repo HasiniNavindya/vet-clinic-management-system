@@ -28,7 +28,7 @@ export default function LatestBlogSection({ posts, compact }: Props) {
         <div className="grid gap-8 lg:grid-cols-2">
           {featured && (
             <article className="group">
-              <Link href={`/blog?post=${featured.slug}`} className="block">
+              <Link href={`/blog/${featured.slug}`} className="block">
                 <div className="relative mb-6 overflow-hidden rounded-2xl shadow-lg">
                   <div className="relative h-72 sm:h-80 md:h-96">
                     <Image
@@ -59,7 +59,7 @@ export default function LatestBlogSection({ posts, compact }: Props) {
             {sidePosts.map((blog) => (
               <Link
                 key={blog.id}
-                href={`/blog?post=${blog.slug}`}
+                href={`/blog/${blog.slug}`}
                 className="group flex gap-4 overflow-hidden rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition hover:shadow-md sm:gap-5"
               >
                 <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-lg sm:h-28 sm:w-32">
@@ -83,15 +83,6 @@ export default function LatestBlogSection({ posts, compact }: Props) {
               </Link>
             ))}
           </div>
-        </div>
-
-        <div className="mt-10 text-center">
-          <Link
-            href="/blog"
-            className="inline-flex rounded-lg border-2 border-[#ec6d13] px-8 py-3 text-sm font-semibold text-[#ec6d13] transition hover:bg-[#ec6d13] hover:text-white"
-          >
-            View all articles
-          </Link>
         </div>
       </div>
     </section>

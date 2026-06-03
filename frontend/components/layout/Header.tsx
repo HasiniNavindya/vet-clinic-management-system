@@ -52,9 +52,13 @@ function NavLink({
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, hasRole } = useAuth();
   const pathname = usePathname();
   const dashboardHref = user ? resolveUserDashboardPath(user) : '/login';
+  const appointmentHref =
+    isAuthenticated && hasRole('user')
+      ? '/dashboard/pet-owner/appointments/book'
+      : '/login?role=user';
 
   const closeMenu = () => setIsMenuOpen(false);
 
@@ -118,7 +122,7 @@ export default function Header() {
                   </Link>
                 )}
                 <Link
-                  href="/login?role=user"
+                  href={appointmentHref}
                   className="border-2 border-white bg-transparent px-4 py-1.5 text-xs font-bold uppercase text-white transition-all hover:bg-white/15"
                 >
                   GET APPOINTMENT
@@ -189,7 +193,7 @@ export default function Header() {
               )}
 
               <Link
-                href="/login?role=user"
+                href={appointmentHref}
                 className="mt-2 block w-full border-2 border-white px-4 py-2 text-center text-sm font-bold uppercase text-white"
                 onClick={closeMenu}
               >

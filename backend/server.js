@@ -29,6 +29,7 @@ const adminMarketplaceRouter = require("./routes/adminMarketplace");
 const adminPaymentsRouter = require("./routes/adminPayments");
 const adminNotificationsRouter = require("./routes/adminNotifications");
 const adminReportsRouter = require("./routes/adminReports");
+const adminBlogRouter = require("./routes/adminBlog");
 const marketplacePetListingsRouter = require("./routes/marketplacePetListings");
 const publicStatsRouter = require("./routes/publicStats");
 const publicBlogRouter = require("./routes/publicBlog");
@@ -120,6 +121,7 @@ app.use("/api/admin", adminMarketplaceRouter);
 app.use("/api/admin", adminPaymentsRouter);
 app.use("/api/admin", adminNotificationsRouter);
 app.use("/api/admin", adminReportsRouter);
+app.use("/api/admin", adminBlogRouter);
 app.use("/api/marketplace", marketplacePetListingsRouter);
 
 // POST /auth/register - Register new user
