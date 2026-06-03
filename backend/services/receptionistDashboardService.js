@@ -1,4 +1,8 @@
 const pool = require('../db');
+const {
+  APPOINTMENT_SELECT,
+  mapAppointmentRow,
+} = require('./appointmentService');
 
 async function getOverview() {
   const today = new Date().toISOString().slice(0, 10);
@@ -9,11 +13,12 @@ async function getOverview() {
     pendingOrders,
     vaccinationsDue,
     unreadNotifs,
+    pendingBilling,
   ] = await Promise.all([
     pool.query(
       `SELECT COUNT(*)::int AS c FROM appointments
        WHERE appointment_date = $1
-         AND status NOT IN ('cancelled', 'rejected')`,
+         AND status IN ('approved', 'awaiting_payment')`,
       [today]
     ),
     pool.query(
@@ -34,6 +39,13 @@ async function getOverview() {
     pool.query(
       `SELECT COUNT(*)::int AS c FROM notifications WHERE is_read = false`
     ).catch(() => ({ rows: [{ c: 0 }] })),
+    pool.query(
+      `SELECT COUNT(*)::int AS c FROM appointments a
+       WHERE EXISTS (
+         SELECT 1 FROM pet_medical_records r WHERE r.appointment_id = a.id
+       )
+       AND COALESCE(a.billing_status, 'none') IN ('pending', 'ready')`
+    ).catch(() => ({ rows: [{ c: 0 }] })),
   ]);
 
   return {
@@ -42,6 +54,7 @@ async function getOverview() {
     pendingOrders: pendingOrders.rows[0]?.c ?? 0,
     vaccinationsDueSoon: vaccinationsDue.rows[0]?.c ?? 0,
     unreadNotifications: unreadNotifs.rows[0]?.c ?? 0,
+    pendingBilling: pendingBilling.rows[0]?.c ?? 0,
   };
 }
 
@@ -145,8 +158,92 @@ async function getEodSummary() {
   };
 }
 
+async function listVaccinationsDue(limit = 6) {
+  try {
+    const r = await pool.query(
+      `SELECT v.id, v.pet_id, v.vaccine_name, v.due_date, v.status,
+              p.pet_name, u.id AS owner_id, u.full_name AS owner_name, u.email AS owner_email
+       FROM vaccinations v
+       JOIN pets_owned p ON p.id = v.pet_id
+       JOIN auth_users u ON u.id = p.user_id
+       WHERE v.due_date IS NOT NULL
+         AND v.due_date <= CURRENT_DATE + INTERVAL '30 days'
+         AND COALESCE(v.status, 'scheduled') IN ('scheduled', 'overdue', 'due_today', 'upcoming')
+       ORDER BY v.due_date ASC
+       LIMIT $1`,
+      [limit]
+    );
+    return r.rows;
+  } catch (err) {
+    console.error('listVaccinationsDue:', err.message);
+    return [];
+  }
+}
+
+async function queryAppointments(sql, params = []) {
+  try {
+    const r = await pool.query(`${APPOINTMENT_SELECT} ${sql}`, params);
+    return r.rows.map(mapAppointmentRow).filter(Boolean);
+  } catch (err) {
+    console.error('getDashboardFeed query:', err.message);
+    return [];
+  }
+}
+
+/** Single payload for reception home dashboard panels. */
+async function getDashboardFeed() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [
+    recentRequests,
+    todayConfirmed,
+    upcomingConsultations,
+    billingQueue,
+    vaccinationsDue,
+  ] = await Promise.all([
+    queryAppointments(
+      `WHERE a.status IN ('pending', 'reschedule_offered')
+       ORDER BY a.created_at DESC NULLS LAST
+       LIMIT 6`
+    ),
+    queryAppointments(
+      `WHERE a.appointment_date = $1
+         AND a.status IN ('approved', 'awaiting_payment')
+       ORDER BY a.appointment_time ASC
+       LIMIT 8`,
+      [today]
+    ),
+    queryAppointments(
+      `WHERE a.appointment_date > $1::date
+         AND a.appointment_date <= CURRENT_DATE + INTERVAL '14 days'
+         AND a.status IN ('approved', 'awaiting_payment')
+       ORDER BY a.appointment_date ASC, a.appointment_time ASC
+       LIMIT 8`,
+      [today]
+    ),
+    queryAppointments(
+      `WHERE EXISTS (
+         SELECT 1 FROM pet_medical_records r WHERE r.appointment_id = a.id
+       )
+       AND COALESCE(a.billing_status, 'none') IN ('pending', 'ready')
+       ORDER BY a.updated_at DESC NULLS LAST
+       LIMIT 6`
+    ),
+    listVaccinationsDue(6),
+  ]);
+
+  return {
+    recentRequests,
+    todayConfirmed,
+    upcomingConsultations,
+    billingQueue,
+    vaccinationsDue,
+  };
+}
+
 module.exports = {
   getOverview,
+  getDashboardFeed,
   listPetsWithOwners,
   listPetOwners,
   getEodSummary,

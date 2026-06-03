@@ -12,7 +12,19 @@ async function migrate() {
       ADD COLUMN IF NOT EXISTS medicine_fee_cents INTEGER,
       ADD COLUMN IF NOT EXISTS billing_status VARCHAR(20) DEFAULT 'none';
   `);
+  const backfill = await pool.query(`
+    UPDATE appointments a
+    SET status = 'completed',
+        billing_status = 'pending',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE EXISTS (
+      SELECT 1 FROM pet_medical_records r WHERE r.appointment_id = a.id
+    )
+    AND COALESCE(a.billing_status, 'none') IN ('none', '')
+    AND a.status NOT IN ('cancelled', 'rejected')
+  `);
   console.log('✓ Appointment billing columns ready');
+  console.log(`✓ Backfilled ${backfill.rowCount} visit(s) into billing queue`);
   process.exit(0);
 }
 

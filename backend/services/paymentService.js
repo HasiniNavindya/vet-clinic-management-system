@@ -524,6 +524,7 @@ async function fulfillShopOrder(transaction) {
   }
 
   const client = await pool.connect();
+  const stockedProducts = [];
   try {
     await client.query('BEGIN');
 
@@ -532,18 +533,22 @@ async function fulfillShopOrder(transaction) {
        WHERE order_id = $1 AND item_type = 'product'`,
       [orderId]
     );
-
     for (const line of lineRes.rows) {
       const dec = await client.query(
         `UPDATE products
          SET stock_quantity = stock_quantity - $1
          WHERE id = $2 AND stock_quantity >= $1
-         RETURNING id`,
+         RETURNING id, name, stock_quantity`,
         [line.quantity, line.item_id]
       );
       if (dec.rows.length === 0) {
         throw new Error(`Insufficient stock to fulfill order #${orderId}`);
       }
+      stockedProducts.push({
+        id: dec.rows[0].id,
+        name: dec.rows[0].name,
+        stockQuantity: Number(dec.rows[0].stock_quantity),
+      });
     }
 
     await client.query(
@@ -577,6 +582,16 @@ async function fulfillShopOrder(transaction) {
   } catch (notifyErr) {
     console.error('Shop payment notification error:', notifyErr.message);
   }
+
+  try {
+    const { notifyAdminsInventoryRestock } = require('./notificationService');
+    for (const product of stockedProducts) {
+      await notifyAdminsInventoryRestock(product, {});
+    }
+  } catch (stockErr) {
+    console.error('Low stock alert after order:', stockErr.message);
+  }
+
   return { orderId };
 }
 

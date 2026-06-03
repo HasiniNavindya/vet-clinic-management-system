@@ -8,7 +8,11 @@ type NavItem = { href: string; label: string };
 type NavGroup = { id: string; label: string; items: NavItem[] };
 
 const GROUPS: NavGroup[] = [
-  { id: 'dash', label: 'Dashboard', items: [{ href: '/dashboard/receptionist', label: 'Overview' }] },
+  {
+    id: 'dash',
+    label: 'Dashboard',
+    items: [{ href: '/dashboard/receptionist', label: 'Dashboard' }],
+  },
   {
     id: 'appts',
     label: 'Appointments',
@@ -17,17 +21,12 @@ const GROUPS: NavGroup[] = [
   {
     id: 'pets',
     label: 'Pets',
-    items: [
-      { href: '/dashboard/receptionist/pets', label: 'Pet List' },
-      { href: '/dashboard/receptionist/owners', label: 'Pet Owners' },
-    ],
+    items: [{ href: '/dashboard/receptionist/pets', label: 'Pets' }],
   },
   {
     id: 'orders',
     label: 'Orders',
-    items: [
-      { href: '/dashboard/receptionist/orders', label: 'All Orders' },
-    ],
+    items: [{ href: '/dashboard/receptionist/orders', label: 'Shop & orders' }],
   },
   {
     id: 'notif',
@@ -45,10 +44,7 @@ const GROUPS: NavGroup[] = [
   {
     id: 'pay',
     label: 'Payments',
-    items: [
-      { href: '/dashboard/receptionist/billing', label: 'Consultation billing' },
-      { href: '/dashboard/receptionist/payments', label: 'Record offline payment' },
-    ],
+    items: [{ href: '/dashboard/receptionist/payments', label: 'Record offline payment' }],
   },
   {
     id: 'eod',
@@ -79,24 +75,32 @@ type Props = {
 export default function ReceptionistSidebar({ welcomeName, email }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState<Record<string, boolean>>({
-    pets: false,
     orders: false,
     notif: false,
   });
 
   const isActive = (href: string) => {
-    if (href === '/dashboard/receptionist') return pathname === href;
+    if (href === '/dashboard/receptionist') {
+      return pathname === href || pathname.startsWith('/dashboard/receptionist/billing');
+    }
     if (href === '/dashboard/receptionist/appointments') {
       return pathname === href || pathname.startsWith(`${href}/`);
+    }
+    if (href === '/dashboard/receptionist/pets') {
+      return (
+        pathname === href ||
+        pathname.startsWith(`${href}/`) ||
+        pathname.startsWith('/dashboard/receptionist/owners')
+      );
     }
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
   return (
-    <aside className="fixed left-0 top-28 z-20 flex h-[calc(100vh-112px)] w-64 flex-col overflow-y-auto border-r border-gray-200 bg-white p-5">
-      <div className="mb-5 border-b border-gray-200 pb-5 text-center">
+    <aside className="fixed left-0 top-20 z-20 flex h-[calc(100vh-5rem)] w-64 flex-col overflow-y-auto border-r border-gray-200 bg-white p-4">
+      <div className="mb-3 border-b border-gray-200 pb-3 text-center">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#ec6d13]">Reception desk</p>
-        <div className="mx-auto mt-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#ec6d13] text-xl font-bold text-white">
+        <div className="mx-auto mt-2 flex h-12 w-12 items-center justify-center rounded-full bg-[#ec6d13] text-lg font-bold text-white">
           {welcomeName.charAt(0).toUpperCase()}
         </div>
         <p className="mt-2 text-sm font-bold text-gray-900">{welcomeName}</p>

@@ -35,6 +35,9 @@ const FULFILLMENT_STATUS = {
 
 const ALL_FULFILLMENT = Object.values(FULFILLMENT_STATUS);
 
+/** Alert reception & admin when marketplace stock falls at or below this level. */
+const LOW_STOCK_THRESHOLD = 10;
+
 function normalizeProductCategory(raw) {
   const k = String(raw || '')
     .toLowerCase()
@@ -54,6 +57,7 @@ module.exports = {
   LISTING_STATUS,
   FULFILLMENT_STATUS,
   ALL_FULFILLMENT,
+  LOW_STOCK_THRESHOLD,
   normalizeProductCategory,
   isAllowedProductCategory,
 };

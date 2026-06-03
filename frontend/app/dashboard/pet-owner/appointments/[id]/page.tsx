@@ -20,6 +20,8 @@ import {
   rescheduleAppointment,
 } from '@/lib/appointments';
 import { createAppointmentCheckout, fetchPaymentConfig, formatMoney } from '@/lib/payments';
+import { visitChargesTotalCents } from '@/lib/receptionistBilling';
+import { fetchConsultationByAppointment } from '@/lib/medicalRecords';
 import AppointmentFeedbackForm from '@/components/appointments/AppointmentFeedbackForm';
 
 export default function AppointmentDetailPage() {
@@ -37,6 +39,7 @@ export default function AppointmentDetailPage() {
   const [cancelReason, setCancelReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [feeLabel, setFeeLabel] = useState('');
+  const [hasConsultationRecord, setHasConsultationRecord] = useState(false);
 
   const load = async () => {
     if (!token) return;
@@ -51,6 +54,12 @@ export default function AppointmentDetailPage() {
         appointment_date: res.data.appointmentDate,
         appointment_time: res.data.appointmentTime,
       });
+    }
+    if (res.ok && res.data.status === 'completed') {
+      const consult = await fetchConsultationByAppointment(token, id);
+      if (consult.ok) setHasConsultationRecord(consult.data.hasRecord);
+    } else {
+      setHasConsultationRecord(false);
     }
     setLoading(false);
   };
@@ -159,6 +168,9 @@ export default function AppointmentDetailPage() {
   const needsPayment = appointment.status === 'awaiting_payment';
   const hasRescheduleOffer = appointment.status === 'reschedule_offered';
   const isCompleted = appointment.status === 'completed';
+  const visitTotalCents = visitChargesTotalCents(appointment);
+  const billingPending = appointment.billingStatus === 'ready' && visitTotalCents > 0;
+  const billingPaid = appointment.billingStatus === 'paid' && visitTotalCents > 0;
 
   return (
     <PetOwnerShell>
@@ -177,6 +189,48 @@ export default function AppointmentDetailPage() {
         ) : null}
 
         <DetailsCard appointment={appointment} />
+
+        {hasConsultationRecord && appointment.petId ? (
+          <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 text-sm">
+            <p className="font-semibold text-blue-900">Consultation record</p>
+            <p className="mt-1 text-blue-800">
+              Your veterinarian saved visit notes for this appointment.
+            </p>
+            <Link
+              href={`/dashboard/pet-owner/medical-records/${appointment.petId}`}
+              className="mt-2 inline-block font-semibold text-[#ec6d13] hover:underline"
+            >
+              View in pet health records →
+            </Link>
+          </div>
+        ) : null}
+
+        {billingPending ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="font-semibold text-amber-900">Visit balance due</p>
+            <VisitChargesBreakdown appointment={appointment} totalCents={visitTotalCents} />
+            <p className="mt-3 text-sm text-amber-800">
+              Please pay this amount at the reception desk. Your appointment will show as paid once
+              reception records your payment.
+            </p>
+          </div>
+        ) : null}
+
+        {billingPaid ? (
+          <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+            <p className="font-semibold text-green-900">Visit charges paid</p>
+            <VisitChargesBreakdown appointment={appointment} totalCents={visitTotalCents} />
+            <p className="mt-2 text-sm text-green-800">
+              Thank you — this visit is fully settled. Details are also in your payment history.
+            </p>
+            <Link
+              href="/dashboard/pet-owner/payments"
+              className="mt-2 inline-block text-sm font-semibold text-[#ec6d13] hover:underline"
+            >
+              Payment history →
+            </Link>
+          </div>
+        ) : null}
 
         {isCompleted && token ? (
           <AppointmentFeedbackForm token={token} appointmentId={appointment.id} />
@@ -371,6 +425,39 @@ function RescheduleForm({
         </button>
       </div>
     </form>
+  );
+}
+
+function VisitChargesBreakdown({
+  appointment,
+  totalCents,
+}: {
+  appointment: Appointment;
+  totalCents: number;
+}) {
+  const lines = [
+    { label: 'Consultation', cents: appointment.consultationFeeCents },
+    { label: 'Vaccination', cents: appointment.vaccinationFeeCents },
+    { label: 'Medicine', cents: appointment.medicineFeeCents },
+  ].filter((l) => l.cents && l.cents > 0);
+
+  return (
+    <div className="mt-2 text-sm">
+      {lines.length > 0 ? (
+        <ul className="space-y-1 text-gray-800">
+          {lines.map((l) => (
+            <li key={l.label} className="flex justify-between gap-4">
+              <span>{l.label}</span>
+              <span className="font-medium">{formatMoney(l.cents!)}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <p className="mt-2 flex justify-between gap-4 font-semibold text-gray-900">
+        <span>Total</span>
+        <span>{formatMoney(totalCents)}</span>
+      </p>
+    </div>
   );
 }
 

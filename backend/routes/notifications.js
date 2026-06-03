@@ -55,6 +55,21 @@ router.post('/read-all', authenticateToken, async (req, res) => {
   }
 });
 
+/** Pet owners: check vaccination due dates and create in-app alerts (throttled per user). */
+router.post('/sync-my-reminders', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'user') {
+      return res.json({ ok: true, skipped: true });
+    }
+    const { processAndGetReminders } = require('../services/vaccinationService');
+    const result = await processAndGetReminders(req.user.id);
+    res.json({ ok: true, reminders: result?.active?.length ?? 0 });
+  } catch (err) {
+    console.error('Sync my reminders error:', err.message);
+    res.status(500).json({ error: 'Failed to sync reminders' });
+  }
+});
+
 router.post(
   '/process-reminders',
   authenticateToken,

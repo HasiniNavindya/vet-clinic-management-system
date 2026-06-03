@@ -7,8 +7,12 @@ export type NotificationType =
   | 'doctor_appointment_assigned'
   | 'consultation_billing_ready'
   | 'consultation_record_added'
+  | 'visit_charges_ready'
+  | 'visit_payment_recorded'
   | 'payment_confirmation'
   | 'vaccination_alert'
+  | 'inventory_restock'
+  | 'shop_order_update'
   | 'announcement';
 
 export type AppNotification = {
@@ -24,6 +28,14 @@ export type AppNotification = {
   emailSent: boolean;
   createdAt: string;
 };
+
+/** Pet owner: refresh vaccination due alerts (safe to call when opening notifications). */
+export function syncMyReminders(token: string) {
+  return apiFetch<{ ok: boolean; reminders?: number }>('/api/notifications/sync-my-reminders', {
+    method: 'POST',
+    headers: authHeaders(token),
+  });
+}
 
 export function fetchNotifications(token: string, unreadOnly = false) {
   const q = unreadOnly ? '?unread=true' : '';
@@ -60,8 +72,12 @@ export function notificationTypeLabel(type: NotificationType) {
     doctor_appointment_assigned: 'Assigned visit',
     consultation_billing_ready: 'Billing',
     consultation_record_added: 'Consultation record',
+    visit_charges_ready: 'Visit charges',
+    visit_payment_recorded: 'Visit payment',
     payment_confirmation: 'Payment',
     vaccination_alert: 'Vaccination',
+    inventory_restock: 'Restock needed',
+    shop_order_update: 'Shop order',
     announcement: 'Announcement',
   };
   return labels[type] || type;

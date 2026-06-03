@@ -34,7 +34,20 @@ async function getUserPrefs(userId) {
      FROM user_preferences WHERE user_id = $1`,
     [userId]
   );
-  const row = result.rows[0] || {};
+  if (result.rows.length === 0) {
+    await pool.query(
+      `INSERT INTO user_preferences (user_id, vaccination_reminders, appointment_updates)
+       VALUES ($1, true, true)
+       ON CONFLICT (user_id) DO NOTHING`,
+      [userId]
+    );
+    return {
+      vaccinationReminders: true,
+      appointmentUpdates: true,
+      emailNotifications: true,
+    };
+  }
+  const row = result.rows[0];
   return {
     vaccinationReminders: row.vaccination_reminders !== false,
     appointmentUpdates: row.appointment_updates !== false,
@@ -137,21 +150,34 @@ async function markAllRead(userId) {
 
 async function notifyPaymentConfirmation(userId, transaction) {
   const amount = formatMoney(transaction.amountCents, transaction.currency || 'usd');
-  const title = 'Payment confirmed';
-  const message = `Your payment of ${amount} for ${transaction.description || 'your order'} was successful.`;
+  const isVisitPayment =
+    transaction.referenceType === 'appointment' &&
+    (transaction.type === 'consultation' ||
+      String(transaction.description || '').toLowerCase().includes('visit charges'));
+
+  let title = 'Payment confirmed';
+  let message = `Your payment of ${amount} for ${transaction.description || 'your order'} was successful.`;
+  let type = NOTIFICATION_TYPES.PAYMENT_CONFIRMATION;
   let linkPath = '/dashboard/pet-owner/payments';
-  if (transaction.referenceType === 'appointment' && transaction.referenceId) {
+
+  if (isVisitPayment && transaction.referenceId) {
+    title = 'Visit payment received';
+    message = `Thank you! Your consultation visit payment of ${amount} has been recorded. Your appointment and health records are updated.`;
+    type = NOTIFICATION_TYPES.VISIT_PAYMENT_RECORDED;
+    linkPath = `/dashboard/pet-owner/appointments/${transaction.referenceId}`;
+  } else if (transaction.referenceType === 'appointment' && transaction.referenceId) {
     linkPath = `/dashboard/pet-owner/appointments/${transaction.referenceId}`;
   }
 
   return createNotification({
     userId,
-    type: NOTIFICATION_TYPES.PAYMENT_CONFIRMATION,
+    type,
     title,
     message,
     linkPath,
     referenceType: transaction.referenceType || 'payment',
     referenceId: transaction.referenceId || transaction.id,
+    sendEmail: true,
     emailSubject: title,
     emailBody: message,
   });
@@ -179,7 +205,6 @@ async function notifyAppointmentBooked(userId, appointment) {
 
 async function notifyAppointmentStatusChange(userId, appointment, status) {
   const prefs = await getUserPrefs(userId);
-  if (!prefs.appointmentUpdates) return null;
 
   const labels = {
     pending: 'Appointment request received',
@@ -205,6 +230,7 @@ async function notifyAppointmentStatusChange(userId, appointment, status) {
     linkPath: `/dashboard/pet-owner/appointments/${appointment.id}`,
     referenceType: 'appointment',
     referenceId: appointment.id,
+    sendEmail: prefs.appointmentUpdates && prefs.emailNotifications,
     emailSubject: title,
     emailBody: message,
   });
@@ -212,7 +238,6 @@ async function notifyAppointmentStatusChange(userId, appointment, status) {
 
 async function notifyVaccinationAlert(userId, { petName, vaccineName, dueDate, status, message }) {
   const prefs = await getUserPrefs(userId);
-  if (!prefs.vaccinationReminders) return null;
 
   const title =
     status === 'overdue'
@@ -224,8 +249,9 @@ async function notifyVaccinationAlert(userId, { petName, vaccineName, dueDate, s
     type: NOTIFICATION_TYPES.VACCINATION_ALERT,
     title,
     message,
-    linkPath: '/dashboard/pet-owner/health?tab=vaccinations',
+    linkPath: '/dashboard/pet-owner/vaccinations',
     referenceType: 'vaccination',
+    sendEmail: prefs.vaccinationReminders && prefs.emailNotifications,
     emailSubject: title,
     emailBody: `${message}\n\nDue date: ${dueDate}`,
   });
@@ -282,9 +308,8 @@ async function notifyDoctorAppointmentAssigned(doctorId, appointment, { reassign
   });
 }
 
-async function notifyAppointmentReminder(userId, appointment) {
+async function notifyAppointmentReminder(userId, appointment, { reminderKind = 'day_before' } = {}) {
   const prefs = await getUserPrefs(userId);
-  if (!prefs.appointmentUpdates) return null;
 
   const existing = await pool.query(
     `SELECT id FROM notifications
@@ -294,8 +319,13 @@ async function notifyAppointmentReminder(userId, appointment) {
   );
   if (existing.rows.length > 0) return null;
 
-  const title = 'Appointment reminder';
-  const message = `Reminder: You have an appointment with Dr. ${appointment.doctorName || 'your vet'} on ${appointment.appointmentDate} at ${appointment.appointmentTime}. Please arrive 10 minutes early.`;
+  const title =
+    reminderKind === 'same_day' ? 'Appointment today' : 'Appointment reminder';
+  const when =
+    reminderKind === 'same_day'
+      ? `today at ${appointment.appointmentTime}`
+      : `${appointment.appointmentDate} at ${appointment.appointmentTime}`;
+  const message = `Reminder: You have an appointment with Dr. ${appointment.doctorName || 'your vet'} ${when}. Please arrive 10 minutes early.`;
 
   return createNotification({
     userId,
@@ -305,36 +335,63 @@ async function notifyAppointmentReminder(userId, appointment) {
     linkPath: `/dashboard/pet-owner/appointments/${appointment.id}`,
     referenceType: 'appointment',
     referenceId: appointment.id,
+    sendEmail: prefs.appointmentUpdates && prefs.emailNotifications,
     emailSubject: title,
     emailBody: message,
   });
 }
 
 async function processAppointmentReminders() {
-  const result = await pool.query(
-    `SELECT a.id, a.user_id, a.appointment_date, a.appointment_time, a.status,
-            d.name AS doctor_name
-     FROM appointments a
-     LEFT JOIN doctors d ON a.doctor_id = d.id
-     WHERE a.status = 'approved'
-       AND a.appointment_date = CURRENT_DATE + INTERVAL '1 day'`
-  );
+  const [tomorrowRows, todayRows] = await Promise.all([
+    pool.query(
+      `SELECT a.id, a.user_id, a.appointment_date, a.appointment_time, a.status,
+              d.name AS doctor_name
+       FROM appointments a
+       LEFT JOIN doctors d ON a.doctor_id = d.id
+       WHERE a.status IN ('approved', 'awaiting_payment')
+         AND a.appointment_date = CURRENT_DATE + INTERVAL '1 day'`
+    ),
+    pool.query(
+      `SELECT a.id, a.user_id, a.appointment_date, a.appointment_time, a.status,
+              d.name AS doctor_name
+       FROM appointments a
+       LEFT JOIN doctors d ON a.doctor_id = d.id
+       WHERE a.status IN ('approved', 'awaiting_payment')
+         AND a.appointment_date = CURRENT_DATE
+         AND a.appointment_time::time > CURRENT_TIME`
+    ),
+  ]);
 
   let sent = 0;
-  for (const row of result.rows) {
-    const appointment = {
-      id: row.id,
-      appointmentDate: row.appointment_date,
-      appointmentTime:
-        typeof row.appointment_time === 'string'
-          ? row.appointment_time.slice(0, 5)
-          : row.appointment_time,
-      doctorName: row.doctor_name,
-    };
-    const n = await notifyAppointmentReminder(row.user_id, appointment);
+  const mapRow = (row) => ({
+    id: row.id,
+    appointmentDate: row.appointment_date,
+    appointmentTime:
+      typeof row.appointment_time === 'string'
+        ? row.appointment_time.slice(0, 5)
+        : row.appointment_time,
+    doctorName: row.doctor_name,
+  });
+
+  for (const row of tomorrowRows.rows) {
+    const n = await notifyAppointmentReminder(row.user_id, mapRow(row), {
+      reminderKind: 'day_before',
+    });
     if (n) sent += 1;
   }
-  return { sent, checked: result.rows.length };
+  for (const row of todayRows.rows) {
+    const n = await notifyAppointmentReminder(row.user_id, mapRow(row), {
+      reminderKind: 'same_day',
+    });
+    if (n) sent += 1;
+  }
+
+  return {
+    sent,
+    checked: tomorrowRows.rows.length + todayRows.rows.length,
+    tomorrow: tomorrowRows.rows.length,
+    today: todayRows.rows.length,
+  };
 }
 
 async function listNotificationsAdmin({ limit = 80, type } = {}) {
@@ -453,13 +510,88 @@ async function notifyReceptionConsultationReady(appointment) {
   return results;
 }
 
+/** Pet owner: reception saved visit charges — payment due at desk. */
+async function notifyPetOwnerVisitChargesReady(ownerUserId, appointment, totalCents) {
+  if (!ownerUserId || !appointment) return null;
+
+  const prefs = await getUserPrefs(ownerUserId);
+  const amount = formatMoney(totalCents, 'usd');
+  const pet = appointment.petName || 'your pet';
+  const title = `Visit charges ready — ${pet}`;
+  const message = `Your visit balance is ${amount} (consultation, vaccination, and/or medicine). Please pay at reception when you are ready. You can view the breakdown on your appointment page.`;
+
+  return createNotification({
+    userId: ownerUserId,
+    type: NOTIFICATION_TYPES.VISIT_CHARGES_READY,
+    title,
+    message,
+    linkPath: `/dashboard/pet-owner/appointments/${appointment.id}`,
+    referenceType: 'appointment',
+    referenceId: appointment.id,
+    sendEmail: prefs.appointmentUpdates && prefs.emailNotifications,
+    emailSubject: title,
+    emailBody: message,
+  });
+}
+
 /** Notify pet owner when consultation / medical records are added after a visit. */
+const FULFILLMENT_LABELS = {
+  unfulfilled: 'Received',
+  processing: 'Processing',
+  shipped: 'Shipped',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+};
+
+function fulfillmentLabel(status) {
+  return FULFILLMENT_LABELS[status] || String(status || 'unfulfilled').replace(/_/g, ' ');
+}
+
+/** Pet owner: reception updated shop order fulfillment or tracking. */
+async function notifyPetOwnerShopOrderUpdate(
+  ownerUserId,
+  order,
+  { statusChanged = false, trackingUpdated = false } = {}
+) {
+  if (!ownerUserId || !order?.id) return null;
+
+  const prefs = await getUserPrefs(ownerUserId);
+  const status = order.fulfillment_status || order.fulfillmentStatus || 'unfulfilled';
+  const label = fulfillmentLabel(status);
+  const orderId = order.id;
+  const linkPath = '/dashboard/pet-owner/marketplace?tab=orders';
+  const tracking = order.tracking_note || order.trackingNote;
+
+  let title;
+  let message;
+  if (trackingUpdated && tracking) {
+    title = `Order #${orderId} — tracking update`;
+    message = `Your shop order has a new tracking note: ${tracking}. Current stage: ${label}.`;
+  } else if (statusChanged) {
+    title = `Order #${orderId} — ${label}`;
+    message = `Your marketplace order is now at the "${label}" stage. Open View order progress in Marketplace to see the full tracker.`;
+  } else {
+    return null;
+  }
+
+  return createNotification({
+    userId: ownerUserId,
+    type: NOTIFICATION_TYPES.SHOP_ORDER_UPDATE,
+    title,
+    message,
+    linkPath,
+    referenceType: 'shop_order',
+    referenceId: orderId,
+    sendEmail: prefs.appointmentUpdates && prefs.emailNotifications,
+    emailSubject: title,
+    emailBody: message,
+  });
+}
+
 async function notifyPetOwnerConsultationRecord(ownerUserId, { appointment, record, petName }) {
   if (!ownerUserId) return null;
 
   const prefs = await getUserPrefs(ownerUserId);
-  if (!prefs.appointmentUpdates) return null;
-
   const pet = petName || appointment?.petName || 'your pet';
   const doctor = appointment?.doctorName || record?.doctorName || 'your veterinarian';
   const rawDate = record?.visitDate || appointment?.appointmentDate;
@@ -467,13 +599,15 @@ async function notifyPetOwnerConsultationRecord(ownerUserId, { appointment, reco
     ? String(rawDate).slice(0, 10)
     : 'your recent visit';
 
-  const title = `Consultation record added — ${pet}`;
-  const message = `Dr. ${doctor} has saved consultation notes for ${pet} (${visitDate}). You can review the diagnosis and treatment plan in your pet health records. Reception will process any visit charges separately.`;
+  const title = `Consultation complete — ${pet}`;
+  const message = `Dr. ${doctor} finished your consultation for ${pet} on ${visitDate}. Medical notes are available in your pet health records. Reception will notify you when visit charges are ready for payment.`;
 
   const petId = appointment?.petId || record?.petId;
-  const linkPath = petId
-    ? `/dashboard/pet-owner/medical-records/${petId}`
-    : '/dashboard/pet-owner/health?tab=medical';
+  const linkPath = appointment?.id
+    ? `/dashboard/pet-owner/appointments/${appointment.id}`
+    : petId
+      ? `/dashboard/pet-owner/medical-records/${petId}`
+      : '/dashboard/pet-owner/health?tab=medical';
 
   return createNotification({
     userId: ownerUserId,
@@ -483,9 +617,109 @@ async function notifyPetOwnerConsultationRecord(ownerUserId, { appointment, reco
     linkPath,
     referenceType: appointment?.id ? 'appointment' : 'medical_record',
     referenceId: appointment?.id || record?.id || null,
+    sendEmail: prefs.appointmentUpdates && prefs.emailNotifications,
     emailSubject: title,
     emailBody: message,
   });
+}
+
+async function listAdminUserIds() {
+  const result = await pool.query(
+    `SELECT id FROM auth_users
+     WHERE LOWER(TRIM(role)) = 'admin'
+       AND COALESCE(account_status, 'active') = 'active'`
+  );
+  return result.rows.map((r) => r.id);
+}
+
+async function wasRestockAlertSentRecently(productId, withinHours = 48) {
+  const existing = await pool.query(
+    `SELECT id FROM notifications
+     WHERE type = $1
+       AND reference_type = 'product'
+       AND reference_id = $2
+       AND created_at > NOW() - ($3::int * INTERVAL '1 hour')`,
+    [NOTIFICATION_TYPES.INVENTORY_RESTOCK, productId, withinHours]
+  );
+  return existing.rows.length > 0;
+}
+
+/**
+ * Alert admins to restock a marketplace product (reception-triggered or automatic).
+ */
+async function notifyAdminsInventoryRestock(
+  product,
+  { triggeredByUserId = null, receptionistName = null } = {}
+) {
+  if (!product?.id) return { sent: 0, skipped: true };
+
+  const stock = Number(product.stockQuantity ?? product.stock_quantity ?? 0);
+  const { LOW_STOCK_THRESHOLD } = require('../config/shop');
+  if (stock > LOW_STOCK_THRESHOLD) {
+    return { sent: 0, skipped: true, reason: 'above_threshold' };
+  }
+
+  if (await wasRestockAlertSentRecently(product.id)) {
+    return { sent: 0, skipped: true, reason: 'recent_alert' };
+  }
+
+  const adminIds = await listAdminUserIds();
+  if (adminIds.length === 0) return { sent: 0, skipped: true, reason: 'no_admins' };
+
+  const name = product.name || 'Product';
+  const title =
+    stock === 0 ? `Out of stock — ${name}` : `Low stock — ${name}`;
+  const byReception = receptionistName
+    ? ` Reception (${receptionistName}) flagged this for restock.`
+    : triggeredByUserId
+      ? ' Reception flagged this for restock.'
+      : '';
+  const message = `Marketplace product "${name}" has ${stock} unit(s) left (restock at ${LOW_STOCK_THRESHOLD} or below). Please update inventory in the shop admin.${byReception}`;
+
+  const results = [];
+  for (const adminId of adminIds) {
+    const n = await createNotification({
+      userId: adminId,
+      type: NOTIFICATION_TYPES.INVENTORY_RESTOCK,
+      title,
+      message,
+      linkPath: '/dashboard/admin/shop/inventory',
+      referenceType: 'product',
+      referenceId: product.id,
+      sendEmail: true,
+      emailSubject: title,
+      emailBody: message,
+    });
+    if (n) results.push(n);
+  }
+  return { sent: results.length, productId: product.id };
+}
+
+/** Scan active products and notify admins for any at/below low-stock threshold. */
+async function processLowStockInventoryAlerts() {
+  const { LOW_STOCK_THRESHOLD } = require('../config/shop');
+  const result = await pool.query(
+    `SELECT id, name, category, COALESCE(stock_quantity, 0)::int AS stock_quantity
+     FROM products
+     WHERE COALESCE(is_active, true) = true
+       AND COALESCE(stock_quantity, 0) <= $1
+     ORDER BY stock_quantity ASC, id ASC`,
+    [LOW_STOCK_THRESHOLD]
+  );
+
+  let sent = 0;
+  for (const row of result.rows) {
+    const r = await notifyAdminsInventoryRestock(
+      {
+        id: row.id,
+        name: row.name,
+        stockQuantity: row.stock_quantity,
+      },
+      {}
+    );
+    if (r.sent > 0) sent += r.sent;
+  }
+  return { checked: result.rows.length, alertsSent: sent };
 }
 
 module.exports = {
@@ -500,9 +734,13 @@ module.exports = {
   notifyAppointmentStatusChange,
   notifyDoctorAppointmentAssigned,
   notifyReceptionConsultationReady,
+  notifyPetOwnerVisitChargesReady,
   notifyPetOwnerConsultationRecord,
+  notifyPetOwnerShopOrderUpdate,
   notifyVaccinationAlert,
   notifyAppointmentReminder,
+  notifyAdminsInventoryRestock,
+  processLowStockInventoryAlerts,
   processAppointmentReminders,
   listNotificationsAdmin,
   broadcastAnnouncement,
