@@ -18,7 +18,10 @@ const APPOINTMENT_SELECT = `
          p.image_url AS pet_image,
          u.full_name AS owner_name,
          u.email AS owner_email,
-         u.mobile_number AS owner_phone
+         u.mobile_number AS owner_phone,
+         EXISTS (
+           SELECT 1 FROM pet_medical_records r WHERE r.appointment_id = a.id
+         ) AS has_medical_record
   FROM appointments a
   LEFT JOIN doctors d ON a.doctor_id = d.id
   LEFT JOIN pets_owned p ON a.pet_id = p.id
@@ -68,6 +71,11 @@ function mapAppointmentRow(row) {
     staffRespondedAt: row.staff_responded_at,
     checkedInAt: row.checked_in_at,
     serviceFeeCents: row.service_fee_cents,
+    hasMedicalRecord: Boolean(row.has_medical_record),
+    consultationFeeCents: row.consultation_fee_cents,
+    vaccinationFeeCents: row.vaccination_fee_cents,
+    medicineFeeCents: row.medicine_fee_cents,
+    billingStatus: row.billing_status || 'none',
   };
 }
 
@@ -131,6 +139,35 @@ function buildTimeSlots() {
   return slots;
 }
 
+function todayDateString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function timeToMinutes(timeStr) {
+  const norm = timeStr.length >= 5 ? timeStr.slice(0, 5) : timeStr;
+  const [h, m] = norm.split(':').map(Number);
+  return h * 60 + m;
+}
+
+/** True if date is before today, or today with time already passed. */
+function isPastDateTime(dateStr, timeStr) {
+  const today = todayDateString();
+  if (dateStr < today) return true;
+  if (dateStr > today) return false;
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  return timeToMinutes(timeStr) <= nowMinutes;
+}
+
+function filterBookableSlotsForDate(dateStr, slots) {
+  const today = todayDateString();
+  if (dateStr < today) return [];
+  if (dateStr > today) return slots;
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  return slots.filter((slot) => timeToMinutes(slot) > nowMinutes);
+}
+
 async function getAvailableSlots(doctorId, dateStr) {
   const dayCheck = await isDoctorAvailableOnDate(doctorId, dateStr);
   if (!dayCheck.ok) {
@@ -161,8 +198,36 @@ async function getAvailableSlots(doctorId, dateStr) {
     }
   });
 
-  const available = buildTimeSlots().filter((slot) => !taken.has(slot));
+  const available = filterBookableSlotsForDate(
+    dateStr,
+    buildTimeSlots().filter((slot) => !taken.has(slot))
+  );
   return { available, error: null };
+}
+
+/** Full day grid: each clinic slot marked available or booked (for calendar UI). */
+async function getDaySchedule(doctorId, dateStr) {
+  const dayCheck = await isDoctorAvailableOnDate(doctorId, dateStr);
+  if (!dayCheck.ok) {
+    return { schedule: [], error: dayCheck.error };
+  }
+
+  const today = todayDateString();
+  if (dateStr < today) {
+    return { schedule: [], error: 'Cannot view or book past dates' };
+  }
+
+  const { available, error } = await getAvailableSlots(doctorId, dateStr);
+  if (error) return { schedule: [], error };
+
+  const availableSet = new Set(available);
+  const futureSlots = filterBookableSlotsForDate(dateStr, buildTimeSlots());
+  const schedule = futureSlots.map((time) => ({
+    time,
+    status: availableSet.has(time) ? 'available' : 'booked',
+  }));
+
+  return { schedule, error: null };
 }
 
 async function validateBookingInput({
@@ -192,9 +257,15 @@ async function validateBookingInput({
     }
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayDateString();
   if (appointmentDate < today) {
-    return { ok: false, error: 'Cannot book appointments in the past' };
+    return { ok: false, error: 'Cannot book or move appointments to a past date' };
+  }
+
+  const timeNormEarly =
+    appointmentTime.length === 5 ? appointmentTime : appointmentTime.slice(0, 5);
+  if (isPastDateTime(appointmentDate, timeNormEarly)) {
+    return { ok: false, error: 'Cannot book a time slot that has already passed' };
   }
 
   const dayCheck = await isDoctorAvailableOnDate(doctorId, appointmentDate);
@@ -296,6 +367,8 @@ module.exports = {
   mapAppointmentRow,
   fetchAppointmentById,
   getAvailableSlots,
+  getDaySchedule,
+  isPastDateTime,
   validateBookingInput,
   isSlotTaken,
   isDoctorAvailableOnDate,

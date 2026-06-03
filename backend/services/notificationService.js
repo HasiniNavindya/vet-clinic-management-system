@@ -231,6 +231,57 @@ async function notifyVaccinationAlert(userId, { petName, vaccineName, dueDate, s
   });
 }
 
+async function getAuthUserIdForDoctor(doctorId) {
+  if (!doctorId) return null;
+  const result = await pool.query(
+    `SELECT user_id FROM doctors WHERE id = $1 AND user_id IS NOT NULL`,
+    [doctorId]
+  );
+  return result.rows[0]?.user_id || null;
+}
+
+function formatAppointmentTimeForMessage(time) {
+  if (!time) return '';
+  const raw = String(time).trim().slice(0, 8);
+  const match = raw.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return raw;
+  const h = Number(match[1]);
+  const m = Number(match[2]);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+/** Notify veterinarian when reception assigns or reassigns them to an appointment. */
+async function notifyDoctorAppointmentAssigned(doctorId, appointment, { reassigned = false } = {}) {
+  const userId = await getAuthUserIdForDoctor(doctorId);
+  if (!userId) return null;
+
+  const prefs = await getUserPrefs(userId);
+  if (!prefs.appointmentUpdates) return null;
+
+  const pet = appointment.petName || 'a patient';
+  const owner = appointment.ownerName || 'pet owner';
+  const date = appointment.appointmentDate || 'scheduled date';
+  const time = formatAppointmentTimeForMessage(appointment.appointmentTime);
+  const when = time ? `${date} at ${time}` : String(date);
+
+  const title = reassigned ? 'Appointment reassigned to you' : 'New appointment assigned';
+  const message = `Reception assigned ${pet} (${owner}) for ${when}. View it under My appointments on your dashboard.`;
+
+  return createNotification({
+    userId,
+    type: NOTIFICATION_TYPES.DOCTOR_APPOINTMENT_ASSIGNED,
+    title,
+    message,
+    linkPath: '/dashboard/doctor/appointments',
+    referenceType: 'appointment',
+    referenceId: appointment.id,
+    emailSubject: title,
+    emailBody: message,
+  });
+}
+
 async function notifyAppointmentReminder(userId, appointment) {
   const prefs = await getUserPrefs(userId);
   if (!prefs.appointmentUpdates) return null;
@@ -367,6 +418,76 @@ async function runAllReminderJobs() {
   return { appointment, vaccination };
 }
 
+async function listReceptionistUserIds() {
+  const result = await pool.query(
+    `SELECT id FROM auth_users WHERE LOWER(TRIM(role)) = 'receptionist' AND account_status = 'active'`
+  );
+  return result.rows.map((r) => r.id);
+}
+
+/** Alert reception when a doctor finishes consultation — ready for billing. */
+async function notifyReceptionConsultationReady(appointment) {
+  const receptionistIds = await listReceptionistUserIds();
+  if (receptionistIds.length === 0) return [];
+
+  const pet = appointment.petName || 'Patient';
+  const owner = appointment.ownerName || 'pet owner';
+  const doctor = appointment.doctorName || 'Veterinarian';
+  const title = 'Consultation finished — billing needed';
+  const message = `Dr. ${doctor} completed consultation for ${pet} (${owner}). Add consultation, vaccination, and medicine charges at reception.`;
+
+  const results = [];
+  for (const userId of receptionistIds) {
+    const n = await createNotification({
+      userId,
+      type: NOTIFICATION_TYPES.CONSULTATION_BILLING_READY,
+      title,
+      message,
+      linkPath: '/dashboard/receptionist/billing',
+      referenceType: 'appointment',
+      referenceId: appointment.id,
+      sendEmail: false,
+    });
+    if (n) results.push(n);
+  }
+  return results;
+}
+
+/** Notify pet owner when consultation / medical records are added after a visit. */
+async function notifyPetOwnerConsultationRecord(ownerUserId, { appointment, record, petName }) {
+  if (!ownerUserId) return null;
+
+  const prefs = await getUserPrefs(ownerUserId);
+  if (!prefs.appointmentUpdates) return null;
+
+  const pet = petName || appointment?.petName || 'your pet';
+  const doctor = appointment?.doctorName || record?.doctorName || 'your veterinarian';
+  const rawDate = record?.visitDate || appointment?.appointmentDate;
+  const visitDate = rawDate
+    ? String(rawDate).slice(0, 10)
+    : 'your recent visit';
+
+  const title = `Consultation record added — ${pet}`;
+  const message = `Dr. ${doctor} has saved consultation notes for ${pet} (${visitDate}). You can review the diagnosis and treatment plan in your pet health records. Reception will process any visit charges separately.`;
+
+  const petId = appointment?.petId || record?.petId;
+  const linkPath = petId
+    ? `/dashboard/pet-owner/medical-records/${petId}`
+    : '/dashboard/pet-owner/health?tab=medical';
+
+  return createNotification({
+    userId: ownerUserId,
+    type: NOTIFICATION_TYPES.CONSULTATION_RECORD_ADDED,
+    title,
+    message,
+    linkPath,
+    referenceType: appointment?.id ? 'appointment' : 'medical_record',
+    referenceId: appointment?.id || record?.id || null,
+    emailSubject: title,
+    emailBody: message,
+  });
+}
+
 module.exports = {
   mapNotificationRow,
   createNotification,
@@ -377,6 +498,9 @@ module.exports = {
   notifyPaymentConfirmation,
   notifyAppointmentBooked,
   notifyAppointmentStatusChange,
+  notifyDoctorAppointmentAssigned,
+  notifyReceptionConsultationReady,
+  notifyPetOwnerConsultationRecord,
   notifyVaccinationAlert,
   notifyAppointmentReminder,
   processAppointmentReminders,

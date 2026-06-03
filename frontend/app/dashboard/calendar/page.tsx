@@ -18,7 +18,7 @@ interface Pet {
 
 export default function CalendarPage() {
   const router = useRouter();
-  const { token, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { token, isAuthenticated, isLoading: authLoading, hasRole } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -65,18 +65,34 @@ export default function CalendarPage() {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (authLoading) return;
+
+    if (!isAuthenticated) {
       router.replace('/login');
       return;
     }
+
+    if (hasRole('doctor')) {
+      router.replace('/dashboard/doctor/appointments');
+      return;
+    }
+    if (hasRole('receptionist')) {
+      router.replace('/dashboard/receptionist/appointments/calendar');
+      return;
+    }
+    if (hasRole('user')) {
+      router.replace('/dashboard/pet-owner/appointments');
+      return;
+    }
+
     if (token) {
       setLoading(true);
       fetchAppointments(token);
       fetchPets(token);
-    } else if (!authLoading) {
+    } else {
       setLoading(false);
     }
-  }, [authLoading, isAuthenticated, token, router, fetchAppointments, fetchPets]);
+  }, [authLoading, isAuthenticated, token, router, fetchAppointments, fetchPets, hasRole]);
 
   const handleAppointmentBooked = () => {
     if (token) fetchAppointments(token);
@@ -132,6 +148,20 @@ export default function CalendarPage() {
            date.getMonth() === today.getMonth() &&
            date.getFullYear() === today.getFullYear();
   };
+
+  if (
+    authLoading ||
+    !isAuthenticated ||
+    hasRole('doctor') ||
+    hasRole('receptionist') ||
+    hasRole('user')
+  ) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

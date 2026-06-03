@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import DoctorAvatar from '@/components/doctor/DoctorAvatar';
 import { useAuth } from '@/context/AuthContext';
 import DoctorShell from '@/components/doctor/DoctorShell';
+import DoctorPageHeader from '@/components/doctor/DoctorPageHeader';
 import { API_BASE_URL, authHeaders, fileToRawBase64 } from '@/lib/api';
 import { doctorImageUrl } from '@/lib/appointments';
 
@@ -155,10 +156,10 @@ export default function DoctorSettingsPage() {
 
   return (
     <DoctorShell>
-      <p className="font-sans text-xl font-semibold text-gray-900">Profile settings</p>
-      <p className="mt-1 text-sm text-gray-600">
-        Update your photo, bio, and the days you accept appointments.
-      </p>
+      <DoctorPageHeader
+        title="Profile settings"
+        subtitle="Update your photo, bio, and the days you accept appointments"
+      />
 
       {message ? (
         <p

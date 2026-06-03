@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchDoctorAvailability, formatTime } from '@/lib/appointments';
+import { DayScheduleSlot, fetchDoctorAvailability, formatTime } from '@/lib/appointments';
 
 type Action = 'reject' | 'reschedule';
 
@@ -31,25 +31,32 @@ export default function StaffRespondModal({
   const [reason, setReason] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
-  const [slots, setSlots] = useState<string[]>([]);
+  const [schedule, setSchedule] = useState<DayScheduleSlot[]>([]);
 
   useEffect(() => {
     if (!open) {
       setReason('');
       setDate('');
       setTime('');
-      setSlots([]);
+      setSchedule([]);
     }
   }, [open]);
 
   useEffect(() => {
     if (!open || action !== 'reschedule' || !date || !token) {
-      setSlots([]);
+      setSchedule([]);
       return;
     }
     fetchDoctorAvailability(token, doctorId, date).then((res) => {
-      if (res.ok) setSlots(res.data.slots);
-      else setSlots([]);
+      if (res.ok) {
+        const daySchedule =
+          res.data.schedule?.length
+            ? res.data.schedule
+            : res.data.slots.map((t) => ({ time: t, status: 'available' as const }));
+        setSchedule(daySchedule);
+      } else {
+        setSchedule([]);
+      }
     });
   }, [open, action, date, doctorId, token]);
 
@@ -88,7 +95,7 @@ export default function StaffRespondModal({
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">New time</label>
-                {slots.length === 0 && date ? (
+                {schedule.length === 0 && date ? (
                   <p className="text-sm text-amber-700">No slots on this day</p>
                 ) : (
                   <select
@@ -98,9 +105,10 @@ export default function StaffRespondModal({
                     className="w-full rounded-lg border border-gray-300 px-3 py-2"
                   >
                     <option value="">Select time</option>
-                    {slots.map((s) => (
-                      <option key={s} value={s}>
-                        {formatTime(s)}
+                    {schedule.map((s) => (
+                      <option key={s.time} value={s.time} disabled={s.status === 'booked'}>
+                        {formatTime(s.time)}
+                        {s.status === 'booked' ? ' (Booked)' : ''}
                       </option>
                     ))}
                   </select>

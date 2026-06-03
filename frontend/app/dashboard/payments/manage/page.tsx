@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/context/AuthContext';
@@ -14,7 +15,14 @@ import {
 } from '@/lib/payments';
 
 export default function StaffPaymentsManagePage() {
+  const router = useRouter();
   const { token, hasRole } = useAuth();
+
+  useEffect(() => {
+    if (hasRole('doctor')) {
+      router.replace('/dashboard/doctor/appointments');
+    }
+  }, [hasRole, router]);
   const [owners, setOwners] = useState<Array<{ id: number; full_name: string; email: string }>>([]);
   const [transactions, setTransactions] = useState<
     import('@/lib/payments').PaymentTransaction[]
@@ -31,7 +39,7 @@ export default function StaffPaymentsManagePage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const canManage = hasRole('admin', 'doctor', 'receptionist');
+  const canManage = hasRole('admin', 'receptionist');
 
   useEffect(() => {
     if (!token || !canManage) return;
@@ -78,7 +86,7 @@ export default function StaffPaymentsManagePage() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={['admin', 'doctor', 'receptionist']}>
+    <ProtectedRoute allowedRoles={['admin', 'receptionist']}>
       <div className="min-h-screen bg-gray-50">
         <Header />
         <main className="mx-auto max-w-4xl px-4 py-32">
