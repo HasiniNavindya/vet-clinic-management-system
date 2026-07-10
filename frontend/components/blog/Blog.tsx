@@ -21,11 +21,11 @@ export default function Blog() {
 
   if (loading) {
     return (
-      <section className="bg-gray-50 py-24 md:py-28">
+      <section className="bg-gray-50 py-14 md:py-16">
         <div className="mx-auto max-w-7xl px-4 text-center text-gray-500">Loading latest articles…</div>
       </section>
     );
   }
 
-  return <LatestBlogSection posts={posts} />;
+  return <LatestBlogSection posts={posts} compact />;
 }

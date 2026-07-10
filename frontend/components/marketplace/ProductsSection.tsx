@@ -58,6 +58,8 @@ export default function ProductsSection({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PRODUCTS_PER_PAGE = 8;
 
   useEffect(() => {
     const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
@@ -97,6 +99,16 @@ export default function ProductsSection({
     }
     return matches;
   }, [products, activeCategory, searchQuery, priceRange, sortBy]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredProducts.length, activeCategory, searchQuery, priceRange, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE));
+  const pagedProducts = filteredProducts.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
 
   const activeFilters = [
     activeCategory !== 'all' && {
@@ -183,7 +195,7 @@ export default function ProductsSection({
             {!loading && !error && (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {filteredProducts.map((product) => (
+                  {pagedProducts.map((product) => (
                     <ProductCard 
                       key={product.id} 
                       {...product} 
@@ -206,29 +218,31 @@ export default function ProductsSection({
               </>
             )}
 
-            <div className="flex justify-center items-center gap-1 sm:gap-2 mt-12 overflow-x-auto pb-2">
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                &lt;
-              </button>
-              <button className="px-4 py-2 rounded-lg bg-[#ec6d13] text-white font-semibold">
-                1
-              </button>
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                2
-              </button>
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                3
-              </button>
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                4
-              </button>
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                5
-              </button>
-              <button className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors">
-                &gt;
-              </button>
-            </div>
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-12 overflow-x-auto pb-2">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+
+                <span className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         </div>
   );

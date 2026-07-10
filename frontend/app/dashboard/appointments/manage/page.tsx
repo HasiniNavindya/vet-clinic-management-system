@@ -24,7 +24,7 @@ export default function ManageAppointmentsPage() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <main className="mx-auto max-w-4xl px-4 py-32">
-          <ManageAppointmentsPanel title="Manage appointment requests" defaultFilter="pending" />
+          <ManageAppointmentsPanel />
         </main>
       </div>
     </ProtectedRoute>

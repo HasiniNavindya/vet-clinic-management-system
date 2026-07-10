@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import Header from '@/components/layout/Header';
 import AdminDashboardCharts from '@/components/admin/AdminDashboardCharts';
 import {
   fetchAdminOverview,
@@ -84,16 +83,14 @@ export default function AdminAnalyticsPage() {
 
   if (isLoading || !isAuthenticated || !hasRole('admin')) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex justify-center py-16">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="container mx-auto max-w-6xl px-4 py-8 pt-28">
+    <div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <Link href="/dashboard/admin" className="text-sm font-semibold text-[#ec6d13] hover:underline">
@@ -187,7 +184,6 @@ export default function AdminAnalyticsPage() {
             </p>
           </div>
         ) : null}
-      </div>
     </div>
   );
 }

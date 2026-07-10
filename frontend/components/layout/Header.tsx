@@ -81,7 +81,7 @@ export default function Header() {
       <nav className="bg-[#ec6d13]">
         <div className="container mx-auto px-4">
           <div className="flex items-center gap-3 md:gap-5">
-            <SiteLogo href="/" height={48} />
+            <SiteLogo href="/" height={48} prominent />
 
             <div className="hidden min-w-0 flex-1 items-center justify-between md:flex">
               <div className="flex items-center gap-5 py-2">

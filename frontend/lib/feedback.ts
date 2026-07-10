@@ -4,7 +4,18 @@ export type AppointmentFeedback = {
   id: number;
   rating: number;
   comment: string | null;
+  status?: string;
   createdAt: string;
+};
+
+export type PublicFeedback = {
+  id: number;
+  rating: number;
+  comment: string | null;
+  createdAt: string;
+  userName: string;
+  doctorName: string | null;
+  petName: string | null;
 };
 
 export async function fetchAppointmentFeedback(token: string, appointmentId: number | string) {
@@ -23,4 +34,8 @@ export async function submitAppointmentFeedback(
     headers: authHeaders(token),
     body: JSON.stringify(body),
   });
+}
+
+export async function fetchApprovedFeedback() {
+  return apiFetch<{ feedback: PublicFeedback[] }>('/api/feedback/approved');
 }

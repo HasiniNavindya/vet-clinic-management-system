@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/layout/Header';
 import { useAuth } from '@/context/AuthContext';
 import { formatUsdFromCents } from '@/lib/adminInsights';
 import { fetchPaymentOverview, type PaymentOverview } from '@/lib/adminPayments';
@@ -35,16 +34,14 @@ export default function AdminPaymentRevenuePage() {
 
   if (isLoading || !isAuthenticated || !hasRole('admin')) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex justify-center py-16">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="container mx-auto max-w-4xl px-4 py-8 pt-28">
+    <div>
         <Link href="/dashboard/admin/payments" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Payment dashboard
         </Link>
@@ -123,7 +120,6 @@ export default function AdminPaymentRevenuePage() {
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />
           </div>
         ) : null}
-      </div>
     </div>
   );
 }

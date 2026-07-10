@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import BlogCoverImage from '@/components/blog/BlogCoverImage';
 import { fetchBlogPostBySlug, formatBlogDateLong, type BlogPost } from '@/lib/blog';
 
 export default function BlogArticlePage() {
@@ -44,8 +44,8 @@ export default function BlogArticlePage() {
       {post && !loading && !error ? (
         <section className="relative overflow-hidden pb-12 pt-28">
           <div className="absolute inset-0 z-0">
-            <Image
-              src={post.image || '/images/services/care-advice.jpg'}
+            <BlogCoverImage
+              imagePath={post.image}
               alt=""
               fill
               className="object-cover"

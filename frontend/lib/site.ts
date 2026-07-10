@@ -1,5 +1,5 @@
 /** Site-wide branding assets (served from /public). */
-export const SITE_LOGO_PATH = '/images/carlisle-logo.png';
+export const SITE_LOGO_PATH = '/images/newlogo1.png';
 export const SITE_NAME = 'Carlisle Pet Care';
 
 export const EMERGENCY_PHONE = '+0123456789';

@@ -4,15 +4,11 @@ import Link from 'next/link';
 
 export default function AboutHeroSection() {
   return (
-    <section className="pt-32 pb-16 bg-white">
+    <section className="pt-16 pb-14 bg-white">
       <div className="max-w-6xl mx-auto px-4">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <div className="inline-block mb-4">
-              <span className="bg-[#ec6d13] text-white px-4 py-2 rounded-full text-sm font-semibold">
-                About Our Clinic
-              </span>
-            </div>
+            
             <h1 className="text-gray-900 mb-6 leading-tight">
               Your Pet's Health is Our Top Priority
             </h1>

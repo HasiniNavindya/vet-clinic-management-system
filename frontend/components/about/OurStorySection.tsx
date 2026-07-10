@@ -23,9 +23,14 @@ export default function OurStorySection() {
           </div>
           
           <div>
-            <h2 className="text-gray-900 mb-6">
+            <h2 className="text-gray-900 mb-2">
               Our Story: A Journey of Compassion
             </h2>
+            <div className="mx-auto mt-3 flex items-center justify-center gap-3">
+              <div className="h-0.5 w-14 bg-[#ec6d13]" />
+              <span className="text-[#ec6d13]">✦</span>
+              <div className="h-0.5 w-14 bg-[#ec6d13]" />
+            </div>
             <p className="text-lg text-gray-600 mb-6 leading-relaxed">
               What started as a small neighborhood clinic in 2010 has grown into a trusted name in veterinary care. 
               Our founder, Dr. Sarah Mitchell, had a simple vision: to create a place where pets would receive the 

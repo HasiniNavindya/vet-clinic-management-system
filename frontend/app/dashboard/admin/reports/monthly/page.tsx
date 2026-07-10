@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import Header from '@/components/layout/Header';
 import { fetchMonthlyReport, formatUsdFromCents } from '@/lib/adminInsights';
 
 export default function AdminMonthlyReportPage() {
@@ -44,7 +43,7 @@ export default function AdminMonthlyReportPage() {
 
   if (isLoading || !isAuthenticated || !hasRole('admin')) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex justify-center py-16">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />
       </div>
     );
@@ -56,9 +55,7 @@ export default function AdminMonthlyReportPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="container mx-auto max-w-3xl px-4 py-8 pt-28">
+    <div>
         <Link href="/dashboard/admin/reports" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Reports dashboard
         </Link>
@@ -141,7 +138,6 @@ export default function AdminMonthlyReportPage() {
             </dl>
           </div>
         ) : null}
-      </div>
     </div>
   );
 }

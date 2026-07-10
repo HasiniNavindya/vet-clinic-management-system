@@ -1,4 +1,13 @@
-import { apiFetch } from './api';
+import { apiFetch, API_BASE_URL } from './api';
+
+/** Resolve blog cover path for display (uploads, site assets, or external URLs). */
+export function blogImageUrl(imagePath?: string | null): string {
+  if (!imagePath?.trim()) return '/images/services/care-advice.jpg';
+  const p = imagePath.trim();
+  if (p.startsWith('http://') || p.startsWith('https://')) return p;
+  if (p.startsWith('/')) return `${API_BASE_URL}${p}`;
+  return p;
+}
 
 export type BlogCategory = 'all' | 'health' | 'nutrition' | 'training' | 'lifestyle' | 'news';
 

@@ -30,7 +30,7 @@ const HIGHLIGHTS = [
 
 export default function HomeWhyChoose() {
   return (
-    <section className="bg-white pt-6 pb-14 md:pt-8 md:pb-16">
+    <section className="bg-white pt-20 pb-14 sm:pt-24 md:pt-28 md:pb-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeader
           title="How We Help Your Pet"

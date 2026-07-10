@@ -5,12 +5,13 @@ export default function MissionVisionValues() {
     <section className="py-16 bg-gray-50">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-gray-900 mb-3">
-            What Drives Us
-          </h2>
-          <p className="text-gray-600">
-            Our core principles that shape exceptional pet care
-          </p>
+          <h2 className="text-gray-900 mb-2">What Drives Us</h2>
+          <div className="mx-auto mt-3 flex items-center justify-center gap-3">
+            <div className="h-0.5 w-14 bg-[#ec6d13]" />
+            <span className="text-[#ec6d13]">✦</span>
+            <div className="h-0.5 w-14 bg-[#ec6d13]" />
+          </div>
+          <p className="text-gray-600 mt-3">Our core principles that shape exceptional pet care</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import Header from '@/components/layout/Header';
 import {
   fetchClinicDoctor,
   fetchDoctorScheduleSample,
@@ -106,7 +105,7 @@ export default function AdminDoctorDetailPage() {
 
   if (isLoading || !isAuthenticated || !hasRole('admin')) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex justify-center py-16">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />
       </div>
     );
@@ -114,19 +113,17 @@ export default function AdminDoctorDetailPage() {
 
   if (!Number.isFinite(doctorId)) {
     return (
-      <div className="min-h-screen bg-gray-50 p-12 pt-28">
+      <div>
         <p className="text-red-600">Invalid doctor id.</p>
-        <Link href="/dashboard/admin/doctors">Back</Link>
+        <Link href="/dashboard/admin/users?tab=veterinarians">Back</Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="container mx-auto max-w-4xl px-4 py-8 pt-28">
-        <Link href="/dashboard/admin/doctors" className="text-sm font-semibold text-[#ec6d13] hover:underline">
-          ← All doctors
+    <div>
+        <Link href="/dashboard/admin/users?tab=veterinarians" className="text-sm font-semibold text-[#ec6d13] hover:underline">
+          ← Veterinarians
         </Link>
 
         {loading ? (
@@ -268,7 +265,6 @@ export default function AdminDoctorDetailPage() {
         ) : (
           <p className="mt-8 text-gray-700">Doctor not found.</p>
         )}
-      </div>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import SectionHeader from '@/components/home/SectionHeader';
+import BlogCoverImage from '@/components/blog/BlogCoverImage';
 import type { BlogPostDisplay } from '@/lib/blog';
 
 type Props = {
@@ -31,8 +31,8 @@ export default function LatestBlogSection({ posts, compact }: Props) {
               <Link href={`/blog/${featured.slug}`} className="block">
                 <div className="relative mb-6 overflow-hidden rounded-2xl shadow-lg">
                   <div className="relative h-72 sm:h-80 md:h-96">
-                    <Image
-                      src={featured.image}
+                    <BlogCoverImage
+                      imagePath={featured.image}
                       alt={featured.title}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -63,8 +63,8 @@ export default function LatestBlogSection({ posts, compact }: Props) {
                 className="group flex gap-4 overflow-hidden rounded-xl border border-gray-100 bg-white p-3 shadow-sm transition hover:shadow-md sm:gap-5"
               >
                 <div className="relative h-24 w-28 shrink-0 overflow-hidden rounded-lg sm:h-28 sm:w-32">
-                  <Image
-                    src={blog.image}
+                  <BlogCoverImage
+                    imagePath={blog.image}
                     alt={blog.title}
                     fill
                     className="object-cover transition-transform duration-300 group-hover:scale-105"

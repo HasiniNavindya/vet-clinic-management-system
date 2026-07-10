@@ -1,4 +1,4 @@
-import { API_BASE_URL, authHeaders } from './api';
+import { API_BASE_URL, authHeaders, fileToRawBase64 } from './api';
 import type { BlogCategory } from './blog';
 
 async function parseJson(res: Response) {
@@ -6,7 +6,12 @@ async function parseJson(res: Response) {
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error(res.status === 404 ? 'API not found' : 'Invalid response');
+    if (res.status === 404) {
+      throw new Error(
+        'Blog image upload API not found. Restart the backend: cd backend && node server.js'
+      );
+    }
+    throw new Error('Invalid response from server');
   }
 }
 
@@ -40,6 +45,21 @@ export type AdminBlogPostInput = {
   isFeatured?: boolean;
   slug?: string;
 };
+
+export async function uploadBlogCoverImage(
+  token: string,
+  file: File
+): Promise<{ imageUrl: string }> {
+  const imageBase64 = await fileToRawBase64(file);
+  const res = await fetch(`${API_BASE_URL}/api/admin/blog/upload-cover`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({ imageBase64, filename: file.name }),
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'Failed to upload image');
+  return data as { imageUrl: string };
+}
 
 export async function fetchAdminBlogPosts(token: string): Promise<{
   posts: AdminBlogPost[];

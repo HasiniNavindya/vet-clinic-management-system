@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Header from '@/components/layout/Header';
 import { useAuth } from '@/context/AuthContext';
 import { BLOG_CATEGORIES, type BlogCategory } from '@/lib/blog';
 import {
@@ -11,8 +10,10 @@ import {
   deleteAdminBlogPost,
   fetchAdminBlogPosts,
   patchAdminBlogPost,
+  uploadBlogCoverImage,
   type AdminBlogPost,
 } from '@/lib/adminBlog';
+import { blogImageUrl } from '@/lib/blog';
 
 const emptyForm = {
   title: '',
@@ -47,6 +48,8 @@ export default function AdminBlogPage() {
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -74,6 +77,34 @@ export default function AdminBlogPage() {
   const resetForm = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setImagePreview(null);
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !token) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file (JPG, PNG, WebP, or GIF).');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setError('Image must be 8 MB or smaller.');
+      return;
+    }
+
+    setUploadingImage(true);
+    setError('');
+    try {
+      const { imageUrl } = await uploadBlogCoverImage(token, file);
+      setForm((f) => ({ ...f, image: imageUrl }));
+      setImagePreview(blogImageUrl(imageUrl));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -119,6 +150,7 @@ export default function AdminBlogPage() {
       isPublished: p.isPublished,
       isFeatured: p.isFeatured,
     });
+    setImagePreview(p.image ? blogImageUrl(p.image) : null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -145,16 +177,14 @@ export default function AdminBlogPage() {
 
   if (isLoading || !isAuthenticated || !hasRole('admin')) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex justify-center py-16">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="container mx-auto max-w-6xl px-4 py-8 pt-28">
+    <div>
         <Link href="/dashboard/admin" className="text-sm font-semibold text-[#ec6d13] hover:underline">
           ← Admin home
         </Link>
@@ -225,15 +255,57 @@ export default function AdminBlogPage() {
                 onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
               />
             </label>
-            <label className="block sm:col-span-2">
-              <span className="text-xs font-semibold uppercase text-gray-500">Cover image URL</span>
-              <input
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="/images/... or https://..."
-                value={form.image}
-                onChange={(e) => setForm((f) => ({ ...f, image: e.target.value }))}
-              />
-            </label>
+            <div className="block sm:col-span-2">
+              <span className="text-xs font-semibold uppercase text-gray-500">Cover image</span>
+              <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start">
+                <label
+                  className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 transition ${
+                    uploadingImage
+                      ? 'border-gray-200 bg-gray-50'
+                      : 'border-[#ec6d13]/40 bg-orange-50/30 hover:border-[#ec6d13] hover:bg-orange-50/50'
+                  }`}
+                >
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="sr-only"
+                    disabled={uploadingImage}
+                    onChange={handleCoverUpload}
+                  />
+                  {uploadingImage ? (
+                    <span className="text-sm font-semibold text-gray-600">Uploading…</span>
+                  ) : (
+                    <>
+                      <span className="text-2xl text-[#ec6d13]">↑</span>
+                      <span className="mt-2 text-sm font-semibold text-[#b6530f]">
+                        Upload cover image
+                      </span>
+                      <span className="mt-1 text-xs text-gray-500">JPG, PNG, WebP or GIF · max 8 MB</span>
+                    </>
+                  )}
+                </label>
+                {(imagePreview || form.image) ? (
+                  <div className="relative min-w-0 flex-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imagePreview || blogImageUrl(form.image)}
+                      alt="Cover preview"
+                      className="max-h-40 w-full rounded-xl border border-gray-200 object-cover shadow-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm((f) => ({ ...f, image: '' }));
+                        setImagePreview(null);
+                      }}
+                      className="mt-2 text-sm font-semibold text-red-600 hover:text-red-800"
+                    >
+                      Remove image
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
             <label className="block">
               <span className="text-xs font-semibold uppercase text-gray-500">Author</span>
               <input
@@ -352,7 +424,6 @@ export default function AdminBlogPage() {
             </ul>
           )}
         </div>
-      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
+import BlogCoverImage from '@/components/blog/BlogCoverImage';
 import type { BlogPostDisplay } from '@/lib/blog';
 
 interface BlogDetailModalProps {
@@ -35,12 +35,7 @@ export default function BlogDetailModal({ isOpen, blog, onClose }: BlogDetailMod
 
         {/* Image */}
         <div className="relative h-48 sm:h-72 md:h-96 w-full overflow-hidden rounded-t-2xl">
-          <Image
-            src={blog.image}
-            alt={blog.title}
-            fill
-            className="object-cover"
-          />
+          <BlogCoverImage imagePath={blog.image} alt={blog.title} fill className="object-cover" />
         </div>
 
         {/* Content */}

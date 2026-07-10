@@ -1,6 +1,13 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const pool = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+
+const blogUploadsDir = path.join(__dirname, '..', 'uploads', 'blog');
+if (!fs.existsSync(blogUploadsDir)) fs.mkdirSync(blogUploadsDir, { recursive: true });
+
+const ALLOWED_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
 
 const router = express.Router();
 router.use(authenticateToken, requireRole('admin'));
@@ -52,6 +59,36 @@ async function uniqueSlug(base, excludeId) {
     n += 1;
   }
 }
+
+async function handleBlogCoverUpload(req, res) {
+  const { imageBase64, filename } = req.body || {};
+  if (!imageBase64 || !filename) {
+    return res.status(400).json({ error: 'Missing imageBase64 or filename' });
+  }
+
+  const ext = path.extname(String(filename)).toLowerCase();
+  if (!ALLOWED_EXT.has(ext)) {
+    return res.status(400).json({ error: 'Cover image must be JPG, PNG, WebP, or GIF' });
+  }
+
+  try {
+    const buffer = Buffer.from(imageBase64, 'base64');
+    if (buffer.length > 8 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Image must be 8 MB or smaller' });
+    }
+    const safeName = String(filename).replace(/[^a-z0-9.\-_]/gi, '_');
+    const outName = `blog_${Date.now()}_${safeName}`;
+    const destPath = path.join(blogUploadsDir, outName);
+    fs.writeFileSync(destPath, buffer);
+    const imageUrl = `/uploads/blog/${outName}`;
+    res.json({ message: 'Cover image uploaded', imageUrl });
+  } catch (err) {
+    console.error('adminBlog upload-cover:', err.message);
+    res.status(500).json({ error: 'Failed to upload cover image' });
+  }
+}
+
+router.post('/blog/upload-cover', handleBlogCoverUpload);
 
 router.get('/blog/posts', async (_req, res) => {
   try {
@@ -232,3 +269,4 @@ router.delete('/blog/posts/:id', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.handleBlogCoverUpload = handleBlogCoverUpload;

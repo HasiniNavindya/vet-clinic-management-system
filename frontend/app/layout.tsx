@@ -20,8 +20,8 @@ export const metadata: Metadata = {
   title: "Carlisle Pet Care",
   description: "Veterinary Clinic Management System",
   icons: {
-    icon: "/images/carlisle-logo.png",
-    apple: "/images/carlisle-logo.png",
+    icon: "/images/newlogo1.png",
+    apple: "/images/newlogo1.png",
   },
 };
 
@@ -32,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
-      <body className="min-h-screen font-sans antialiased">
+      <body className="min-h-screen font-sans antialiased pt-30 md:pt-38">
         <AuthProvider>
           {children}
           <EmergencyFloatingButton />

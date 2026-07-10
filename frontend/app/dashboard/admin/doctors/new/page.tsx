@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import Header from '@/components/layout/Header';
 import { createClinicDoctor } from '@/lib/adminClinicDoctors';
 
 const DAY_OPTS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -58,24 +57,22 @@ export default function AdminNewDoctorPage() {
 
   if (isLoading || !isAuthenticated || !hasRole('admin')) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex justify-center py-16">
         <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#ec6d13] border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="container mx-auto max-w-xl px-4 py-8 pt-28">
-        <Link href="/dashboard/admin/doctors" className="text-sm font-semibold text-[#ec6d13] hover:underline">
-          ← All doctors
+    <div>
+        <Link href="/dashboard/admin/users?tab=veterinarians" className="text-sm font-semibold text-[#ec6d13] hover:underline">
+          ← Veterinarians
         </Link>
         <h1 className="mt-2 text-gray-900">Add doctor profile</h1>
         <p className="text-sm text-gray-600">
           Creates a public veterinarian card only. For receptionists who need login, use{' '}
-          <Link href="/dashboard/admin/doctor-applications" className="font-semibold text-[#ec6d13] hover:underline">
-            doctor applications
+          <Link href="/dashboard/admin/users?tab=veterinarians&vetTab=applications" className="font-semibold text-[#ec6d13] hover:underline">
+            vet applications
           </Link>{' '}
           or promote a user in{' '}
           <Link href="/dashboard/admin/users" className="font-semibold text-[#ec6d13] hover:underline">
@@ -159,7 +156,6 @@ export default function AdminNewDoctorPage() {
             {saving ? 'Saving…' : 'Create profile'}
           </button>
         </form>
-      </div>
     </div>
   );
 }

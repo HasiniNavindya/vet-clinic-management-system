@@ -85,10 +85,12 @@ const uploadsDir = path.join(__dirname, 'uploads');
 const petsUploadsDir = path.join(uploadsDir, 'pets');
 const doctorLicensesDir = path.join(uploadsDir, 'doctor-licenses');
 const doctorProfilesDir = path.join(uploadsDir, 'doctor-profiles');
+const blogUploadsDir = path.join(uploadsDir, 'blog');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 if (!fs.existsSync(petsUploadsDir)) fs.mkdirSync(petsUploadsDir, { recursive: true });
 if (!fs.existsSync(doctorLicensesDir)) fs.mkdirSync(doctorLicensesDir, { recursive: true });
 if (!fs.existsSync(doctorProfilesDir)) fs.mkdirSync(doctorProfilesDir, { recursive: true });
+if (!fs.existsSync(blogUploadsDir)) fs.mkdirSync(blogUploadsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
 app.get("/", (req, res) => {
@@ -123,6 +125,12 @@ app.use("/api/admin", adminMarketplaceRouter);
 app.use("/api/admin", adminPaymentsRouter);
 app.use("/api/admin", adminNotificationsRouter);
 app.use("/api/admin", adminReportsRouter);
+app.post(
+  "/api/admin/blog/upload-cover",
+  authenticateToken,
+  requireRole("admin"),
+  adminBlogRouter.handleBlogCoverUpload
+);
 app.use("/api/admin", adminBlogRouter);
 app.use("/api/marketplace", marketplacePetListingsRouter);
 

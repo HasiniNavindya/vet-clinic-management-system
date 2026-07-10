@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import Header from '@/components/layout/Header';
 import {
   fetchAdminUserActivity,
   fetchAdminUserDetail,
@@ -94,9 +93,7 @@ export default function AdminUserDetailPage() {
   const du = detail?.user;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <div className="container mx-auto max-w-4xl px-4 py-8 pt-28">
+    <div>
         <Link
           href="/dashboard/admin/users"
           className="text-sm font-semibold text-[#ec6d13] hover:underline"
@@ -262,7 +259,6 @@ export default function AdminUserDetailPage() {
             </section>
           </>
         ) : null}
-      </div>
     </div>
   );
 }

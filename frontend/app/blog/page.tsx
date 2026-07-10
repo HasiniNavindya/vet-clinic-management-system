@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import BlogHero from '@/components/blog/BlogHero';
+import BlogCoverImage from '@/components/blog/BlogCoverImage';
 import { fetchBlogPosts, toDisplayPost, type BlogPostDisplay } from '@/lib/blog';
 
 export default function BlogPage() {
@@ -123,8 +123,8 @@ export default function BlogPage() {
                 <article className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-lg">
                   <div className="grid gap-0 lg:grid-cols-2">
                     <div className="relative h-72 lg:h-80">
-                      <Image
-                        src={featuredPost.image || '/images/services/care-advice.jpg'}
+                      <BlogCoverImage
+                        imagePath={featuredPost.image}
                         alt={featuredPost.title}
                         fill
                         className="object-cover"
@@ -165,8 +165,8 @@ export default function BlogPage() {
                       className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition hover:shadow-md"
                     >
                       <div className="relative h-52 overflow-hidden">
-                        <Image
-                          src={post.image || '/images/services/care-advice.jpg'}
+                        <BlogCoverImage
+                          imagePath={post.image}
                           alt={post.title}
                           fill
                           className="object-cover transition duration-500 group-hover:scale-105"

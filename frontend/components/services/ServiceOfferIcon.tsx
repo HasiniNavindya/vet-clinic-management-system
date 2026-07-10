@@ -46,7 +46,11 @@ export default function ServiceOfferIcon({
     <svg
       className={className}
       viewBox="0 0 24 24"
-      fill={ORANGE}
+      fill="none"
+      stroke={ORANGE}
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden
       xmlns="http://www.w3.org/2000/svg"
     >

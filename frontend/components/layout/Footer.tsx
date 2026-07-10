@@ -20,8 +20,8 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <div className="mb-6">
-              <SiteLogo href="/" height={100} />
+            <div className="mb-6 inline-flex items-center">
+              <SiteLogo href="/" height={90} prominent />
             </div>
             <p className="mb-6 leading-relaxed text-gray-400">
               Carlisle Pet Care provides compassionate veterinary services, grooming, vaccinations,
